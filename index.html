@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Tique — Contador de calorías</title>
+<meta name="theme-color" content="#FAFAFB">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tique">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=7">
+</head>
+<body>
+
+<div class="app">
+
+  <div class="view" id="nutritionView">
+  <header class="topbar">
+    <div class="day-nav">
+      <button id="prevDay" class="icon-btn" aria-label="Día anterior">‹</button>
+      <span id="dateLabel" class="day-label">Hoy</span>
+      <button id="nextDay" class="icon-btn" aria-label="Día siguiente">›</button>
+    </div>
+    <div class="topbar-actions">
+      <button id="profileBtn" class="icon-btn" aria-label="Perfil">⚙</button>
+      <button id="targetBtn" class="chip">
+        <span id="targetMinEl">1900</span>–<span id="targetMaxEl">2100</span> kcal
+      </button>
+    </div>
+  </header>
+
+  <div class="adaptive-banner" id="adaptiveBanner" hidden>
+    <p id="adaptiveBannerText"></p>
+    <div class="adaptive-banner-actions">
+      <button type="button" id="adaptiveAcceptBtn" class="link-btn">Ajustar</button>
+      <button type="button" id="adaptiveDismissBtn" class="link-btn link-btn--muted">Ahora no</button>
+    </div>
+  </div>
+
+  <main class="content">
+    <div class="card">
+      <div class="card-date" id="fullDateLabel">—</div>
+
+      <div class="quick-section" id="quickSection" hidden>
+        <div class="quick-label">Rápido</div>
+        <div class="quick-row" id="quickRow"></div>
+      </div>
+
+      <div class="log-list" id="entryList"></div>
+      <div class="empty-state" id="emptyState">
+        <p>Sin artículos todavía.<br>Escanea o añade el primero.</p>
+        <button type="button" id="copyYesterdayBtn" class="link-btn" hidden>Copiar de ayer</button>
+      </div>
+
+      <div class="totals">
+        <div class="totals-row">
+          <span class="totals-label">Total</span>
+          <span class="totals-value" id="totalKcal">0 kcal</span>
+        </div>
+        <div class="range-status" id="rangeStatusLine">—</div>
+        <div class="range" aria-hidden="true">
+          <div class="range-track">
+            <div class="range-band" id="rangeBandFill"></div>
+            <div class="range-marker" id="rangeMarker"></div>
+          </div>
+          <div class="range-labels">
+            <span id="rangeMinLabel">1900</span>
+            <span id="rangeMaxLabel">2100</span>
+          </div>
+        </div>
+
+        <div class="macro-row" id="macroSection" hidden>
+          <div class="macro-col">
+            <div class="macro-label">Prot.</div>
+            <div class="macro-value"><span id="proteinTotal">0</span>/<span id="proteinTarget">0</span> g</div>
+            <div class="macro-track"><div class="macro-fill" id="proteinFill"></div></div>
+          </div>
+          <div class="macro-col">
+            <div class="macro-label">Grasa</div>
+            <div class="macro-value"><span id="fatTotal">0</span>/<span id="fatTarget">0</span> g</div>
+            <div class="macro-track"><div class="macro-fill" id="fatFill"></div></div>
+          </div>
+          <div class="macro-col">
+            <div class="macro-label">Carbos</div>
+            <div class="macro-value"><span id="carbsTotal">0</span>/<span id="carbsTarget">0</span> g</div>
+            <div class="macro-track"><div class="macro-fill" id="carbsFill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="action-bar">
+    <button id="scanBtn" class="btn btn--primary btn--block">
+      <span class="btn-icon">▤</span> Escanear
+    </button>
+    <button id="manualBtn" class="btn btn--secondary btn--block">
+      <span class="btn-icon">+</span> Añadir a mano
+    </button>
+  </div>
+  </div>
+
+  <div class="view" id="workoutView" hidden>
+    <header class="topbar">
+      <div class="day-nav">
+        <button id="prevWorkoutDay" class="icon-btn" aria-label="Día anterior">‹</button>
+        <span id="workoutDateLabel" class="day-label">Hoy</span>
+        <button id="nextWorkoutDay" class="icon-btn" aria-label="Día siguiente">›</button>
+      </div>
+      <span class="chip" id="sessionCountChip">0 sesiones</span>
+    </header>
+
+    <main class="content">
+      <div class="card">
+        <div class="card-date" id="workoutFullDateLabel">—</div>
+
+        <div class="quick-section" id="exerciseQuickSection" hidden>
+          <div class="quick-label">Ejercicios recientes</div>
+          <div class="quick-row" id="exerciseQuickRow"></div>
+        </div>
+
+        <div class="log-list" id="exerciseList"></div>
+        <p class="empty-state" id="workoutEmptyState">Sin ejercicios todavía.<br>Añade el primero.</p>
+      </div>
+    </main>
+
+    <div class="action-bar">
+      <button id="addExerciseBtn" class="btn btn--primary btn--block">
+        <span class="btn-icon">+</span> Añadir ejercicio
+      </button>
+    </div>
+  </div>
+
+  <div class="view" id="analyticsView" hidden>
+    <header class="topbar">
+      <span class="day-label">Análisis</span>
+      <div class="segmented segmented--compact" id="analyticsPeriodToggle">
+        <button type="button" class="segmented-btn active" data-days="7">7 d</button>
+        <button type="button" class="segmented-btn" data-days="30">30 d</button>
+        <button type="button" class="segmented-btn" data-days="all">Todo</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="card">
+        <div class="card-date">Calorías</div>
+        <div id="calorieChart" class="chart-scroll"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-date">Peso</div>
+        <div id="weightChart" class="chart-scroll"></div>
+        <p class="empty-state" id="weightChartEmpty" hidden>Registra tu peso para ver la tendencia.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-date">Más consumido</div>
+        <div class="log-list" id="topContributorsList"></div>
+        <p class="empty-state" id="topContributorsEmpty" hidden>Sin datos en este periodo.</p>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<nav class="tabbar">
+  <button class="tab-btn active" id="tabNutrition" data-view="nutritionView">
+    <span class="tab-icon">🍽</span> Nutrición
+  </button>
+  <button class="tab-btn" id="tabWorkout" data-view="workoutView">
+    <span class="tab-icon">🏋</span> Entreno
+  </button>
+  <button class="tab-btn" id="tabAnalytics" data-view="analyticsView">
+    <span class="tab-icon">📊</span> Análisis
+  </button>
+</nav>
+
+<!-- Scanner modal -->
+<div class="modal" id="scanModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Escanear código de barras</span>
+      <button class="modal-close" id="closeScanModal" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="scannerViewport" class="scanner-viewport"></div>
+    <p class="scanner-hint" id="scannerHint">Apunta al código de barras del producto.</p>
+  </div>
+</div>
+
+<!-- Manual entry / product confirm modal -->
+<div class="modal" id="entryModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span id="entryModalTitle">Añadir alimento</span>
+      <button class="modal-close" id="closeEntryModal" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="entryForm" class="form">
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" id="entryName" required placeholder="p. ej. Yogur natural">
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>kcal / 100 g</span>
+          <input type="number" id="entryKcalPer100" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Cantidad (g)</span>
+          <input type="number" id="entryGrams" min="0" step="1" inputmode="decimal" value="100">
+        </label>
+      </div>
+
+      <label class="field">
+        <span>o directamente, kcal totales</span>
+        <input type="number" id="entryKcalTotal" min="0" step="1" inputmode="decimal" placeholder="opcional, anula lo anterior">
+      </label>
+
+      <span class="field-group-label">Macros por 100 g (opcional)</span>
+      <div class="field-row">
+        <label class="field">
+          <span>Proteína</span>
+          <input type="number" id="entryProteinPer100" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Grasa</span>
+          <input type="number" id="entryFatPer100" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Carbos</span>
+          <input type="number" id="entryCarbsPer100" min="0" step="1" inputmode="decimal">
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--block">Añadir</button>
+    </form>
+  </div>
+</div>
+
+<!-- Target modal -->
+<div class="modal" id="targetModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Meta diaria</span>
+      <button class="modal-close" id="closeTargetModal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <p class="modal-hint" id="targetIncompleteHint" hidden>
+      Completa tu perfil y tu peso para calcular un rango automáticamente.
+      <button type="button" id="targetGoProfile" class="link-btn">Completar perfil</button>
+    </p>
+
+    <p class="modal-hint" id="targetCalcHint" hidden>
+      Basado en tu peso más reciente (<span id="targetHintWeight">—</span>, <span id="targetHintDate">—</span>) y tu objetivo.
+      <button type="button" id="targetGoWeight" class="link-btn">Corregir peso</button>
+    </p>
+
+    <form id="targetForm" class="form">
+      <div class="field-row">
+        <label class="field">
+          <span>Mínimo (kcal)</span>
+          <input type="number" id="targetMinInput" min="0" step="10" required>
+        </label>
+        <label class="field">
+          <span>Máximo (kcal)</span>
+          <input type="number" id="targetMaxInput" min="0" step="10" required>
+        </label>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">Guardar rango manual</button>
+      <button type="button" id="targetResetBtn" class="btn btn--secondary btn--block" hidden>Volver al cálculo automático</button>
+    </form>
+  </div>
+</div>
+
+<!-- Profile modal -->
+<div class="modal" id="profileModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Perfil</span>
+      <button class="modal-close" id="closeProfileModal" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="profileForm" class="form">
+      <div class="field-row">
+        <label class="field">
+          <span>Sexo</span>
+          <select id="profileSex">
+            <option value="male">Hombre</option>
+            <option value="female">Mujer</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Edad</span>
+          <input type="number" id="profileAge" min="10" max="100" step="1" inputmode="numeric" required>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Altura (cm)</span>
+          <input type="number" id="profileHeight" min="100" max="250" step="1" inputmode="numeric" required>
+        </label>
+        <label class="field">
+          <span>Actividad</span>
+          <select id="profileActivity">
+            <option value="sedentary">Sedentaria</option>
+            <option value="light">Ligera</option>
+            <option value="moderate">Moderada</option>
+            <option value="active">Activa</option>
+            <option value="very_active">Muy activa</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field">
+        <span>Objetivo</span>
+        <div class="segmented" id="goalTypeToggle">
+          <button type="button" class="segmented-btn" data-goal="gain">Ganar</button>
+          <button type="button" class="segmented-btn" data-goal="maintain">Mantener</button>
+          <button type="button" class="segmented-btn" data-goal="lose">Perder</button>
+        </div>
+      </div>
+
+      <label class="field" id="rateField">
+        <span>Ritmo: <span id="rateValueLabel">0.50</span> kg/semana</span>
+        <input type="range" id="profileRate" min="0.1" max="1.5" step="0.05" value="0.5">
+      </label>
+
+      <button type="submit" class="btn btn--primary btn--block">Guardar perfil</button>
+      <button type="button" id="profileGoWeight" class="btn btn--secondary btn--block">Registro de peso →</button>
+    </form>
+  </div>
+</div>
+
+<!-- Weight log modal -->
+<div class="modal" id="weightModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <button type="button" class="modal-back" id="weightBackBtn" aria-label="Volver al perfil">‹ Perfil</button>
+      <span>Registro de peso</span>
+      <button class="modal-close" id="closeWeightModal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="log-list" id="weightList"></div>
+    <p class="empty-state" id="weightEmptyState">Sin registros todavía.</p>
+
+    <form id="weightForm" class="form form--divided">
+      <div class="field-row">
+        <label class="field">
+          <span>Fecha</span>
+          <input type="date" id="weightDate" required>
+        </label>
+        <label class="field">
+          <span>Peso (kg)</span>
+          <input type="number" id="weightKg" min="20" max="300" step="0.1" inputmode="decimal" required>
+        </label>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block" id="weightSubmitBtn">Añadir peso</button>
+    </form>
+  </div>
+</div>
+
+<!-- Add exercise modal -->
+<div class="modal" id="addExerciseModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Añadir ejercicio</span>
+      <button class="modal-close" id="closeAddExerciseModal" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="addExerciseForm" class="form">
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" id="exerciseNameInput" required placeholder="p. ej. Press banca">
+      </label>
+      <button type="submit" class="btn btn--primary btn--block">Añadir</button>
+    </form>
+  </div>
+</div>
+
+<!-- Exercise detail modal (log sets) -->
+<div class="modal" id="exerciseDetailModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span id="exerciseDetailTitle">Ejercicio</span>
+      <button class="modal-close" id="closeExerciseDetailModal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <p class="modal-hint" id="lastPerformanceHint" hidden></p>
+
+    <div class="log-list" id="setList"></div>
+    <p class="empty-state" id="setEmptyState">Sin series todavía.</p>
+
+    <form id="setForm" class="form form--divided">
+      <div class="field-row">
+        <label class="field">
+          <span>Peso (kg) — opcional</span>
+          <input type="number" id="setWeight" min="0" step="0.5" inputmode="decimal" placeholder="peso corporal">
+        </label>
+        <label class="field">
+          <span>Reps</span>
+          <input type="number" id="setReps" min="1" step="1" inputmode="numeric" required>
+        </label>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">Añadir serie</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="app.js?v=9"></script>
+</body>
+</html>
