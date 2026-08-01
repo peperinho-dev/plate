@@ -1,4 +1,4 @@
-const CACHE_NAME = "tique-cache-v12";
+const CACHE_NAME = "tique-cache-v13";
 const APP_SHELL = [
   "./",
   "./index.html",
