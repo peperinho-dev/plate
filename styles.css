@@ -272,6 +272,28 @@ button.row-main { cursor: pointer; }
 .empty-state p { margin: 0 0 10px; }
 .empty-state .link-btn { font-size: 13px; }
 
+.chart-legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.chart-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* ---------- Quick add ---------- */
 .quick-section { margin-bottom: 16px; }
 
@@ -706,6 +728,7 @@ button.row-main { cursor: pointer; }
   gap: 12px;
 }
 .field-row .field { flex: 1; }
+.field-row .btn { flex: 1; }
 
 .segmented {
   display: flex;

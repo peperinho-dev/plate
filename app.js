@@ -280,13 +280,13 @@
         const row = document.createElement("div");
         row.className = "row";
         row.innerHTML = `
-          <div class="row-main">
+          <button type="button" class="row-main row-edit" data-id="${entry.id}">
             <span class="row-name">${escapeHtml(entry.name)}</span>
             <span class="row-qty">${entry.qtyLabel ? entry.qtyLabel + " · " : ""}${formatTime(entry.addedAt)}</span>
             ${(entry.protein || entry.fat || entry.carbs)
               ? `<span class="row-macros">${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C</span>`
               : ""}
-          </div>
+          </button>
           <span class="row-amount">${Math.round(entry.calories)} kcal</span>
           <button class="row-del" data-id="${entry.id}" aria-label="Quitar">✕</button>
         `;
@@ -355,16 +355,20 @@
   }
 
   entryListEl.addEventListener("click", (e) => {
-    const btn = e.target.closest(".row-del");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const entries = currentDayEntries();
-    const idx = entries.findIndex((en) => en.id === id);
-    if (idx >= 0) {
-      entries.splice(idx, 1);
-      saveData(state);
-      render();
+    const delBtn = e.target.closest(".row-del");
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      const entries = currentDayEntries();
+      const idx = entries.findIndex((en) => en.id === id);
+      if (idx >= 0) {
+        entries.splice(idx, 1);
+        saveData(state);
+        render();
+      }
+      return;
     }
+    const editBtn = e.target.closest(".row-edit");
+    if (editBtn) openEntryForEdit(editBtn.dataset.id);
   });
 
   /* ---------- Quick add & copy from yesterday ---------- */
@@ -621,6 +625,51 @@
     showToast("Perfil guardado");
   });
 
+  /* ---------- Data export / import ---------- */
+
+  document.getElementById("exportDataBtn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plate-backup-${todayKey(0)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Datos exportados");
+  });
+
+  const importDataInputEl = document.getElementById("importDataInput");
+  document.getElementById("importDataBtn").addEventListener("click", () => importDataInputEl.click());
+
+  importDataInputEl.addEventListener("change", () => {
+    const file = importDataInputEl.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch (e) {
+        showToast("Archivo no válido");
+        importDataInputEl.value = "";
+        return;
+      }
+      if (!confirm("Esto reemplazará todos tus datos actuales con los del archivo. ¿Continuar?")) {
+        importDataInputEl.value = "";
+        return;
+      }
+      state = migrateData(parsed);
+      saveData(state);
+      importDataInputEl.value = "";
+      closeModal(profileModal);
+      render();
+      showToast("Datos importados");
+    };
+    reader.readAsText(file);
+  });
+
   /* ---------- Weight log modal ---------- */
 
   const weightModal = document.getElementById("weightModal");
@@ -751,6 +800,13 @@
   const foodSearchInputEl = document.getElementById("foodSearchInput");
   const foodSearchResultsEl = document.getElementById("foodSearchResults");
   const foodSearchHintEl = document.getElementById("foodSearchHint");
+  const foodSearchSectionEl = document.getElementById("foodSearchSection");
+  const entryPer100RowEl = document.getElementById("entryPer100Row");
+  const entryKcalTotalLabelEl = document.getElementById("entryKcalTotalLabel");
+  const entryMacrosLabelEl = document.getElementById("entryMacrosLabel");
+  const entrySubmitBtnEl = document.getElementById("entrySubmitBtn");
+
+  let editingEntryId = null;
 
   function resetFoodSearch() {
     foodSearchInputEl.value = "";
@@ -775,7 +831,7 @@
 
   async function searchFoods(query) {
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&lc=es&fields=product_name,product_name_es,nutriments`;
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_es,nutriments`;
       const res = await fetch(url);
       const data = await res.json();
       renderFoodSearchResults(data.products || [], query);
@@ -813,8 +869,10 @@
   }
 
   function applyFoodSearchResult(product, name, kcal) {
+    editingEntryId = null;
     entryModalTitleEl.textContent = "Confirmar producto";
     entryForm.reset();
+    setEntryFormMode(false);
     entryNameEl.value = name;
     entryGramsEl.value = 100;
     entryKcalPer100El.value = kcal;
@@ -825,11 +883,38 @@
     resetFoodSearch();
   }
 
+  function setEntryFormMode(isEditing) {
+    foodSearchSectionEl.hidden = isEditing;
+    entryPer100RowEl.hidden = isEditing;
+    entryKcalTotalLabelEl.textContent = isEditing ? "kcal totales" : "o directamente, kcal totales";
+    entryMacrosLabelEl.textContent = isEditing ? "Macros (totales, opcional)" : "Macros por 100 g (opcional)";
+    entrySubmitBtnEl.textContent = isEditing ? "Guardar cambios" : "Añadir";
+  }
+
+  function openEntryForEdit(entryId) {
+    const entry = currentDayEntries().find((en) => en.id === entryId);
+    if (!entry) return;
+    editingEntryId = entryId;
+    entryModalTitleEl.textContent = "Editar alimento";
+    entryForm.reset();
+    resetFoodSearch();
+    setEntryFormMode(true);
+    entryNameEl.value = entry.name;
+    entryGramsEl.value = 100;
+    entryKcalTotalEl.value = Math.round(entry.calories);
+    if (entry.protein) entryProteinPer100El.value = Math.round(entry.protein);
+    if (entry.fat) entryFatPer100El.value = Math.round(entry.fat);
+    if (entry.carbs) entryCarbsPer100El.value = Math.round(entry.carbs);
+    openModal(entryModal);
+  }
+
   document.getElementById("manualBtn").addEventListener("click", () => {
+    editingEntryId = null;
     entryModalTitleEl.textContent = "Añadir alimento";
     entryForm.reset();
     entryGramsEl.value = 100;
     resetFoodSearch();
+    setEntryFormMode(false);
     openModal(entryModal);
     setTimeout(() => foodSearchInputEl.focus(), 50);
   });
@@ -860,6 +945,22 @@
     const fatPer100 = parseFloat(entryFatPer100El.value);
     const carbsPer100 = parseFloat(entryCarbsPer100El.value);
     const scale = (v) => (!isNaN(v) && v >= 0 ? (v * grams) / 100 : 0);
+
+    if (editingEntryId) {
+      const entry = currentDayEntries().find((en) => en.id === editingEntryId);
+      if (!entry) return;
+      entry.name = name;
+      entry.calories = calories;
+      entry.qtyLabel = qtyLabel;
+      entry.protein = scale(proteinPer100);
+      entry.fat = scale(fatPer100);
+      entry.carbs = scale(carbsPer100);
+      saveData(state);
+      render();
+      closeModal(entryModal);
+      showToast("Guardado");
+      return;
+    }
 
     const entries = currentDayEntries();
     entries.push({
@@ -949,6 +1050,9 @@
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`);
       const data = await res.json();
+
+      editingEntryId = null;
+      setEntryFormMode(false);
 
       if (data.status !== 1 || !data.product) {
         showToast("Producto no encontrado. Añádelo a mano.");
@@ -1194,6 +1298,9 @@
   const setForm = document.getElementById("setForm");
   const setWeightEl = document.getElementById("setWeight");
   const setRepsEl = document.getElementById("setReps");
+  const setSubmitBtnEl = document.getElementById("setSubmitBtn");
+
+  let editingSetId = null;
 
   function formatSet(s) {
     return s.weightKg !== null && s.weightKg !== undefined ? `${s.weightKg}×${s.reps}` : `${s.reps} reps`;
@@ -1214,7 +1321,9 @@
     }
 
     renderSetList();
+    editingSetId = null;
     setForm.reset();
+    setSubmitBtnEl.textContent = "Añadir serie";
     openModal(exerciseDetailModal);
     setTimeout(() => setRepsEl.focus(), 50);
   }
@@ -1230,10 +1339,10 @@
         const row = document.createElement("div");
         row.className = "row";
         row.innerHTML = `
-          <div class="row-main">
+          <button type="button" class="row-main row-edit" data-id="${s.id}">
             <span class="row-name">Serie ${i + 1}</span>
             <span class="row-qty">${formatSet(s)}</span>
-          </div>
+          </button>
           <button class="row-del" data-id="${s.id}" aria-label="Quitar">✕</button>
         `;
         setListEl.appendChild(row);
@@ -1245,15 +1354,33 @@
 
   setListEl.addEventListener("click", (e) => {
     const delBtn = e.target.closest(".row-del");
-    if (!delBtn) return;
-    const ex = currentWorkoutExercises().find((e2) => e2.id === currentExerciseId);
-    if (!ex) return;
-    const idx = ex.sets.findIndex((s) => s.id === delBtn.dataset.id);
-    if (idx >= 0) {
-      ex.sets.splice(idx, 1);
-      saveData(state);
-      renderSetList();
-      renderWorkoutDay();
+    if (delBtn) {
+      const ex = currentWorkoutExercises().find((e2) => e2.id === currentExerciseId);
+      if (!ex) return;
+      const idx = ex.sets.findIndex((s) => s.id === delBtn.dataset.id);
+      if (idx >= 0) {
+        ex.sets.splice(idx, 1);
+        saveData(state);
+        renderSetList();
+        renderWorkoutDay();
+        if (editingSetId === delBtn.dataset.id) {
+          editingSetId = null;
+          setForm.reset();
+          setSubmitBtnEl.textContent = "Añadir serie";
+        }
+      }
+      return;
+    }
+    const editBtn = e.target.closest(".row-edit");
+    if (editBtn) {
+      const ex = currentWorkoutExercises().find((e2) => e2.id === currentExerciseId);
+      const s = ex && ex.sets.find((s2) => s2.id === editBtn.dataset.id);
+      if (!s) return;
+      editingSetId = s.id;
+      setWeightEl.value = s.weightKg !== null && s.weightKg !== undefined ? s.weightKg : "";
+      setRepsEl.value = s.reps;
+      setSubmitBtnEl.textContent = "Guardar cambios";
+      setRepsEl.focus();
     }
   });
 
@@ -1268,6 +1395,22 @@
     }
     const ex = currentWorkoutExercises().find((e2) => e2.id === currentExerciseId);
     if (!ex) return;
+
+    if (editingSetId) {
+      const s = ex.sets.find((s2) => s2.id === editingSetId);
+      if (!s) return;
+      s.weightKg = weight;
+      s.reps = reps;
+      saveData(state);
+      renderSetList();
+      renderWorkoutDay();
+      editingSetId = null;
+      setForm.reset();
+      setSubmitBtnEl.textContent = "Añadir serie";
+      setRepsEl.focus();
+      return;
+    }
+
     ex.sets.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weightKg: weight, reps, addedAt: Date.now() });
     saveData(state);
     renderSetList();
@@ -1282,13 +1425,22 @@
 
   let analyticsPeriodDays = 7;
 
+  function dayMacroTotals(entries) {
+    return entries.reduce((acc, e) => {
+      acc.protein += e.protein || 0;
+      acc.fat += e.fat || 0;
+      acc.carbs += e.carbs || 0;
+      return acc;
+    }, { protein: 0, fat: 0, carbs: 0 });
+  }
+
   function getRecentDays(n) {
     const result = [];
     for (let i = n - 1; i >= 0; i--) {
       const key = todayKey(-i);
       const entries = (state.days[key] && state.days[key].entries) || [];
       const total = entries.reduce((sum, e) => sum + e.calories, 0);
-      result.push({ date: key, total });
+      result.push({ date: key, total, ...dayMacroTotals(entries) });
     }
     return result;
   }
@@ -1307,7 +1459,7 @@
       const key = cursor.toISOString().slice(0, 10);
       const entries = (state.days[key] && state.days[key].entries) || [];
       const total = entries.reduce((sum, e) => sum + e.calories, 0);
-      result.push({ date: key, total });
+      result.push({ date: key, total, ...dayMacroTotals(entries) });
       cursor.setDate(cursor.getDate() + 1);
     }
     return result;
@@ -1380,6 +1532,27 @@
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
     return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${line}${dots}</svg>`;
+  }
+
+  const MACRO_COLORS = { protein: "var(--accent)", fat: "#D97706", carbs: "#6366F1" };
+
+  function buildMacroChart(days) {
+    const h = 140, pad = 12;
+    const scrollable = days.length > 30;
+    const w = scrollable ? days.length * 16 : 300;
+    const maxVal = Math.max(...days.map((d) => Math.max(d.protein, d.fat, d.carbs)), 1) * 1.1;
+    const x = (i) => (days.length <= 1 ? w / 2 : (i / (days.length - 1)) * (w - pad * 2) + pad);
+    const y = (v) => h - pad - (v / maxVal) * (h - pad * 2);
+
+    const lineFor = (key, color) => {
+      if (days.length < 2) return "";
+      const points = days.map((d, i) => `${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
+      return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+    };
+
+    const lines = lineFor("protein", MACRO_COLORS.protein) + lineFor("fat", MACRO_COLORS.fat) + lineFor("carbs", MACRO_COLORS.carbs);
+    const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${lines}</svg>`;
   }
 
   function computeTopContributors(days) {
@@ -1519,6 +1692,17 @@
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
     const { min, max } = state.calorieTarget;
     document.getElementById("calorieChart").innerHTML = buildCalorieChart(days, min, max);
+
+    const hasMacroData = days.some((d) => d.protein || d.fat || d.carbs);
+    const macroChartEl = document.getElementById("macroChart");
+    const macroChartEmptyEl = document.getElementById("macroChartEmpty");
+    if (!hasMacroData) {
+      macroChartEl.innerHTML = "";
+      macroChartEmptyEl.hidden = false;
+    } else {
+      macroChartEmptyEl.hidden = true;
+      macroChartEl.innerHTML = buildMacroChart(days);
+    }
 
     const periodDates = new Set(days.map((d) => d.date));
     const weightEntries = state.weightLog.filter((w) => periodDates.has(w.date));

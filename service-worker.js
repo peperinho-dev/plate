@@ -1,4 +1,4 @@
-const CACHE_NAME = "tique-cache-v10";
+const CACHE_NAME = "tique-cache-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,10 +9,18 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
 ];
+// Loaded from a CDN, so it's precached separately and best-effort — a failure here
+// (offline install, CDN hiccup) shouldn't block the rest of the app from installing.
+const QR_LIB_URL = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(APP_SHELL);
+      try {
+        await cache.add(QR_LIB_URL);
+      } catch (e) { /* scanning just won't work offline until this succeeds later */ }
+    })
   );
   self.skipWaiting();
 });

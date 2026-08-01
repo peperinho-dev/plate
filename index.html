@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=9">
+<link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
 
@@ -159,6 +159,17 @@
       </div>
 
       <div class="card">
+        <div class="card-date">Macros</div>
+        <div class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Prot.</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#D97706"></span>Grasa</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#6366F1"></span>Carbos</span>
+        </div>
+        <div id="macroChart" class="chart-scroll"></div>
+        <p class="empty-state" id="macroChartEmpty" hidden>Registra comidas con macros para ver la tendencia.</p>
+      </div>
+
+      <div class="card">
         <div class="card-date">Más consumido</div>
         <div class="log-list" id="topContributorsList"></div>
         <p class="empty-state" id="topContributorsEmpty" hidden>Sin datos en este periodo.</p>
@@ -228,21 +239,22 @@
       <button class="modal-close" id="closeEntryModal" aria-label="Cerrar">✕</button>
     </div>
 
-    <label class="field" id="foodSearchField">
-      <span>Buscar alimento</span>
-      <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
-    </label>
-    <div class="log-list" id="foodSearchResults"></div>
-    <p class="modal-hint" id="foodSearchHint" hidden></p>
-
-    <span class="field-group-label">o a mano</span>
+    <div id="foodSearchSection">
+      <label class="field" id="foodSearchField">
+        <span>Buscar alimento</span>
+        <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
+      </label>
+      <div class="log-list" id="foodSearchResults"></div>
+      <p class="modal-hint" id="foodSearchHint" hidden></p>
+      <span class="field-group-label">o a mano</span>
+    </div>
     <form id="entryForm" class="form">
       <label class="field">
         <span>Nombre</span>
         <input type="text" id="entryName" required placeholder="p. ej. Yogur natural">
       </label>
 
-      <div class="field-row">
+      <div class="field-row" id="entryPer100Row">
         <label class="field">
           <span>kcal / 100 g</span>
           <input type="number" id="entryKcalPer100" min="0" step="1" inputmode="decimal">
@@ -254,11 +266,11 @@
       </div>
 
       <label class="field">
-        <span>o directamente, kcal totales</span>
+        <span id="entryKcalTotalLabel">o directamente, kcal totales</span>
         <input type="number" id="entryKcalTotal" min="0" step="1" inputmode="decimal" placeholder="opcional, anula lo anterior">
       </label>
 
-      <span class="field-group-label">Macros por 100 g (opcional)</span>
+      <span class="field-group-label" id="entryMacrosLabel">Macros por 100 g (opcional)</span>
       <div class="field-row">
         <label class="field">
           <span>Proteína</span>
@@ -274,7 +286,7 @@
         </label>
       </div>
 
-      <button type="submit" class="btn btn--primary btn--block">Añadir</button>
+      <button type="submit" class="btn btn--primary btn--block" id="entrySubmitBtn">Añadir</button>
     </form>
   </div>
 </div>
@@ -372,6 +384,13 @@
       <button type="submit" class="btn btn--primary btn--block">Guardar perfil</button>
       <button type="button" id="profileGoWeight" class="btn btn--secondary btn--block">Registro de peso →</button>
     </form>
+
+    <span class="field-group-label">Datos</span>
+    <div class="field-row">
+      <button type="button" id="exportDataBtn" class="btn btn--secondary btn--block">Exportar datos</button>
+      <button type="button" id="importDataBtn" class="btn btn--secondary btn--block">Importar datos</button>
+    </div>
+    <input type="file" id="importDataInput" accept="application/json" hidden>
   </div>
 </div>
 
@@ -447,7 +466,7 @@
           <input type="number" id="setReps" min="1" step="1" inputmode="numeric" required>
         </label>
       </div>
-      <button type="submit" class="btn btn--primary btn--block">Añadir serie</button>
+      <button type="submit" class="btn btn--primary btn--block" id="setSubmitBtn">Añadir serie</button>
     </form>
   </div>
 </div>
@@ -455,6 +474,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
