@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -225,8 +225,20 @@
       <span>Escanear código de barras</span>
       <button class="modal-close" id="closeScanModal" aria-label="Cerrar">✕</button>
     </div>
-    <div id="scannerViewport" class="scanner-viewport"></div>
+    <div id="scannerViewport" class="scanner-viewport">
+      <video id="scannerVideo" playsinline muted></video>
+      <div class="scanner-frame" aria-hidden="true"></div>
+      <button type="button" class="scanner-torch" id="scannerTorchBtn" hidden aria-label="Linterna">🔦</button>
+    </div>
     <p class="scanner-hint" id="scannerHint">Apunta al código de barras del producto.</p>
+    <button type="button" class="link-btn" id="scannerManualToggle">Introducir código a mano</button>
+    <form id="scannerManualForm" class="form" hidden>
+      <label class="field">
+        <span>Código de barras</span>
+        <input type="text" id="scannerManualInput" inputmode="numeric" placeholder="p. ej. 8410000123456">
+      </label>
+      <button type="submit" class="btn btn--primary btn--block">Buscar</button>
+    </form>
   </div>
 </div>
 
@@ -473,7 +485,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

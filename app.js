@@ -994,53 +994,153 @@
   });
 
   /* ---------- Barcode scanning ---------- */
+  // Prefers the native BarcodeDetector API (fast, hardware-backed, works well for
+  // 1D EAN/UPC codes). Falls back to the @zxing/browser library — loaded lazily,
+  // only on browsers without native support — since it's far more reliable than
+  // html5-qrcode was for non-QR barcodes.
 
   const scanModal = document.getElementById("scanModal");
   const scannerHintEl = document.getElementById("scannerHint");
-  let html5QrCode = null;
+  const scannerVideoEl = document.getElementById("scannerVideo");
+  const scannerTorchBtnEl = document.getElementById("scannerTorchBtn");
+  const scannerManualToggleEl = document.getElementById("scannerManualToggle");
+  const scannerManualFormEl = document.getElementById("scannerManualForm");
+  const scannerManualInputEl = document.getElementById("scannerManualInput");
+
+  const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
+
+  let mediaStream = null;
   let scanning = false;
+  let detectRAF = null;
+  let zxingControls = null;
+  let zxingReaderPromise = null;
+
+  function loadZxing() {
+    if (!zxingReaderPromise) {
+      zxingReaderPromise = import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm");
+    }
+    return zxingReaderPromise;
+  }
 
   document.getElementById("scanBtn").addEventListener("click", async () => {
+    scannerManualFormEl.hidden = true;
+    scannerManualToggleEl.textContent = "Introducir código a mano";
     openModal(scanModal);
     scannerHintEl.textContent = "Apunta al código de barras del producto.";
+    await startScanner();
+  });
+
+  async function startScanner() {
     try {
-      if (typeof Html5Qrcode === "undefined") {
-        scannerHintEl.textContent = "No se pudo cargar el lector de códigos. Comprueba tu conexión.";
-        return;
-      }
-      html5QrCode = new Html5Qrcode("scannerViewport");
-      scanning = true;
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 140 } },
-        onScanSuccess,
-        () => {} // ignore per-frame scan failures
-      );
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
     } catch (err) {
       console.error(err);
       scannerHintEl.textContent = "No se pudo acceder a la cámara. Revisa los permisos.";
+      return;
+    }
+
+    scannerVideoEl.srcObject = mediaStream;
+    await scannerVideoEl.play();
+    scanning = true;
+
+    const track = mediaStream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.torch) {
+      scannerTorchBtnEl.hidden = false;
+      scannerTorchBtnEl.classList.remove("active");
+    } else {
+      scannerTorchBtnEl.hidden = true;
+    }
+
+    if ("BarcodeDetector" in window) {
+      let detector;
+      try {
+        detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+      } catch (e) {
+        detector = new BarcodeDetector();
+      }
+      const detectLoop = async () => {
+        if (!scanning) return;
+        try {
+          const results = await detector.detect(scannerVideoEl);
+          if (results.length > 0) {
+            onScanSuccess(results[0].rawValue);
+            return;
+          }
+        } catch (e) { /* transient per-frame detection error, keep scanning */ }
+        detectRAF = requestAnimationFrame(detectLoop);
+      };
+      detectRAF = requestAnimationFrame(detectLoop);
+    } else {
+      try {
+        const { BrowserMultiFormatReader } = await loadZxing();
+        const reader = new BrowserMultiFormatReader();
+        zxingControls = await reader.decodeFromVideoElement(scannerVideoEl, (result, err) => {
+          if (result) onScanSuccess(result.getText());
+        });
+      } catch (e) {
+        console.error(e);
+        scannerHintEl.textContent = "No se pudo cargar el lector de códigos. Comprueba tu conexión.";
+      }
+    }
+  }
+
+  scannerTorchBtnEl.addEventListener("click", async () => {
+    if (!mediaStream) return;
+    const track = mediaStream.getVideoTracks()[0];
+    const isActive = scannerTorchBtnEl.classList.toggle("active");
+    try {
+      await track.applyConstraints({ advanced: [{ torch: isActive }] });
+    } catch (e) {
+      scannerTorchBtnEl.classList.toggle("active", !isActive);
     }
   });
 
-  async function stopScanner() {
-    if (html5QrCode && scanning) {
-      try {
-        await html5QrCode.stop();
-        html5QrCode.clear();
-      } catch (e) { /* already stopped */ }
-    }
+  scannerManualToggleEl.addEventListener("click", () => {
+    const showing = scannerManualFormEl.hidden;
+    scannerManualFormEl.hidden = !showing;
+    scannerManualToggleEl.textContent = showing ? "Ocultar" : "Introducir código a mano";
+    if (showing) setTimeout(() => scannerManualInputEl.focus(), 50);
+  });
+
+  scannerManualFormEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = scannerManualInputEl.value.trim();
+    if (!code) return;
+    await stopScanner();
+    closeModal(scanModal);
+    lookupBarcode(code);
+  });
+
+  function stopScanner() {
     scanning = false;
+    if (detectRAF) {
+      cancelAnimationFrame(detectRAF);
+      detectRAF = null;
+    }
+    if (zxingControls) {
+      zxingControls.stop();
+      zxingControls = null;
+    }
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((t) => t.stop());
+      mediaStream = null;
+    }
+    scannerVideoEl.srcObject = null;
+    scannerTorchBtnEl.hidden = true;
+    scannerTorchBtnEl.classList.remove("active");
   }
 
-  document.getElementById("closeScanModal").addEventListener("click", async () => {
-    await stopScanner();
+  document.getElementById("closeScanModal").addEventListener("click", () => {
+    stopScanner();
     closeModal(scanModal);
   });
 
-  async function onScanSuccess(decodedText) {
+  function onScanSuccess(decodedText) {
     if (!scanning) return;
-    scanning = false;
-    await stopScanner();
+    stopScanner();
     closeModal(scanModal);
     lookupBarcode(decodedText.trim());
   }
