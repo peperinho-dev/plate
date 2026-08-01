@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
@@ -172,6 +172,22 @@
         </div>
         <p class="stat-note" id="sessionsAvgLine">—</p>
         <div id="sessionsChart" class="chart-scroll"></div>
+
+        <div class="goal-progress-row">
+          <div class="goal-progress-item">
+            <span class="goal-progress-label">Esta semana</span>
+            <span class="goal-progress-value" id="weekGoalProgress">0/4</span>
+          </div>
+          <div class="goal-progress-item">
+            <span class="goal-progress-label">Este mes</span>
+            <span class="goal-progress-value" id="monthGoalProgress">0/16</span>
+          </div>
+        </div>
+
+        <label class="field" id="sessionGoalField">
+          <span>Objetivo semanal: <span id="sessionGoalValueLabel">4</span> sesiones</span>
+          <input type="range" id="sessionGoalSlider" min="1" max="7" step="1" value="4">
+        </label>
       </div>
     </main>
   </div>
@@ -439,6 +455,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

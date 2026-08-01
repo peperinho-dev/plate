@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "tique-data-v1";
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const SCHEMA_VERSION = 4;
+  const SCHEMA_VERSION = 5;
   const ADAPTIVE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADAPTIVE_MIN_SPAN_DAYS = 14;
   const ADAPTIVE_THRESHOLD_KG_PER_WEEK = 0.15;
@@ -44,6 +44,10 @@
     return { lastCheckedAt: null, suggestion: null };
   }
 
+  function defaultWorkoutGoal() {
+    return { weeklySessions: 4 };
+  }
+
   function defaultState() {
     return {
       schemaVersion: SCHEMA_VERSION,
@@ -54,6 +58,7 @@
       macroTargets: defaultMacroTargets(),
       adaptive: defaultAdaptive(),
       workouts: {},
+      workoutGoal: defaultWorkoutGoal(),
       onboardingShown: false
     };
   }
@@ -89,6 +94,7 @@
     if (!data.macroTargets) data.macroTargets = defaultMacroTargets();
     if (!data.adaptive) data.adaptive = defaultAdaptive();
     if (!data.workouts) data.workouts = {};
+    if (!data.workoutGoal) data.workoutGoal = defaultWorkoutGoal();
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
     return data;
   }
@@ -1442,9 +1448,74 @@
 
     const chartEl = document.getElementById("sessionsChart");
     chartEl.innerHTML = weeks.length > 1 ? buildSessionsChart(weeks) : "";
+
+    renderSessionGoalProgress();
   }
 
+  function mondayOf(date) {
+    const d = new Date(date);
+    const dow = (d.getDay() + 6) % 7; // 0 = Monday
+    d.setDate(d.getDate() - dow);
+    return d;
+  }
+
+  function countSessionsBetween(start, end) {
+    let count = 0;
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const key = cursor.toISOString().slice(0, 10);
+      if (hasWorkoutSession(key)) count += 1;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return count;
+  }
+
+  function computeCurrentWeekProgress() {
+    const today = new Date(`${todayKey(0)}T00:00:00`);
+    const start = mondayOf(today);
+    const goal = state.workoutGoal.weeklySessions;
+    return { done: countSessionsBetween(start, today), goal };
+  }
+
+  function computeCurrentMonthProgress() {
+    const today = new Date(`${todayKey(0)}T00:00:00`);
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const weeksInMonth = Math.ceil(daysInMonth / 7);
+    const goal = state.workoutGoal.weeklySessions * weeksInMonth;
+    return { done: countSessionsBetween(start, today), goal };
+  }
+
+  function renderSessionGoalProgress() {
+    const week = computeCurrentWeekProgress();
+    const month = computeCurrentMonthProgress();
+
+    const weekEl = document.getElementById("weekGoalProgress");
+    weekEl.textContent = `${week.done}/${week.goal}`;
+    weekEl.classList.toggle("goal-met", week.done >= week.goal);
+
+    const monthEl = document.getElementById("monthGoalProgress");
+    monthEl.textContent = `${month.done}/${month.goal}`;
+    monthEl.classList.toggle("goal-met", month.done >= month.goal);
+  }
+
+  const sessionGoalSliderEl = document.getElementById("sessionGoalSlider");
+  const sessionGoalValueLabelEl = document.getElementById("sessionGoalValueLabel");
+
+  sessionGoalSliderEl.addEventListener("input", () => {
+    sessionGoalValueLabelEl.textContent = sessionGoalSliderEl.value;
+  });
+
+  sessionGoalSliderEl.addEventListener("change", () => {
+    state.workoutGoal.weeklySessions = parseInt(sessionGoalSliderEl.value, 10);
+    saveData(state);
+    renderSessionGoalProgress();
+  });
+
   function renderAnalytics() {
+    sessionGoalSliderEl.value = state.workoutGoal.weeklySessions;
+    sessionGoalValueLabelEl.textContent = state.workoutGoal.weeklySessions;
+
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
     const { min, max } = state.calorieTarget;
     document.getElementById("calorieChart").innerHTML = buildCalorieChart(days, min, max);
