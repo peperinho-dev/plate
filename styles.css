@@ -9,12 +9,31 @@
   --accent: #1E8F5F;
   --accent-ink: #0F5C3A;
   --accent-soft: rgba(30, 143, 95, 0.13);
+  --ink-pressed: #26272B;
   --shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 12px 28px rgba(16, 16, 20, 0.07);
   --shadow-sheet: 0 -8px 30px rgba(16, 16, 20, 0.12);
   --font: 'Inter', system-ui, sans-serif;
   --radius-lg: 22px;
   --radius-md: 14px;
   --radius-sm: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E0F11;
+    --surface: #1B1C1F;
+    --surface-alt: #232428;
+    --ink: #F2F2F3;
+    --ink-soft: #9C9CA3;
+    --ink-faint: #5C5C63;
+    --line: #2C2D31;
+    --accent: #34C481;
+    --accent-ink: #6FE3A8;
+    --accent-soft: rgba(52, 196, 129, 0.16);
+    --ink-pressed: #E2E2E3;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.45);
+    --shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
+  }
 }
 
 * { box-sizing: border-box; }
@@ -528,7 +547,7 @@ button.row-main { cursor: pointer; }
   background: var(--ink);
   color: var(--surface);
 }
-.btn--primary:active { background: #26272B; }
+.btn--primary:active { background: var(--ink-pressed); }
 
 .btn--secondary {
   background: var(--surface-alt);
