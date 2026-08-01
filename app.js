@@ -742,13 +742,90 @@
   const entryFatPer100El = document.getElementById("entryFatPer100");
   const entryCarbsPer100El = document.getElementById("entryCarbsPer100");
   const entryModalTitleEl = document.getElementById("entryModalTitle");
+  const foodSearchInputEl = document.getElementById("foodSearchInput");
+  const foodSearchResultsEl = document.getElementById("foodSearchResults");
+  const foodSearchHintEl = document.getElementById("foodSearchHint");
+
+  function resetFoodSearch() {
+    foodSearchInputEl.value = "";
+    foodSearchResultsEl.innerHTML = "";
+    foodSearchHintEl.hidden = true;
+  }
+
+  let foodSearchDebounce = null;
+
+  foodSearchInputEl.addEventListener("input", () => {
+    clearTimeout(foodSearchDebounce);
+    const query = foodSearchInputEl.value.trim();
+    foodSearchResultsEl.innerHTML = "";
+    if (query.length < 2) {
+      foodSearchHintEl.hidden = true;
+      return;
+    }
+    foodSearchHintEl.hidden = false;
+    foodSearchHintEl.textContent = "Buscando…";
+    foodSearchDebounce = setTimeout(() => searchFoods(query), 450);
+  });
+
+  async function searchFoods(query) {
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&lc=es&fields=product_name,product_name_es,nutriments`;
+      const res = await fetch(url);
+      const data = await res.json();
+      renderFoodSearchResults(data.products || [], query);
+    } catch (err) {
+      console.error(err);
+      foodSearchHintEl.hidden = false;
+      foodSearchHintEl.textContent = "Error al buscar. Revisa tu conexión.";
+    }
+  }
+
+  function renderFoodSearchResults(products, query) {
+    if (foodSearchInputEl.value.trim() !== query) return; // stale response, a newer search superseded it
+    foodSearchResultsEl.innerHTML = "";
+    const valid = products.filter((p) => (p.product_name_es || p.product_name) && p.nutriments && typeof p.nutriments["energy-kcal_100g"] === "number");
+    if (valid.length === 0) {
+      foodSearchHintEl.hidden = false;
+      foodSearchHintEl.textContent = "Sin resultados. Añádelo a mano abajo.";
+      return;
+    }
+    foodSearchHintEl.hidden = true;
+    valid.forEach((p) => {
+      const name = p.product_name_es || p.product_name;
+      const kcal = Math.round(p.nutriments["energy-kcal_100g"]);
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <button type="button" class="row-main">
+          <span class="row-name">${escapeHtml(name)}</span>
+          <span class="row-qty">${kcal} kcal /100g</span>
+        </button>
+      `;
+      row.querySelector(".row-main").addEventListener("click", () => applyFoodSearchResult(p, name, kcal));
+      foodSearchResultsEl.appendChild(row);
+    });
+  }
+
+  function applyFoodSearchResult(product, name, kcal) {
+    entryModalTitleEl.textContent = "Confirmar producto";
+    entryForm.reset();
+    entryNameEl.value = name;
+    entryGramsEl.value = 100;
+    entryKcalPer100El.value = kcal;
+    const n = product.nutriments;
+    if (typeof n.proteins_100g === "number") entryProteinPer100El.value = Math.round(n.proteins_100g);
+    if (typeof n.fat_100g === "number") entryFatPer100El.value = Math.round(n.fat_100g);
+    if (typeof n.carbohydrates_100g === "number") entryCarbsPer100El.value = Math.round(n.carbohydrates_100g);
+    resetFoodSearch();
+  }
 
   document.getElementById("manualBtn").addEventListener("click", () => {
     entryModalTitleEl.textContent = "Añadir alimento";
     entryForm.reset();
     entryGramsEl.value = 100;
+    resetFoodSearch();
     openModal(entryModal);
-    setTimeout(() => entryNameEl.focus(), 50);
+    setTimeout(() => foodSearchInputEl.focus(), 50);
   });
   document.getElementById("closeEntryModal").addEventListener("click", () => closeModal(entryModal));
 
@@ -792,7 +869,7 @@
     saveData(state);
     render();
     closeModal(entryModal);
-    showToast("Añadido al tique");
+    showToast("Añadido");
   });
 
   /* ---------- Modal helpers ---------- */
@@ -872,6 +949,7 @@
         entryModalTitleEl.textContent = "Añadir alimento";
         entryForm.reset();
         entryGramsEl.value = 100;
+        resetFoodSearch();
         openModal(entryModal);
         return;
       }
@@ -883,6 +961,7 @@
 
       entryModalTitleEl.textContent = "Confirmar producto";
       entryForm.reset();
+      resetFoodSearch();
       entryNameEl.value = name;
       entryGramsEl.value = 100;
       if (typeof kcalPer100 === "number") {
@@ -1312,6 +1391,59 @@
     return Array.from(tally.values()).sort((a, b) => b.total - a.total).slice(0, 8);
   }
 
+  function hasWorkoutSession(dateKey) {
+    return !!(state.workouts[dateKey] && state.workouts[dateKey].exercises.length > 0);
+  }
+
+  function computeWeeklySessions(days) {
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const chunk = days.slice(i, i + 7);
+      const count = chunk.filter((d) => hasWorkoutSession(d.date)).length;
+      weeks.push({ label: chunk[0].date, count });
+    }
+    return weeks;
+  }
+
+  function buildSessionsChart(weeks) {
+    const h = 100, padBottom = 16;
+    const chartH = h - padBottom;
+    const scrollable = weeks.length > 8;
+    const w = scrollable ? weeks.length * 32 : Math.max(300, weeks.length * 40);
+    const barW = w / weeks.length;
+    const maxVal = Math.max(...weeks.map((wk) => wk.count), 1);
+
+    let bars = "";
+    weeks.forEach((wk, i) => {
+      const barH = (wk.count / maxVal) * chartH;
+      const x = i * barW + barW * 0.2;
+      const bw = barW * 0.6;
+      const y = chartH - barH;
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${wk.count > 0 ? "var(--accent)" : "var(--line)"}"></rect>`;
+    });
+
+    let labels = "";
+    weeks.forEach((wk, i) => {
+      const x = i * barW + barW / 2;
+      labels += `<text x="${x.toFixed(1)}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${formatShortDate(wk.label)}</text>`;
+    });
+
+    const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${bars}${labels}</svg>`;
+  }
+
+  function renderWorkoutAnalytics(days) {
+    const totalSessions = days.filter((d) => hasWorkoutSession(d.date)).length;
+    const weeks = computeWeeklySessions(days);
+    const avgPerWeek = weeks.length ? totalSessions / weeks.length : 0;
+
+    document.getElementById("sessionsStatValue").textContent = totalSessions;
+    document.getElementById("sessionsAvgLine").textContent = `${avgPerWeek.toFixed(1)} por semana de media`;
+
+    const chartEl = document.getElementById("sessionsChart");
+    chartEl.innerHTML = weeks.length > 1 ? buildSessionsChart(weeks) : "";
+  }
+
   function renderAnalytics() {
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
     const { min, max } = state.calorieTarget;
@@ -1347,6 +1479,8 @@
         listEl.appendChild(row);
       });
     }
+
+    renderWorkoutAnalytics(days);
   }
 
   document.querySelectorAll("#analyticsPeriodToggle .segmented-btn").forEach((btn) => {

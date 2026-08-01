@@ -1,7 +1,7 @@
 {
-  "name": "Tique — Contador de calorías",
-  "short_name": "Tique",
-  "description": "Registra lo que comes escaneando el código de barras, como en un tique de la compra.",
+  "name": "Plate — Contador de calorías",
+  "short_name": "Plate",
+  "description": "Registra tus comidas, tu peso y tus entrenamientos.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

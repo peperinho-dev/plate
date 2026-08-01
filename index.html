@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Tique — Contador de calorías</title>
+<title>Plate — Contador de calorías</title>
 <meta name="theme-color" content="#FAFAFB">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Tique">
+<meta name="apple-mobile-web-app-title" content="Plate">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 
@@ -163,6 +163,16 @@
         <div class="log-list" id="topContributorsList"></div>
         <p class="empty-state" id="topContributorsEmpty" hidden>Sin datos en este periodo.</p>
       </div>
+
+      <div class="card">
+        <div class="card-date">Entrenamientos</div>
+        <div class="totals-row">
+          <span class="totals-label">Sesiones</span>
+          <span class="totals-value" id="sessionsStatValue">0</span>
+        </div>
+        <p class="stat-note" id="sessionsAvgLine">—</p>
+        <div id="sessionsChart" class="chart-scroll"></div>
+      </div>
     </main>
   </div>
 
@@ -201,6 +211,15 @@
       <span id="entryModalTitle">Añadir alimento</span>
       <button class="modal-close" id="closeEntryModal" aria-label="Cerrar">✕</button>
     </div>
+
+    <label class="field" id="foodSearchField">
+      <span>Buscar alimento</span>
+      <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
+    </label>
+    <div class="log-list" id="foodSearchResults"></div>
+    <p class="modal-hint" id="foodSearchHint" hidden></p>
+
+    <span class="field-group-label">o a mano</span>
     <form id="entryForm" class="form">
       <label class="field">
         <span>Nombre</span>
@@ -420,6 +439,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

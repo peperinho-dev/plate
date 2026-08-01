@@ -359,6 +359,13 @@ button.row-main { cursor: pointer; }
 }
 .range-status.in-range { color: var(--accent-ink); }
 
+.stat-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 2px 0 14px;
+}
+
 .range { margin-top: 14px; }
 
 .range-track {
@@ -584,13 +591,18 @@ button.row-main { cursor: pointer; }
 }
 
 .field-group-label {
+  display: block;
   font-size: 11px;
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-top: 2px;
+  margin: 2px 0 12px;
 }
+
+#foodSearchField { margin-bottom: 10px; }
+#foodSearchResults:not(:empty) { margin-bottom: 14px; }
+#foodSearchHint:not([hidden]) { margin-bottom: 14px; }
 
 .field input,
 .field select {
