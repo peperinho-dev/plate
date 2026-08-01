@@ -19,10 +19,25 @@
 
   /* ---------- Data layer ---------- */
 
+  // Local-calendar-day helpers. Deliberately never use toISOString() for date
+  // keys — it renders in UTC, which shifts the "day" by however many hours
+  // the local timezone is offset, right around local midnight.
+  function formatDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function parseDateKey(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
   function todayKey(offsetDays = 0) {
     const d = new Date();
     d.setDate(d.getDate() + offsetDays);
-    return d.toISOString().slice(0, 10);
+    return formatDateKey(d);
   }
 
   function defaultProfile() {
@@ -1014,6 +1029,9 @@
   let detectRAF = null;
   let zxingControls = null;
   let zxingReaderPromise = null;
+  let scanSession = 0; // bumped on every start/stop so a slow getUserMedia/zxing
+                        // load that resolves after the modal's been closed (or
+                        // reopened) knows to clean up instead of taking over
 
   function loadZxing() {
     if (!zxingReaderPromise) {
@@ -1031,16 +1049,23 @@
   });
 
   async function startScanner() {
+    const session = ++scanSession;
+    let stream;
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
     } catch (err) {
       console.error(err);
-      scannerHintEl.textContent = "No se pudo acceder a la cámara. Revisa los permisos.";
+      if (session === scanSession) scannerHintEl.textContent = "No se pudo acceder a la cámara. Revisa los permisos.";
+      return;
+    }
+    if (session !== scanSession) {
+      stream.getTracks().forEach((t) => t.stop());
       return;
     }
 
+    mediaStream = stream;
     scannerVideoEl.srcObject = mediaStream;
     await scannerVideoEl.play();
     scanning = true;
@@ -1077,12 +1102,17 @@
       try {
         const { BrowserMultiFormatReader } = await loadZxing();
         const reader = new BrowserMultiFormatReader();
-        zxingControls = await reader.decodeFromVideoElement(scannerVideoEl, (result, err) => {
-          if (result) onScanSuccess(result.getText());
+        const controls = await reader.decodeFromVideoElement(scannerVideoEl, (result, err) => {
+          if (result && session === scanSession) onScanSuccess(result.getText());
         });
+        if (session === scanSession) {
+          zxingControls = controls;
+        } else {
+          controls.stop();
+        }
       } catch (e) {
         console.error(e);
-        scannerHintEl.textContent = "No se pudo cargar el lector de códigos. Comprueba tu conexión.";
+        if (session === scanSession) scannerHintEl.textContent = "No se pudo cargar el lector de códigos. Comprueba tu conexión.";
       }
     }
   }
@@ -1115,6 +1145,7 @@
   });
 
   function stopScanner() {
+    scanSession++; // invalidate any in-flight startScanner() call
     scanning = false;
     if (detectRAF) {
       cancelAnimationFrame(detectRAF);
@@ -1552,11 +1583,21 @@
     if (allKeys.length === 0) return getRecentDays(7);
     const earliest = allKeys.reduce((min, k) => (k < min ? k : min));
 
+    const cursor = parseDateKey(earliest);
+    const end = parseDateKey(todayKey(0));
+
+    // Guard against a corrupted or malformed date key (e.g. from a bad import
+    // file) sending this into a years-long day-by-day loop that freezes the tab.
+    const MAX_DAYS_BACK = 20 * 366;
+    const daysSpan = Math.round((end - cursor) / DAY_MS);
+    if (!(daysSpan >= 0) || daysSpan > MAX_DAYS_BACK) {
+      console.error("getAllDays: implausible date range from", earliest, "— falling back to last 90 days");
+      return getRecentDays(90);
+    }
+
     const result = [];
-    const cursor = new Date(`${earliest}T00:00:00`);
-    const end = new Date(`${todayKey(0)}T00:00:00`);
     while (cursor <= end) {
-      const key = cursor.toISOString().slice(0, 10);
+      const key = formatDateKey(cursor);
       const entries = (state.days[key] && state.days[key].entries) || [];
       const total = entries.reduce((sum, e) => sum + e.calories, 0);
       result.push({ date: key, total, ...dayMacroTotals(entries) });
@@ -1736,7 +1777,7 @@
     let count = 0;
     const cursor = new Date(start);
     while (cursor <= end) {
-      const key = cursor.toISOString().slice(0, 10);
+      const key = formatDateKey(cursor);
       if (hasWorkoutSession(key)) count += 1;
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -1744,14 +1785,14 @@
   }
 
   function computeCurrentWeekProgress() {
-    const today = new Date(`${todayKey(0)}T00:00:00`);
+    const today = parseDateKey(todayKey(0));
     const start = mondayOf(today);
     const goal = state.workoutGoal.weeklySessions;
     return { done: countSessionsBetween(start, today), goal };
   }
 
   function computeCurrentMonthProgress() {
-    const today = new Date(`${todayKey(0)}T00:00:00`);
+    const today = parseDateKey(todayKey(0));
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const weeksInMonth = Math.ceil(daysInMonth / 7);
@@ -1860,16 +1901,16 @@
     const sorted = [...state.weightLog].sort((x, y) => (x.date < y.date ? -1 : 1));
     if (sorted.length < 4) { a.suggestion = null; return; }
 
-    const spanDays = (new Date(sorted[sorted.length - 1].date) - new Date(sorted[0].date)) / DAY_MS;
+    const spanDays = (parseDateKey(sorted[sorted.length - 1].date) - parseDateKey(sorted[0].date)) / DAY_MS;
     if (spanDays < ADAPTIVE_MIN_SPAN_DAYS) { a.suggestion = null; return; }
 
     const withEma = computeEma(sorted);
     const latest = withEma[withEma.length - 1];
-    const cutoff = new Date(latest.date);
+    const cutoff = parseDateKey(latest.date);
     cutoff.setDate(cutoff.getDate() - ADAPTIVE_MIN_SPAN_DAYS);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = formatDateKey(cutoff);
     const refEntry = withEma.find((e) => e.date >= cutoffStr) || withEma[0];
-    const daysBetween = (new Date(latest.date) - new Date(refEntry.date)) / DAY_MS;
+    const daysBetween = (parseDateKey(latest.date) - parseDateKey(refEntry.date)) / DAY_MS;
     if (daysBetween < 7) { a.suggestion = null; return; }
 
     const actualRate = ((latest.ema - refEntry.ema) / daysBetween) * 7;
