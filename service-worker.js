@@ -1,13 +1,13 @@
-const CACHE_NAME = "tique-cache-v14";
+const CACHE_NAME = "tique-cache-v15";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
+  "./manifest.json?v=2",
+  "./icons/icon-192.png?v=2",
+  "./icons/icon-512.png?v=2",
+  "./icons/apple-touch-icon.png?v=2"
 ];
 
 self.addEventListener("install", (event) => {
