@@ -823,7 +823,7 @@ button.row-main { cursor: pointer; }
 }
 .field-row .field { flex: 1; }
 .field-row .btn { flex: 1; }
-.field-row .btn--icon-only { flex: 0 0 52px; font-size: 20px; }
+.field-row .btn--icon-only { flex: 0 0 52px; font-size: 20px; align-self: flex-end; }
 
 .segmented {
   display: flex;

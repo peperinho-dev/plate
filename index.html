@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 
@@ -47,31 +47,6 @@
   <main class="content">
     <div class="card">
       <div class="card-date" id="fullDateLabel">—</div>
-
-      <div class="quick-section" id="favoritesSection" hidden>
-        <div class="quick-label-row">
-          <div class="quick-label">★ Favoritos</div>
-          <button type="button" class="link-btn link-btn--muted" id="favoritesEditToggle">Editar</button>
-        </div>
-        <div class="quick-row" id="favoritesRow"></div>
-      </div>
-
-      <div class="quick-section" id="recipesSection">
-        <div class="quick-label-row">
-          <div class="quick-label">Recetas</div>
-          <div class="quick-label-actions">
-            <button type="button" class="link-btn" id="addRecipeBtn">+ Nueva</button>
-            <button type="button" class="link-btn link-btn--muted" id="recipesEditToggle" hidden>Editar</button>
-          </div>
-        </div>
-        <div class="quick-row" id="recipesRow"></div>
-        <p class="quick-empty-hint" id="recipesEmptyHint" hidden>Sin recetas todavía.</p>
-      </div>
-
-      <div class="quick-section" id="quickSection" hidden>
-        <div class="quick-label">Rápido</div>
-        <div class="quick-row" id="quickRow"></div>
-      </div>
 
       <div class="log-list" id="entryList"></div>
       <div class="empty-state" id="emptyState">
@@ -273,11 +248,38 @@
       <button class="modal-close" id="closeEntryModal" aria-label="Cerrar">✕</button>
     </div>
 
+    <div id="foodBrowseSection">
+      <div class="quick-section" id="browseFavoritesRow" hidden>
+        <div class="quick-label-row">
+          <div class="quick-label">★ Favoritos</div>
+          <button type="button" class="link-btn link-btn--muted" id="favoritesEditToggle">Editar</button>
+        </div>
+        <div class="quick-row" id="modalFavoritesRow"></div>
+      </div>
+      <div class="quick-section" id="browseRecipesRow" hidden>
+        <div class="quick-label-row">
+          <div class="quick-label">Recetas</div>
+          <div class="quick-label-actions">
+            <button type="button" class="link-btn" id="addRecipeBtn">+ Nueva</button>
+            <button type="button" class="link-btn link-btn--muted" id="recipesEditToggle">Editar</button>
+          </div>
+        </div>
+        <div class="quick-row" id="modalRecipesRow"></div>
+      </div>
+      <div class="quick-section" id="browseRecentRow" hidden>
+        <div class="quick-label">Recientes</div>
+        <div class="quick-row" id="modalRecentRow"></div>
+      </div>
+    </div>
+
     <div id="foodSearchSection">
-      <label class="field" id="foodSearchField">
-        <span>Buscar alimento</span>
-        <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
-      </label>
+      <div class="field-row" id="foodSearchFieldRow">
+        <label class="field" id="foodSearchField">
+          <span>Buscar alimento</span>
+          <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
+        </label>
+        <button type="button" class="btn btn--secondary btn--icon-only" id="modalScanBtn" aria-label="Escanear código de barras">▤</button>
+      </div>
       <div class="log-list" id="foodSearchResults"></div>
       <p class="modal-hint" id="foodSearchHint" hidden></p>
       <span class="field-group-label">o a mano</span>
@@ -347,34 +349,7 @@
     <div class="log-list" id="recipeIngredientsList"></div>
     <p class="empty-state" id="recipeIngredientsEmpty">Añade al menos un ingrediente.</p>
 
-    <form id="recipeIngredientForm" class="form form--divided">
-      <label class="field">
-        <span>Nombre del ingrediente</span>
-        <input type="text" id="recipeIngName" placeholder="p. ej. Pechuga de pollo">
-      </label>
-      <div class="field-row">
-        <label class="field">
-          <span>kcal</span>
-          <input type="number" id="recipeIngKcal" min="0" step="1" inputmode="decimal">
-        </label>
-        <label class="field">
-          <span>Proteína</span>
-          <input type="number" id="recipeIngProtein" min="0" step="1" inputmode="decimal">
-        </label>
-      </div>
-      <div class="field-row">
-        <label class="field">
-          <span>Grasa</span>
-          <input type="number" id="recipeIngFat" min="0" step="1" inputmode="decimal">
-        </label>
-        <label class="field">
-          <span>Carbos</span>
-          <input type="number" id="recipeIngCarbs" min="0" step="1" inputmode="decimal">
-        </label>
-      </div>
-      <button type="submit" class="btn btn--secondary btn--block">+ Añadir ingrediente</button>
-    </form>
-
+    <button type="button" class="btn btn--secondary btn--block" id="addRecipeIngredientBtn">+ Añadir ingrediente</button>
     <button type="button" class="btn btn--primary btn--block" id="saveRecipeBtn">Guardar receta</button>
   </div>
 </div>
@@ -561,6 +536,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>

@@ -230,14 +230,15 @@
   const entryListEl = document.getElementById("entryList");
   const emptyStateEl = document.getElementById("emptyState");
   const copyYesterdayBtnEl = document.getElementById("copyYesterdayBtn");
-  const quickSectionEl = document.getElementById("quickSection");
-  const quickRowEl = document.getElementById("quickRow");
-  const favoritesSectionEl = document.getElementById("favoritesSection");
-  const favoritesRowEl = document.getElementById("favoritesRow");
+  const foodBrowseSectionEl = document.getElementById("foodBrowseSection");
+  const browseFavoritesRowEl = document.getElementById("browseFavoritesRow");
+  const modalFavoritesRowEl = document.getElementById("modalFavoritesRow");
   const favoritesEditToggleEl = document.getElementById("favoritesEditToggle");
-  const recipesRowEl = document.getElementById("recipesRow");
-  const recipesEmptyHintEl = document.getElementById("recipesEmptyHint");
+  const browseRecipesRowEl = document.getElementById("browseRecipesRow");
+  const modalRecipesRowEl = document.getElementById("modalRecipesRow");
   const recipesEditToggleEl = document.getElementById("recipesEditToggle");
+  const browseRecentRowEl = document.getElementById("browseRecentRow");
+  const modalRecentRowEl = document.getElementById("modalRecentRow");
   const totalKcalEl = document.getElementById("totalKcal");
   const rangeStatusLineEl = document.getElementById("rangeStatusLine");
   const rangeBandFillEl = document.getElementById("rangeBandFill");
@@ -365,8 +366,6 @@
 
     dateLabelEl.textContent = label.short;
     fullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, c => c.toUpperCase());
-
-    renderQuickAdd();
 
     if (entries.length === 0) {
       entryListEl.innerHTML = "";
@@ -498,32 +497,39 @@
     });
   }
 
-  function renderQuickAdd() {
-    const items = computeFrequentItems();
-    quickRowEl.innerHTML = "";
-    if (items.length === 0) {
-      quickSectionEl.hidden = true;
-    } else {
-      quickSectionEl.hidden = false;
-      items.forEach((item) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "quick-chip";
-        chip.innerHTML = `
-          <span class="quick-chip-name">${escapeHtml(item.name)}</span>
-          <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
-        `;
-        chip.addEventListener("click", () => {
-          addEntryToCurrentDay(item);
-          saveData(state);
-          render();
-          showToast("Añadido");
-        });
-        quickRowEl.appendChild(chip);
+  // Where a food selected/logged from the add-food modal should go: either
+  // straight into today's log ("log"), or into the recipe currently being
+  // built ("recipe-ingredient") — see the recipe builder section below.
+  let foodBrowseContext = "log";
+
+  function commitFoodItem(item) {
+    if (foodBrowseContext === "recipe-ingredient") {
+      draftRecipeItems.push({
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein || 0,
+        fat: item.fat || 0,
+        carbs: item.carbs || 0
       });
+      closeModal(entryModal);
+      renderRecipeIngredients();
+      openModal(recipeModal);
+      showToast("Ingrediente añadido");
+      return;
     }
-    renderFavorites();
-    renderRecipes();
+    addEntryToCurrentDay(item);
+    saveData(state);
+    render();
+    closeModal(entryModal);
+    showToast("Añadido");
+  }
+
+  // Renders the "browse" rows shown in the add-food modal before you type
+  // anything: favorites, saved recipes, and recently/frequently logged foods.
+  function renderFoodBrowseSection() {
+    renderModalFavorites();
+    renderModalRecipes();
+    renderModalRecent();
   }
 
   let favoritesEditMode = false;
@@ -532,24 +538,24 @@
   favoritesEditToggleEl.addEventListener("click", () => {
     favoritesEditMode = !favoritesEditMode;
     favoritesEditToggleEl.textContent = favoritesEditMode ? "Listo" : "Editar";
-    renderFavorites();
+    renderModalFavorites();
   });
 
   recipesEditToggleEl.addEventListener("click", () => {
     recipesEditMode = !recipesEditMode;
     recipesEditToggleEl.textContent = recipesEditMode ? "Listo" : "Editar";
-    renderRecipes();
+    renderModalRecipes();
   });
 
-  function renderFavorites() {
-    favoritesRowEl.innerHTML = "";
+  function renderModalFavorites() {
+    modalFavoritesRowEl.innerHTML = "";
     if (state.favorites.length === 0) {
-      favoritesSectionEl.hidden = true;
+      browseFavoritesRowEl.hidden = true;
       favoritesEditMode = false;
       favoritesEditToggleEl.textContent = "Editar";
       return;
     }
-    favoritesSectionEl.hidden = false;
+    browseFavoritesRowEl.hidden = false;
     state.favorites.forEach((fav) => {
       const chip = document.createElement("button");
       chip.type = "button";
@@ -563,15 +569,12 @@
         if (favoritesEditMode) {
           state.favorites = state.favorites.filter((f) => f.id !== fav.id);
           saveData(state);
-          renderFavorites();
+          renderModalFavorites();
           return;
         }
-        addEntryToCurrentDay(fav);
-        saveData(state);
-        render();
-        showToast("Añadido");
+        commitFoodItem(fav);
       });
-      favoritesRowEl.appendChild(chip);
+      modalFavoritesRowEl.appendChild(chip);
     });
   }
 
@@ -597,16 +600,21 @@
     });
   }
 
-  function renderRecipes() {
-    recipesRowEl.innerHTML = "";
+  function renderModalRecipes() {
+    modalRecipesRowEl.innerHTML = "";
+    // Recipes can't contain other recipes as ingredients, so this whole row
+    // is hidden while adding an ingredient to a recipe being built.
+    if (foodBrowseContext === "recipe-ingredient") {
+      browseRecipesRowEl.hidden = true;
+      return;
+    }
+    browseRecipesRowEl.hidden = false;
     recipesEditToggleEl.hidden = state.recipes.length === 0;
     if (state.recipes.length === 0) {
-      recipesEmptyHintEl.hidden = false;
       recipesEditMode = false;
       recipesEditToggleEl.textContent = "Editar";
       return;
     }
-    recipesEmptyHintEl.hidden = true;
     state.recipes.forEach((recipe) => {
       const totalKcal = recipe.items.reduce((sum, it) => sum + it.calories, 0);
       const chip = document.createElement("button");
@@ -621,15 +629,37 @@
         if (recipesEditMode) {
           state.recipes = state.recipes.filter((r) => r.id !== recipe.id);
           saveData(state);
-          renderRecipes();
+          renderModalRecipes();
           return;
         }
         logRecipe(recipe);
         saveData(state);
         render();
+        closeModal(entryModal);
         showToast("Receta añadida");
       });
-      recipesRowEl.appendChild(chip);
+      modalRecipesRowEl.appendChild(chip);
+    });
+  }
+
+  function renderModalRecent() {
+    const items = computeFrequentItems();
+    modalRecentRowEl.innerHTML = "";
+    if (items.length === 0) {
+      browseRecentRowEl.hidden = true;
+      return;
+    }
+    browseRecentRowEl.hidden = false;
+    items.forEach((item) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-chip";
+      chip.innerHTML = `
+        <span class="quick-chip-name">${escapeHtml(item.name)}</span>
+        <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
+      `;
+      chip.addEventListener("click", () => commitFoodItem(item));
+      modalRecentRowEl.appendChild(chip);
     });
   }
 
@@ -823,12 +853,6 @@
   const recipeNameInputEl = document.getElementById("recipeNameInput");
   const recipeIngredientsListEl = document.getElementById("recipeIngredientsList");
   const recipeIngredientsEmptyEl = document.getElementById("recipeIngredientsEmpty");
-  const recipeIngredientForm = document.getElementById("recipeIngredientForm");
-  const recipeIngNameEl = document.getElementById("recipeIngName");
-  const recipeIngKcalEl = document.getElementById("recipeIngKcal");
-  const recipeIngProteinEl = document.getElementById("recipeIngProtein");
-  const recipeIngFatEl = document.getElementById("recipeIngFat");
-  const recipeIngCarbsEl = document.getElementById("recipeIngCarbs");
 
   let draftRecipeItems = [];
 
@@ -860,31 +884,16 @@
   document.getElementById("addRecipeBtn").addEventListener("click", () => {
     draftRecipeItems = [];
     recipeNameInputEl.value = "";
-    recipeIngredientForm.reset();
     renderRecipeIngredients();
+    closeModal(entryModal);
     openModal(recipeModal);
     setTimeout(() => recipeNameInputEl.focus(), 50);
   });
   document.getElementById("closeRecipeModal").addEventListener("click", () => closeModal(recipeModal));
 
-  recipeIngredientForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const name = recipeIngNameEl.value.trim();
-    const kcal = parseFloat(recipeIngKcalEl.value);
-    if (!name || isNaN(kcal) || kcal < 0) {
-      showToast("Indica nombre y kcal del ingrediente");
-      return;
-    }
-    draftRecipeItems.push({
-      name,
-      calories: kcal,
-      protein: parseFloat(recipeIngProteinEl.value) || 0,
-      fat: parseFloat(recipeIngFatEl.value) || 0,
-      carbs: parseFloat(recipeIngCarbsEl.value) || 0
-    });
-    renderRecipeIngredients();
-    recipeIngredientForm.reset();
-    recipeIngNameEl.focus();
+  document.getElementById("addRecipeIngredientBtn").addEventListener("click", () => {
+    closeModal(recipeModal);
+    openAddFoodModal("recipe-ingredient");
   });
 
   document.getElementById("saveRecipeBtn").addEventListener("click", () => {
@@ -904,7 +913,7 @@
       createdAt: Date.now()
     });
     saveData(state);
-    renderRecipes();
+    renderModalRecipes();
     closeModal(recipeModal);
     showToast("Receta guardada");
   });
@@ -1125,6 +1134,7 @@
     clearTimeout(foodSearchDebounce);
     const query = foodSearchInputEl.value.trim();
     foodSearchResultsEl.innerHTML = "";
+    foodBrowseSectionEl.hidden = query.length > 0;
     if (query.length < 2) {
       foodSearchHintEl.hidden = true;
       return;
@@ -1178,6 +1188,7 @@
     entryModalTitleEl.textContent = "Confirmar producto";
     entryForm.reset();
     setEntryFormMode(false);
+    foodBrowseSectionEl.hidden = true;
     entryNameEl.value = name;
     entryGramsEl.value = 100;
     entryKcalPer100El.value = kcal;
@@ -1191,6 +1202,7 @@
 
   function setEntryFormMode(isEditing) {
     foodSearchSectionEl.hidden = isEditing;
+    foodBrowseSectionEl.hidden = isEditing;
     entryPer100RowEl.hidden = isEditing;
     entryKcalTotalLabelEl.textContent = isEditing ? "kcal totales" : "o directamente, kcal totales";
     entryMacrosLabelEl.textContent = isEditing ? "Macros (totales, opcional)" : "Macros por 100 g (opcional)";
@@ -1215,18 +1227,32 @@
     openModal(entryModal);
   }
 
-  document.getElementById("manualBtn").addEventListener("click", () => {
+  // The single entry point for the add-food modal, used both for logging to
+  // today and (via foodBrowseContext) for picking a recipe ingredient.
+  function openAddFoodModal(context) {
+    foodBrowseContext = context;
     editingEntryId = null;
     entryModalTitleEl.textContent = "Añadir alimento";
     entryForm.reset();
     entryGramsEl.value = 100;
     resetFoodSearch();
     setEntryFormMode(false);
+    foodBrowseSectionEl.hidden = false;
+    renderFoodBrowseSection();
     updateLivePreview();
     openModal(entryModal);
     setTimeout(() => foodSearchInputEl.focus(), 50);
+  }
+
+  document.getElementById("manualBtn").addEventListener("click", () => openAddFoodModal("log"));
+
+  document.getElementById("closeEntryModal").addEventListener("click", () => {
+    closeModal(entryModal);
+    if (foodBrowseContext === "recipe-ingredient") {
+      foodBrowseContext = "log";
+      openModal(recipeModal);
+    }
   });
-  document.getElementById("closeEntryModal").addEventListener("click", () => closeModal(entryModal));
 
   function readEntryFormValues() {
     const name = entryNameEl.value.trim();
@@ -1282,16 +1308,7 @@
       return;
     }
 
-    const entries = currentDayEntries();
-    entries.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      ...values,
-      addedAt: Date.now()
-    });
-    saveData(state);
-    render();
-    closeModal(entryModal);
-    showToast("Añadido");
+    commitFoodItem(values);
   });
 
   entryFavoriteBtnEl.addEventListener("click", () => {
@@ -1306,7 +1323,7 @@
       addedAt: Date.now()
     });
     saveData(state);
-    renderQuickAdd();
+    renderModalFavorites();
     showToast("Guardado en favoritos");
   });
 
@@ -1356,12 +1373,18 @@
     return zxingReaderPromise;
   }
 
-  document.getElementById("scanBtn").addEventListener("click", async () => {
+  async function openScanner() {
     scannerManualFormEl.hidden = true;
     scannerManualToggleEl.textContent = "Introducir código a mano";
     openModal(scanModal);
     scannerHintEl.textContent = "Apunta al código de barras del producto.";
     await startScanner();
+  }
+
+  document.getElementById("scanBtn").addEventListener("click", openScanner);
+  document.getElementById("modalScanBtn").addEventListener("click", () => {
+    closeModal(entryModal);
+    openScanner();
   });
 
   async function startScanner() {
@@ -1500,6 +1523,7 @@
 
       editingEntryId = null;
       setEntryFormMode(false);
+      foodBrowseSectionEl.hidden = true;
 
       if (data.status !== 1 || !data.product) {
         showToast("Producto no encontrado. Añádelo a mano.");
