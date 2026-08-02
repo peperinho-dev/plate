@@ -1125,6 +1125,137 @@ button.row-main:active { opacity: 0.55; }
 
 #scannerManualForm { margin-top: 12px; }
 
+/* ---------- Timer builder (interval rows) ---------- */
+.timer-interval-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.row-move {
+  background: var(--surface-alt);
+  border: none;
+  color: var(--ink-faint);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.12s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.row-move:disabled { opacity: 0.3; }
+.row-move:not(:disabled):active { background: var(--line); transform: scale(0.88); }
+
+/* ---------- Timer run (warmup / stretch playback) ---------- */
+.timer-run {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0 8px;
+}
+
+.timer-run-step {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+}
+
+.timer-run-ring-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  max-width: 100%;
+  margin-bottom: 18px;
+}
+.timer-run-ring-wrap.timer-run-flash { animation: timerRunFlash 0.4s ease; }
+@keyframes timerRunFlash {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+
+.timer-run-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.timer-run-ring-track {
+  fill: none;
+  stroke: var(--surface-alt);
+  stroke-width: 12;
+}
+.timer-run-ring-progress {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s linear;
+}
+.timer-run-ring-progress--stretch { stroke: var(--macro-carbs); }
+
+.timer-run-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 0 20px;
+}
+.timer-run-time {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.timer-run-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.timer-run-next {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 20px;
+  text-align: center;
+}
+
+.timer-run-controls {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.timer-run-btn {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.timer-run-btn--secondary { background: var(--surface-alt); color: var(--ink); }
+.timer-run-btn--primary { background: var(--accent); color: #fff; }
+.timer-run-btn:active { transform: scale(0.96); }
+.timer-run-controls.is-complete .timer-run-btn--pause,
+.timer-run-controls.is-complete .timer-run-btn--skip,
+.timer-run-controls.is-complete .timer-run-btn--stop { display: none; }
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
@@ -1155,6 +1286,7 @@ button:focus-visible, input:focus-visible {
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .row, .modal-sheet, .toast, .modal, .view, .tab-btn .tab-icon, .hour-chevron,
-  .chart-scroll svg, .scanner-frame::after, .modal-hint--loading { animation: none !important; transition: none !important; }
+  .chart-scroll svg, .scanner-frame::after, .modal-hint--loading,
+  .timer-run-ring-wrap, .timer-run-ring-progress { animation: none !important; transition: none !important; }
   .scanner-frame::after { opacity: 0.6; top: 50%; }
 }

@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "tique-data-v1";
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const SCHEMA_VERSION = 7;
+  const SCHEMA_VERSION = 8;
   const ADAPTIVE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADAPTIVE_MIN_SPAN_DAYS = 14;
   const ADAPTIVE_THRESHOLD_KG_PER_WEEK = 0.15;
@@ -80,6 +80,7 @@
       favorites: [],
       recipes: [],
       routines: [],
+      timers: [],
       onboardingShown: false
     };
   }
@@ -120,6 +121,7 @@
     if (!data.favorites) data.favorites = [];
     if (!data.recipes) data.recipes = [];
     if (!data.routines) data.routines = [];
+    if (!data.timers) data.timers = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
     return data;
   }
@@ -1468,6 +1470,7 @@
       if (modal.id === "entryModal") closeEntryModalAndReturn();
       else closeModal(modal);
       if (modal.id === "exerciseDetailModal") stopRestTimer();
+      if (modal.id === "timerRunModal") stopTimerRunEngine();
     });
   });
 
@@ -1749,6 +1752,12 @@
     return state.workouts[key].exercises;
   }
 
+  function ensureTimerLogs(dayKey) {
+    if (!state.workouts[dayKey]) state.workouts[dayKey] = { exercises: [] };
+    if (!state.workouts[dayKey].timerLogs) state.workouts[dayKey].timerLogs = [];
+    return state.workouts[dayKey].timerLogs;
+  }
+
   function computeFrequentExercises(limit = 8) {
     const tally = new Map();
     Object.values(state.workouts).forEach((day) => {
@@ -1888,6 +1897,8 @@
     const sessions = countWorkoutSessions();
     sessionCountChipEl.textContent = `${sessions} ${sessions === 1 ? "sesión" : "sesiones"}`;
 
+    renderTimerLogList();
+    renderTimerQuickRows();
     renderRoutineQuickRow();
     renderExerciseQuickAdd();
 
@@ -2066,6 +2077,363 @@
     showToast("Rutina guardada");
   });
 
+  /* ---------- Timer builder modal (warmup / stretch) ---------- */
+
+  const timerBuilderModal = document.getElementById("timerBuilderModal");
+  const timerBuilderTitleEl = document.getElementById("timerBuilderTitle");
+  const timerNameInputEl = document.getElementById("timerNameInput");
+  const timerIntervalsListEl = document.getElementById("timerIntervalsList");
+  const timerIntervalsEmptyEl = document.getElementById("timerIntervalsEmpty");
+  const timerIntervalNameInputEl = document.getElementById("timerIntervalNameInput");
+  const timerIntervalSecondsInputEl = document.getElementById("timerIntervalSecondsInput");
+
+  const warmupQuickSectionEl = document.getElementById("warmupQuickSection");
+  const warmupTimerQuickRowEl = document.getElementById("warmupTimerQuickRow");
+  const warmupTimersEditToggleEl = document.getElementById("warmupTimersEditToggle");
+  const stretchQuickSectionEl = document.getElementById("stretchQuickSection");
+  const stretchTimerQuickRowEl = document.getElementById("stretchTimerQuickRow");
+  const stretchTimersEditToggleEl = document.getElementById("stretchTimersEditToggle");
+
+  let draftTimerIntervals = [];
+  let draftTimerCategory = "warmup";
+  let warmupTimersEditMode = false;
+  let stretchTimersEditMode = false;
+
+  function timerTotalSeconds(timer) {
+    return timer.intervals.reduce((sum, iv) => sum + iv.seconds, 0);
+  }
+
+  function renderTimerIntervals() {
+    timerIntervalsListEl.innerHTML = "";
+    timerIntervalsEmptyEl.hidden = draftTimerIntervals.length > 0;
+    draftTimerIntervals.forEach((iv, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="row-main">
+          <span class="row-name">${escapeHtml(iv.name)}</span>
+          <span class="row-qty">${formatDuration(iv.seconds)}</span>
+        </div>
+        <div class="timer-interval-actions">
+          <button type="button" class="row-move" data-index="${i}" data-dir="up" aria-label="Subir" ${i === 0 ? "disabled" : ""}>${ICON_CHEVRON_DOWN}</button>
+          <button type="button" class="row-move" data-index="${i}" data-dir="down" aria-label="Bajar" ${i === draftTimerIntervals.length - 1 ? "disabled" : ""}>${ICON_CHEVRON_DOWN}</button>
+          <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">${ICON_X}</button>
+        </div>
+      `;
+      timerIntervalsListEl.appendChild(row);
+    });
+    timerIntervalsListEl.querySelectorAll('.row-move[data-dir="up"]').forEach((b) => {
+      b.style.transform = "rotate(180deg)";
+    });
+  }
+
+  timerIntervalsListEl.addEventListener("click", (e) => {
+    const delBtn = e.target.closest(".row-del");
+    if (delBtn) {
+      draftTimerIntervals.splice(parseInt(delBtn.dataset.index, 10), 1);
+      renderTimerIntervals();
+      return;
+    }
+    const moveBtn = e.target.closest(".row-move");
+    if (moveBtn && !moveBtn.disabled) {
+      const idx = parseInt(moveBtn.dataset.index, 10);
+      const swapWith = moveBtn.dataset.dir === "up" ? idx - 1 : idx + 1;
+      [draftTimerIntervals[idx], draftTimerIntervals[swapWith]] = [draftTimerIntervals[swapWith], draftTimerIntervals[idx]];
+      renderTimerIntervals();
+    }
+  });
+
+  function addDraftTimerInterval() {
+    const name = timerIntervalNameInputEl.value.trim();
+    const seconds = parseInt(timerIntervalSecondsInputEl.value, 10);
+    if (!name || !(seconds > 0)) {
+      showToast("Indica nombre y duración");
+      return;
+    }
+    draftTimerIntervals.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, seconds });
+    timerIntervalNameInputEl.value = "";
+    timerIntervalSecondsInputEl.value = "";
+    renderTimerIntervals();
+    timerIntervalNameInputEl.focus();
+  }
+  document.getElementById("addTimerIntervalBtn").addEventListener("click", addDraftTimerInterval);
+  timerIntervalSecondsInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addDraftTimerInterval();
+    }
+  });
+
+  function openTimerBuilder(category) {
+    draftTimerCategory = category;
+    draftTimerIntervals = [];
+    timerNameInputEl.value = "";
+    timerIntervalNameInputEl.value = "";
+    timerIntervalSecondsInputEl.value = "";
+    timerBuilderTitleEl.textContent = category === "warmup" ? "Nuevo calentamiento" : "Nuevo estiramiento";
+    renderTimerIntervals();
+    openModal(timerBuilderModal);
+    setTimeout(() => timerNameInputEl.focus(), 50);
+  }
+  document.getElementById("addWarmupTimerBtn").addEventListener("click", () => openTimerBuilder("warmup"));
+  document.getElementById("addStretchTimerBtn").addEventListener("click", () => openTimerBuilder("stretch"));
+  document.getElementById("closeTimerBuilderModal").addEventListener("click", () => closeModal(timerBuilderModal));
+
+  document.getElementById("saveTimerBtn").addEventListener("click", () => {
+    const name = timerNameInputEl.value.trim();
+    if (!name) {
+      showToast("Indica el nombre del temporizador");
+      return;
+    }
+    if (draftTimerIntervals.length === 0) {
+      showToast("Añade al menos un intervalo");
+      return;
+    }
+    state.timers.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      category: draftTimerCategory,
+      intervals: draftTimerIntervals,
+      createdAt: Date.now()
+    });
+    saveData(state);
+    renderTimerQuickRows();
+    closeModal(timerBuilderModal);
+    showToast("Temporizador guardado");
+  });
+
+  function renderTimerCategoryRow(category, sectionEl, rowEl, editToggleEl, isEditMode, setEditMode) {
+    const items = state.timers.filter((t) => t.category === category);
+    rowEl.innerHTML = "";
+    sectionEl.hidden = false;
+    editToggleEl.hidden = items.length === 0;
+    if (items.length === 0) {
+      setEditMode(false);
+      editToggleEl.textContent = "Editar";
+      return;
+    }
+    items.forEach((timer) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-chip";
+      chip.innerHTML = `
+        <span class="quick-chip-name">${escapeHtml(timer.name)}</span>
+        <span class="quick-chip-kcal">${formatDuration(timerTotalSeconds(timer))}</span>
+        ${isEditMode() ? `<span class="quick-chip-del" aria-label="Quitar">${ICON_X}</span>` : ""}
+      `;
+      chip.addEventListener("click", () => {
+        if (isEditMode()) {
+          state.timers = state.timers.filter((t) => t.id !== timer.id);
+          saveData(state);
+          renderTimerQuickRows();
+          return;
+        }
+        openTimerRun(timer);
+      });
+      rowEl.appendChild(chip);
+    });
+  }
+
+  function renderTimerQuickRows() {
+    renderTimerCategoryRow(
+      "warmup", warmupQuickSectionEl, warmupTimerQuickRowEl, warmupTimersEditToggleEl,
+      () => warmupTimersEditMode, (v) => { warmupTimersEditMode = v; }
+    );
+    renderTimerCategoryRow(
+      "stretch", stretchQuickSectionEl, stretchTimerQuickRowEl, stretchTimersEditToggleEl,
+      () => stretchTimersEditMode, (v) => { stretchTimersEditMode = v; }
+    );
+  }
+
+  warmupTimersEditToggleEl.addEventListener("click", () => {
+    warmupTimersEditMode = !warmupTimersEditMode;
+    warmupTimersEditToggleEl.textContent = warmupTimersEditMode ? "Listo" : "Editar";
+    renderTimerQuickRows();
+  });
+  stretchTimersEditToggleEl.addEventListener("click", () => {
+    stretchTimersEditMode = !stretchTimersEditMode;
+    stretchTimersEditToggleEl.textContent = stretchTimersEditMode ? "Listo" : "Editar";
+    renderTimerQuickRows();
+  });
+
+  /* ---------- Timer log list (completed warmups/stretches for the day) ---------- */
+
+  const timerLogListEl = document.getElementById("timerLogList");
+
+  function renderTimerLogList() {
+    const logs = ensureTimerLogs(currentWorkoutDayKey());
+    timerLogListEl.innerHTML = "";
+    logs.forEach((log) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="row-main">
+          <span class="row-name">${escapeHtml(log.name)}</span>
+          <span class="row-qty">${log.category === "warmup" ? "Calentamiento" : "Estiramiento"} · ${formatDuration(log.totalSeconds)}</span>
+        </div>
+        <button class="row-del" type="button" data-id="${log.id}" aria-label="Quitar">${ICON_X}</button>
+      `;
+      timerLogListEl.appendChild(row);
+    });
+  }
+
+  timerLogListEl.addEventListener("click", (e) => {
+    const delBtn = e.target.closest(".row-del");
+    if (!delBtn) return;
+    const logs = ensureTimerLogs(currentWorkoutDayKey());
+    const idx = logs.findIndex((l) => l.id === delBtn.dataset.id);
+    if (idx >= 0) {
+      logs.splice(idx, 1);
+      saveData(state);
+      renderTimerLogList();
+    }
+  });
+
+  /* ---------- Timer run (warmup / stretch playback) ---------- */
+
+  const timerRunModal = document.getElementById("timerRunModal");
+  const timerRunTitleEl = document.getElementById("timerRunTitle");
+  const timerRunStepLabelEl = document.getElementById("timerRunStepLabel");
+  const timerRunRingWrapEl = document.getElementById("timerRunRingWrap");
+  const timerRunRingProgressEl = document.getElementById("timerRunRingProgress");
+  const timerRunTimeEl = document.getElementById("timerRunTime");
+  const timerRunIntervalNameEl = document.getElementById("timerRunIntervalName");
+  const timerRunNextEl = document.getElementById("timerRunNext");
+  const timerRunControlsEl = document.getElementById("timerRunControls");
+  const timerRunPauseBtnEl = document.getElementById("timerRunPauseBtn");
+  const timerRunSkipBtnEl = document.getElementById("timerRunSkipBtn");
+  const timerRunStopBtnEl = document.getElementById("timerRunStopBtn");
+
+  const TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * 90;
+  timerRunRingProgressEl.style.strokeDasharray = `${TIMER_RING_CIRCUMFERENCE}`;
+
+  let runningTimer = null;
+  let runningIntervalIndex = 0;
+  let runningRemaining = 0;
+  let runningTickHandle = null;
+  let runningWakeLock = null;
+
+  function acquireWakeLock() {
+    if (!("wakeLock" in navigator)) return;
+    navigator.wakeLock.request("screen").then((lock) => { runningWakeLock = lock; }).catch(() => {});
+  }
+  function releaseWakeLock() {
+    if (runningWakeLock) {
+      runningWakeLock.release().catch(() => {});
+      runningWakeLock = null;
+    }
+  }
+
+  function updateTimerRunUI() {
+    const iv = runningTimer.intervals[runningIntervalIndex];
+    timerRunStepLabelEl.textContent = `Paso ${runningIntervalIndex + 1} de ${runningTimer.intervals.length}`;
+    timerRunTimeEl.textContent = formatDuration(runningRemaining);
+    timerRunIntervalNameEl.textContent = iv.name;
+    const next = runningTimer.intervals[runningIntervalIndex + 1];
+    timerRunNextEl.textContent = next ? `Después: ${next.name} · ${formatDuration(next.seconds)}` : "Último paso";
+    const fraction = (iv.seconds - runningRemaining) / iv.seconds;
+    timerRunRingProgressEl.style.strokeDashoffset = `${TIMER_RING_CIRCUMFERENCE * (1 - fraction)}`;
+  }
+
+  function flashTimerRing() {
+    timerRunRingWrapEl.classList.remove("timer-run-flash");
+    void timerRunRingWrapEl.offsetWidth;
+    timerRunRingWrapEl.classList.add("timer-run-flash");
+  }
+
+  function stopTimerTicking() {
+    if (runningTickHandle) {
+      clearInterval(runningTickHandle);
+      runningTickHandle = null;
+    }
+  }
+
+  function advanceTimerRun() {
+    runningIntervalIndex += 1;
+    if (runningIntervalIndex >= runningTimer.intervals.length) {
+      finishTimerRun();
+      return;
+    }
+    runningRemaining = runningTimer.intervals[runningIntervalIndex].seconds;
+    updateTimerRunUI();
+    flashTimerRing();
+  }
+
+  function tickTimerRun() {
+    runningRemaining -= 1;
+    if (runningRemaining <= 0) {
+      advanceTimerRun();
+      return;
+    }
+    updateTimerRunUI();
+  }
+
+  function finishTimerRun() {
+    stopTimerTicking();
+    releaseWakeLock();
+    const totalSeconds = timerTotalSeconds(runningTimer);
+    const logs = ensureTimerLogs(currentWorkoutDayKey());
+    logs.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: runningTimer.name,
+      category: runningTimer.category,
+      totalSeconds,
+      completedAt: Date.now()
+    });
+    saveData(state);
+    renderTimerLogList();
+    timerRunStepLabelEl.textContent = `${runningTimer.intervals.length} de ${runningTimer.intervals.length}`;
+    timerRunTimeEl.textContent = "0:00";
+    timerRunIntervalNameEl.textContent = "¡Hecho!";
+    timerRunNextEl.textContent = `Total: ${formatDuration(totalSeconds)}`;
+    timerRunRingProgressEl.style.strokeDashoffset = "0";
+    timerRunControlsEl.classList.add("is-complete");
+    showToast(`${runningTimer.name} completado`);
+  }
+
+  function openTimerRun(timer) {
+    runningTimer = timer;
+    runningIntervalIndex = 0;
+    runningRemaining = timer.intervals[0].seconds;
+    timerRunPauseBtnEl.textContent = "Pausar";
+    timerRunControlsEl.classList.remove("is-complete");
+    timerRunRingProgressEl.classList.toggle("timer-run-ring-progress--stretch", timer.category === "stretch");
+    timerRunTitleEl.textContent = timer.name;
+    updateTimerRunUI();
+    openModal(timerRunModal);
+    stopTimerTicking();
+    runningTickHandle = setInterval(tickTimerRun, 1000);
+    acquireWakeLock();
+  }
+
+  function stopTimerRunEngine() {
+    stopTimerTicking();
+    releaseWakeLock();
+  }
+
+  timerRunPauseBtnEl.addEventListener("click", () => {
+    if (timerRunControlsEl.classList.contains("is-complete")) return;
+    if (runningTickHandle) {
+      stopTimerTicking();
+      timerRunPauseBtnEl.textContent = "Reanudar";
+    } else {
+      runningTickHandle = setInterval(tickTimerRun, 1000);
+      timerRunPauseBtnEl.textContent = "Pausar";
+    }
+  });
+  timerRunSkipBtnEl.addEventListener("click", () => {
+    if (timerRunControlsEl.classList.contains("is-complete")) return;
+    advanceTimerRun();
+  });
+  timerRunStopBtnEl.addEventListener("click", () => {
+    stopTimerRunEngine();
+    closeModal(timerRunModal);
+  });
+  document.getElementById("closeTimerRunModal").addEventListener("click", () => {
+    stopTimerRunEngine();
+    closeModal(timerRunModal);
+  });
+
   /* ---------- Exercise detail modal (sets) ---------- */
 
   const exerciseDetailModal = document.getElementById("exerciseDetailModal");
@@ -2135,7 +2503,7 @@
   let restTimerInterval = null;
   let restTimerRemaining = 0;
 
-  function formatRestTime(totalSeconds) {
+  function formatDuration(totalSeconds) {
     const m = Math.floor(totalSeconds / 60);
     const s = totalSeconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
@@ -2156,14 +2524,14 @@
       showToast("Descanso terminado");
       return;
     }
-    restTimerTimeEl.textContent = formatRestTime(restTimerRemaining);
+    restTimerTimeEl.textContent = formatDuration(restTimerRemaining);
   }
 
   function startRestTimer(seconds) {
     const duration = seconds || state.workoutGoal.restSeconds || 90;
     if (restTimerInterval) clearInterval(restTimerInterval);
     restTimerRemaining = duration;
-    restTimerTimeEl.textContent = formatRestTime(restTimerRemaining);
+    restTimerTimeEl.textContent = formatDuration(restTimerRemaining);
     restTimerBannerEl.hidden = false;
     restTimerBannerEl.querySelectorAll(".rest-timer-preset").forEach((b) => {
       b.classList.toggle("active", parseInt(b.dataset.secs, 10) === duration);

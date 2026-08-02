@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=23">
+<link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
 
@@ -128,6 +128,30 @@
             <button type="button" class="link-btn link-btn--muted" id="copyWorkoutDayBtn" hidden>Copiar</button>
             <button type="button" class="link-btn" id="pasteWorkoutDayBtn" hidden>Pegar</button>
           </div>
+        </div>
+
+        <div class="log-list" id="timerLogList"></div>
+
+        <div class="quick-section" id="warmupQuickSection" hidden>
+          <div class="quick-label-row">
+            <div class="quick-label">Calentamiento</div>
+            <div class="quick-label-actions">
+              <button type="button" class="link-btn" id="addWarmupTimerBtn">+ Nueva</button>
+              <button type="button" class="link-btn link-btn--muted" id="warmupTimersEditToggle">Editar</button>
+            </div>
+          </div>
+          <div class="quick-row" id="warmupTimerQuickRow"></div>
+        </div>
+
+        <div class="quick-section" id="stretchQuickSection" hidden>
+          <div class="quick-label-row">
+            <div class="quick-label">Estiramientos</div>
+            <div class="quick-label-actions">
+              <button type="button" class="link-btn" id="addStretchTimerBtn">+ Nueva</button>
+              <button type="button" class="link-btn link-btn--muted" id="stretchTimersEditToggle">Editar</button>
+            </div>
+          </div>
+          <div class="quick-row" id="stretchTimerQuickRow"></div>
         </div>
 
         <div class="quick-section" id="routineQuickSection" hidden>
@@ -412,6 +436,70 @@
   </div>
 </div>
 
+<!-- Timer builder modal (warmup / stretch) -->
+<div class="modal" id="timerBuilderModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span id="timerBuilderTitle">Nuevo temporizador</span>
+      <button class="modal-close" id="closeTimerBuilderModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <label class="field">
+      <span>Nombre</span>
+      <input type="text" id="timerNameInput" placeholder="p. ej. Piernas">
+    </label>
+
+    <span class="field-group-label">Intervalos</span>
+    <div class="log-list" id="timerIntervalsList"></div>
+    <p class="empty-state" id="timerIntervalsEmpty">Añade al menos un intervalo.</p>
+
+    <div class="field-row">
+      <label class="field">
+        <span>Nombre del intervalo</span>
+        <input type="text" id="timerIntervalNameInput" placeholder="p. ej. Saltos">
+      </label>
+      <label class="field">
+        <span>Duración (s)</span>
+        <input type="number" id="timerIntervalSecondsInput" min="1" step="1" inputmode="numeric" placeholder="30">
+      </label>
+    </div>
+    <button type="button" class="btn btn--secondary btn--block" id="addTimerIntervalBtn">+ Añadir intervalo</button>
+    <button type="button" class="btn btn--primary btn--block" id="saveTimerBtn">Guardar temporizador</button>
+  </div>
+</div>
+
+<!-- Timer run modal (warmup / stretch playback) -->
+<div class="modal" id="timerRunModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span id="timerRunTitle">Temporizador</span>
+      <button class="modal-close" id="closeTimerRunModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="timer-run">
+      <div class="timer-run-step" id="timerRunStepLabel">Paso 1 de 1</div>
+      <div class="timer-run-ring-wrap" id="timerRunRingWrap">
+        <svg class="timer-run-ring" viewBox="0 0 200 200">
+          <circle class="timer-run-ring-track" cx="100" cy="100" r="90"></circle>
+          <circle class="timer-run-ring-progress" id="timerRunRingProgress" cx="100" cy="100" r="90"></circle>
+        </svg>
+        <div class="timer-run-center">
+          <div class="timer-run-time" id="timerRunTime">0:30</div>
+          <div class="timer-run-name" id="timerRunIntervalName">—</div>
+        </div>
+      </div>
+      <p class="timer-run-next" id="timerRunNext">—</p>
+      <div class="timer-run-controls" id="timerRunControls">
+        <button type="button" class="timer-run-btn timer-run-btn--secondary timer-run-btn--stop" id="timerRunStopBtn">Detener</button>
+        <button type="button" class="timer-run-btn timer-run-btn--primary timer-run-btn--pause" id="timerRunPauseBtn">Pausar</button>
+        <button type="button" class="timer-run-btn timer-run-btn--secondary timer-run-btn--skip" id="timerRunSkipBtn">Saltar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Target modal -->
 <div class="modal" id="targetModal" hidden>
   <div class="modal-sheet">
@@ -624,6 +712,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=26"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>
