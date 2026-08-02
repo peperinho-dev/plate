@@ -236,7 +236,20 @@ button.chip:active { transform: scale(0.95); }
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-soft);
+}
+
+.card-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 16px;
+}
+
+.card-date-actions {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .log-list {
@@ -700,6 +713,7 @@ button.row-main:active { opacity: 0.55; }
   padding: 10px 20px max(20px, env(safe-area-inset-bottom));
   max-height: 88vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-sheet);
   animation: sheetUp 0.28s cubic-bezier(.2,.8,.2,1);
 }
@@ -885,7 +899,7 @@ button.row-main:active { opacity: 0.55; }
   display: flex;
   gap: 12px;
 }
-.field-row .field { flex: 1; }
+.field-row .field { flex: 1; min-width: 0; }
 .field-row .btn { flex: 1; }
 .field-row .btn--icon-only { flex: 0 0 52px; font-size: 20px; align-self: flex-end; }
 

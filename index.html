@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
 
@@ -46,12 +46,19 @@
 
   <main class="content">
     <div class="card">
-      <div class="card-date" id="fullDateLabel">—</div>
+      <div class="card-date-row">
+        <div class="card-date" id="fullDateLabel">—</div>
+        <div class="card-date-actions">
+          <button type="button" class="link-btn link-btn--muted" id="copyDayBtn" hidden>Copiar</button>
+          <button type="button" class="link-btn" id="pasteDayBtn" hidden>Pegar</button>
+        </div>
+      </div>
 
       <div class="log-list" id="entryList"></div>
       <div class="empty-state" id="emptyState">
         <div class="empty-state-icon"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></div>
         <p>Sin artículos todavía.<br>Escanea o añade el primero.</p>
+        <button type="button" id="pasteDayEmptyBtn" class="link-btn" hidden>Pegar día copiado</button>
         <button type="button" id="copyYesterdayBtn" class="link-btn" hidden>Copiar de ayer</button>
       </div>
 
@@ -115,7 +122,13 @@
 
     <main class="content">
       <div class="card">
-        <div class="card-date" id="workoutFullDateLabel">—</div>
+        <div class="card-date-row">
+          <div class="card-date" id="workoutFullDateLabel">—</div>
+          <div class="card-date-actions">
+            <button type="button" class="link-btn link-btn--muted" id="copyWorkoutDayBtn" hidden>Copiar</button>
+            <button type="button" class="link-btn" id="pasteWorkoutDayBtn" hidden>Pegar</button>
+          </div>
+        </div>
 
         <div class="quick-section" id="exerciseQuickSection" hidden>
           <div class="quick-label">Ejercicios recientes</div>
@@ -126,6 +139,7 @@
         <div class="empty-state" id="workoutEmptyState">
           <div class="empty-state-icon"><svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="9" width="3.5" height="6" rx="1"/><rect x="19.5" y="9" width="3.5" height="6" rx="1"/><rect x="4.8" y="7.2" width="2.2" height="9.6" rx="1"/><rect x="17" y="7.2" width="2.2" height="9.6" rx="1"/><rect x="7" y="10.8" width="10" height="2.4" rx="1.2"/></svg></div>
           <p>Sin ejercicios todavía.<br>Añade el primero.</p>
+          <button type="button" id="pasteWorkoutDayEmptyBtn" class="link-btn" hidden>Pegar día copiado</button>
         </div>
       </div>
     </main>
@@ -543,6 +557,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>

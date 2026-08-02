@@ -147,6 +147,20 @@
   saveData(state); // durably persist migration/defaults even before the first user action
   let dayOffset = 0; // 0 = today, -1 = yesterday, etc.
 
+  // In-memory clipboard for copying a full day's food log or workout session
+  // to a different day. Deliberately not persisted — a session-scoped
+  // clipboard is the expected mental model, same as OS copy/paste.
+  let dayClipboard = null;
+
+  // Rebases a timestamp's time-of-day onto a different calendar day, so a
+  // pasted entry lands at the same hour it was originally logged at instead
+  // of bunching everything at the moment of pasting.
+  function rebaseTimeToDay(sourceTs, targetDayKey) {
+    const src = new Date(sourceTs);
+    const [y, m, d] = targetDayKey.split("-").map(Number);
+    return new Date(y, m - 1, d, src.getHours(), src.getMinutes(), src.getSeconds()).getTime();
+  }
+
   function currentDayKey() {
     return todayKey(dayOffset);
   }
@@ -233,6 +247,9 @@
   const entryListEl = document.getElementById("entryList");
   const emptyStateEl = document.getElementById("emptyState");
   const copyYesterdayBtnEl = document.getElementById("copyYesterdayBtn");
+  const copyDayBtnEl = document.getElementById("copyDayBtn");
+  const pasteDayBtnEl = document.getElementById("pasteDayBtn");
+  const pasteDayEmptyBtnEl = document.getElementById("pasteDayEmptyBtn");
   const foodBrowseSectionEl = document.getElementById("foodBrowseSection");
   const browseFavoritesRowEl = document.getElementById("browseFavoritesRow");
   const modalFavoritesRowEl = document.getElementById("modalFavoritesRow");
@@ -400,13 +417,21 @@
     dateLabelEl.textContent = label.short;
     fullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, c => c.toUpperCase());
 
+    const hasNutritionClipboard = !!(dayClipboard && dayClipboard.type === "nutrition");
     if (entries.length === 0) {
       entryListEl.innerHTML = "";
       emptyStateEl.style.display = "block";
-      copyYesterdayBtnEl.hidden = previousDayEntries().length === 0;
+      pasteDayEmptyBtnEl.hidden = !hasNutritionClipboard;
+      copyYesterdayBtnEl.hidden = hasNutritionClipboard || previousDayEntries().length === 0;
+      copyDayBtnEl.hidden = true;
+      pasteDayBtnEl.hidden = true;
     } else {
       emptyStateEl.style.display = "none";
       renderEntryTimeline(entries);
+      copyDayBtnEl.hidden = false;
+      pasteDayBtnEl.hidden = !hasNutritionClipboard;
+      pasteDayEmptyBtnEl.hidden = true;
+      copyYesterdayBtnEl.hidden = true;
     }
 
     const total = entries.reduce((sum, e) => sum + e.calories, 0);
@@ -527,6 +552,20 @@
       fat: item.fat || 0,
       carbs: item.carbs || 0,
       addedAt: Date.now()
+    });
+  }
+
+  function copyEntryToDay(entry, targetDayKey) {
+    if (!state.days[targetDayKey]) state.days[targetDayKey] = { entries: [] };
+    state.days[targetDayKey].entries.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: entry.name,
+      calories: entry.calories,
+      qtyLabel: entry.qtyLabel || "",
+      protein: entry.protein || 0,
+      fat: entry.fat || 0,
+      carbs: entry.carbs || 0,
+      addedAt: rebaseTimeToDay(entry.addedAt, targetDayKey)
     });
   }
 
@@ -699,11 +738,31 @@
   copyYesterdayBtnEl.addEventListener("click", () => {
     const source = previousDayEntries();
     if (source.length === 0) return;
-    source.forEach((e) => addEntryToCurrentDay(e));
+    const targetKey = currentDayKey();
+    source.forEach((e) => copyEntryToDay(e, targetKey));
     saveData(state);
     render();
     showToast("Copiado de ayer");
   });
+
+  copyDayBtnEl.addEventListener("click", () => {
+    const entries = currentDayEntries();
+    if (entries.length === 0) return;
+    dayClipboard = { type: "nutrition", entries: entries.map((e) => ({ ...e })) };
+    showToast("Día copiado. Ve a otro día y pulsa Pegar.");
+    render();
+  });
+
+  function pasteNutritionDay() {
+    if (!dayClipboard || dayClipboard.type !== "nutrition") return;
+    const targetKey = currentDayKey();
+    dayClipboard.entries.forEach((e) => copyEntryToDay(e, targetKey));
+    saveData(state);
+    render();
+    showToast("Pegado");
+  }
+  pasteDayBtnEl.addEventListener("click", pasteNutritionDay);
+  pasteDayEmptyBtnEl.addEventListener("click", pasteNutritionDay);
 
   /* ---------- Day navigation ---------- */
 
@@ -1652,6 +1711,25 @@
   const exerciseQuickSectionEl = document.getElementById("exerciseQuickSection");
   const exerciseQuickRowEl = document.getElementById("exerciseQuickRow");
   const sessionCountChipEl = document.getElementById("sessionCountChip");
+  const copyWorkoutDayBtnEl = document.getElementById("copyWorkoutDayBtn");
+  const pasteWorkoutDayBtnEl = document.getElementById("pasteWorkoutDayBtn");
+  const pasteWorkoutDayEmptyBtnEl = document.getElementById("pasteWorkoutDayEmptyBtn");
+
+  function copyExerciseToDay(exercise, targetDayKey) {
+    if (!state.workouts[targetDayKey]) state.workouts[targetDayKey] = { exercises: [] };
+    const newExerciseId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    state.workouts[targetDayKey].exercises.push({
+      id: newExerciseId,
+      name: exercise.name,
+      addedAt: rebaseTimeToDay(exercise.addedAt, targetDayKey),
+      sets: exercise.sets.map((s) => ({
+        id: `${newExerciseId}-${Math.random().toString(36).slice(2, 7)}`,
+        weightKg: s.weightKg,
+        reps: s.reps,
+        addedAt: rebaseTimeToDay(s.addedAt, targetDayKey)
+      }))
+    });
+  }
 
   function currentWorkoutDayKey() {
     return todayKey(workoutDayOffset);
@@ -1756,15 +1834,22 @@
     workoutFullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, (c) => c.toUpperCase());
 
     const sessions = countWorkoutSessions();
-    sessionCountChipEl.textContent = `${sessions} sesión${sessions === 1 ? "" : "es"}`;
+    sessionCountChipEl.textContent = `${sessions} ${sessions === 1 ? "sesión" : "sesiones"}`;
 
     renderExerciseQuickAdd();
 
+    const hasWorkoutClipboard = !!(dayClipboard && dayClipboard.type === "workout");
     exerciseListEl.innerHTML = "";
     if (exercises.length === 0) {
       workoutEmptyStateEl.style.display = "block";
+      pasteWorkoutDayEmptyBtnEl.hidden = !hasWorkoutClipboard;
+      copyWorkoutDayBtnEl.hidden = true;
+      pasteWorkoutDayBtnEl.hidden = true;
     } else {
       workoutEmptyStateEl.style.display = "none";
+      copyWorkoutDayBtnEl.hidden = false;
+      pasteWorkoutDayBtnEl.hidden = !hasWorkoutClipboard;
+      pasteWorkoutDayEmptyBtnEl.hidden = true;
       exercises.forEach((ex) => {
         const row = document.createElement("div");
         row.className = "row";
@@ -1788,6 +1873,25 @@
     if (workoutDayOffset < 0) workoutDayOffset += 1;
     renderWorkoutDay();
   });
+
+  copyWorkoutDayBtnEl.addEventListener("click", () => {
+    const exercises = currentWorkoutExercises();
+    if (exercises.length === 0) return;
+    dayClipboard = { type: "workout", exercises: exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s })) })) };
+    showToast("Entreno copiado. Ve a otro día y pulsa Pegar.");
+    renderWorkoutDay();
+  });
+
+  function pasteWorkoutDay() {
+    if (!dayClipboard || dayClipboard.type !== "workout") return;
+    const targetKey = currentWorkoutDayKey();
+    dayClipboard.exercises.forEach((ex) => copyExerciseToDay(ex, targetKey));
+    saveData(state);
+    renderWorkoutDay();
+    showToast("Pegado");
+  }
+  pasteWorkoutDayBtnEl.addEventListener("click", pasteWorkoutDay);
+  pasteWorkoutDayEmptyBtnEl.addEventListener("click", pasteWorkoutDay);
 
   exerciseListEl.addEventListener("click", (e) => {
     const delBtn = e.target.closest(".row-del");
