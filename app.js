@@ -1181,16 +1181,34 @@
     foodSearchDebounce = setTimeout(() => searchFoods(query), 450);
   });
 
-  async function searchFoods(query) {
+  async function searchFoods(query, attempt = 0) {
+    if (foodSearchInputEl.value.trim() !== query) return; // user moved on; abandon
+
     try {
       const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_es,nutriments`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       renderFoodSearchResults(data.products || [], query);
     } catch (err) {
+      // Open Food Facts' search endpoint intermittently fails at the CORS
+      // layer even though the request itself reaches their server (verified
+      // via no-cors probing — the connection always succeeds, only the
+      // CORS-visible fetch sometimes doesn't). A single blip shouldn't show
+      // a scary "check your connection" error, so retry a couple of times
+      // first — this is exactly what re-typing the query used to paper over.
+      if (attempt < 2) {
+        setTimeout(() => searchFoods(query, attempt + 1), 350);
+        return;
+      }
       console.error(err);
+      if (foodSearchInputEl.value.trim() !== query) return;
       foodSearchHintEl.hidden = false;
-      foodSearchHintEl.textContent = "Error al buscar. Revisa tu conexión.";
+      foodSearchHintEl.innerHTML = `Error al buscar. Revisa tu conexión. <button type="button" class="link-btn" id="foodSearchRetryBtn">Reintentar</button>`;
+      document.getElementById("foodSearchRetryBtn").addEventListener("click", () => {
+        foodSearchHintEl.textContent = "Buscando…";
+        searchFoods(query, 0);
+      });
     }
   }
 
@@ -2040,14 +2058,15 @@
       const bw = barW * 0.64;
       const y = padTop + chartH - barH;
       const inRange = d.total >= min && d.total <= max;
-      const fill = d.total === 0 ? "var(--line)" : inRange ? "var(--accent)" : "var(--ink-faint)";
+      const fill = d.total === 0 ? "var(--line)" : inRange ? "url(#calorieBarGradient)" : "var(--ink-faint)";
       bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${fill}"></rect>`;
     });
 
     const labels = buildXAxisDates(days, xFor, h);
+    const defs = `<defs><linearGradient id="calorieBarGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)"></stop><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.7"></stop></linearGradient></defs>`;
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${band}${bars}${labels}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${defs}${gridlines}${band}${bars}${labels}</svg>`;
   }
 
   function computeEma(sortedEntries, alpha = 0.25) {
@@ -2075,14 +2094,20 @@
     const gridlines = buildYAxis(maxV, minV, y, w, 3, (v) => v.toFixed(1));
 
     const dots = withEma.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.raw).toFixed(1)}" r="2.5" fill="var(--ink-faint)"></circle>`).join("");
-    const linePoints = withEma.map((p, i) => `${x(i).toFixed(1)},${y(p.ema).toFixed(1)}`).join(" ");
+    const emaPoints = withEma.map((p, i) => `${x(i).toFixed(1)},${y(p.ema).toFixed(1)}`);
+    const linePoints = emaPoints.join(" ");
+    const baseline = (h - padBottom).toFixed(1);
+    const area = withEma.length > 1
+      ? `<path d="M${emaPoints[0]} L${emaPoints.slice(1).join(" L")} L${x(withEma.length - 1).toFixed(1)},${baseline} L${x(0).toFixed(1)},${baseline} Z" fill="url(#weightAreaGradient)" stroke="none"></path>`
+      : "";
     const line = withEma.length > 1
       ? `<polyline points="${linePoints}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`
       : "";
     const labels = buildXAxisDates(withEma, x, h);
+    const defs = `<defs><linearGradient id="weightAreaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"></stop><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"></stop></linearGradient></defs>`;
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${line}${dots}${labels}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${defs}${gridlines}${area}${line}${dots}${labels}</svg>`;
   }
 
   const MACRO_COLORS = { protein: "var(--accent)", fat: "var(--macro-fat)", carbs: "var(--macro-carbs)" };
@@ -2154,7 +2179,7 @@
       const x = i * barW + barW * 0.2;
       const bw = barW * 0.6;
       const y = chartH - barH;
-      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${wk.count > 0 ? "var(--accent)" : "var(--line)"}"></rect>`;
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${wk.count > 0 ? "url(#sessionsBarGradient)" : "var(--line)"}"></rect>`;
     });
 
     let labels = "";
@@ -2162,9 +2187,10 @@
       const x = i * barW + barW / 2;
       labels += `<text x="${x.toFixed(1)}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${formatShortDate(wk.label)}</text>`;
     });
+    const defs = `<defs><linearGradient id="sessionsBarGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)"></stop><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.7"></stop></linearGradient></defs>`;
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${bars}${labels}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${defs}${bars}${labels}</svg>`;
   }
 
   function renderWorkoutAnalytics(days) {

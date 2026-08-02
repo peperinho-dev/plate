@@ -218,6 +218,12 @@ button.chip:active { transform: scale(0.95); }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+.chart-scroll svg { animation: chartIn 0.32s ease; }
+
+@keyframes chartIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .card {
   background: var(--surface);
