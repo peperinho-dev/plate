@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "tique-data-v1";
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const SCHEMA_VERSION = 5;
+  const SCHEMA_VERSION = 6;
   const ADAPTIVE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADAPTIVE_MIN_SPAN_DAYS = 14;
   const ADAPTIVE_THRESHOLD_KG_PER_WEEK = 0.15;
@@ -74,6 +74,8 @@
       adaptive: defaultAdaptive(),
       workouts: {},
       workoutGoal: defaultWorkoutGoal(),
+      favorites: [],
+      recipes: [],
       onboardingShown: false
     };
   }
@@ -110,6 +112,8 @@
     if (!data.adaptive) data.adaptive = defaultAdaptive();
     if (!data.workouts) data.workouts = {};
     if (!data.workoutGoal) data.workoutGoal = defaultWorkoutGoal();
+    if (!data.favorites) data.favorites = [];
+    if (!data.recipes) data.recipes = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
     return data;
   }
@@ -228,6 +232,12 @@
   const copyYesterdayBtnEl = document.getElementById("copyYesterdayBtn");
   const quickSectionEl = document.getElementById("quickSection");
   const quickRowEl = document.getElementById("quickRow");
+  const favoritesSectionEl = document.getElementById("favoritesSection");
+  const favoritesRowEl = document.getElementById("favoritesRow");
+  const favoritesEditToggleEl = document.getElementById("favoritesEditToggle");
+  const recipesRowEl = document.getElementById("recipesRow");
+  const recipesEmptyHintEl = document.getElementById("recipesEmptyHint");
+  const recipesEditToggleEl = document.getElementById("recipesEditToggle");
   const totalKcalEl = document.getElementById("totalKcal");
   const rangeStatusLineEl = document.getElementById("rangeStatusLine");
   const rangeBandFillEl = document.getElementById("rangeBandFill");
@@ -276,6 +286,79 @@
     return (state.days[key] && state.days[key].entries) || [];
   }
 
+  // Which "dayKey-hour" groups are collapsed, in-memory only (not persisted).
+  const collapsedHourGroups = new Set();
+
+  function buildEntryRow(entry) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <button type="button" class="row-main row-edit" data-id="${entry.id}">
+        <span class="row-name">${escapeHtml(entry.name)}</span>
+        <span class="row-qty">${entry.qtyLabel ? entry.qtyLabel + " · " : ""}${formatTime(entry.addedAt)}</span>
+        ${(entry.protein || entry.fat || entry.carbs)
+          ? `<span class="row-macros">${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C</span>`
+          : ""}
+      </button>
+      <span class="row-amount">${Math.round(entry.calories)} kcal</span>
+      <button class="row-del" data-id="${entry.id}" aria-label="Quitar">✕</button>
+    `;
+    return row;
+  }
+
+  function groupEntriesByHour(entries) {
+    const groups = new Map();
+    entries.forEach((entry) => {
+      const hour = new Date(entry.addedAt).getHours();
+      if (!groups.has(hour)) groups.set(hour, []);
+      groups.get(hour).push(entry);
+    });
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([hour, groupEntries]) => ({
+        hour,
+        entries: groupEntries,
+        total: groupEntries.reduce((sum, e) => sum + e.calories, 0)
+      }));
+  }
+
+  function renderEntryTimeline(entries) {
+    entryListEl.innerHTML = "";
+    const dayKey = currentDayKey();
+    const groups = groupEntriesByHour(entries);
+    groups.forEach(({ hour, entries: groupEntries, total }) => {
+      const groupKey = `${dayKey}-${hour}`;
+      const collapsed = collapsedHourGroups.has(groupKey);
+
+      const wrap = document.createElement("div");
+      wrap.className = "hour-group";
+
+      const header = document.createElement("button");
+      header.type = "button";
+      header.className = "hour-header";
+      header.innerHTML = `
+        <span class="hour-time">${String(hour).padStart(2, "0")}:00</span>
+        <span class="hour-summary">${groupEntries.length} · ${Math.round(total)} kcal</span>
+        <span class="hour-chevron">${collapsed ? "›" : "⌄"}</span>
+      `;
+      header.addEventListener("click", () => {
+        if (collapsedHourGroups.has(groupKey)) collapsedHourGroups.delete(groupKey);
+        else collapsedHourGroups.add(groupKey);
+        render();
+      });
+      wrap.appendChild(header);
+
+      if (!collapsed) {
+        const list = document.createElement("div");
+        list.className = "hour-entries";
+        groupEntries.forEach((entry) => list.appendChild(buildEntryRow(entry)));
+        wrap.appendChild(list);
+      }
+
+      entryListEl.appendChild(wrap);
+    });
+  }
+
   function render() {
     const entries = currentDayEntries();
     const label = formatDateLabel(dayOffset);
@@ -285,28 +368,13 @@
 
     renderQuickAdd();
 
-    entryListEl.innerHTML = "";
     if (entries.length === 0) {
+      entryListEl.innerHTML = "";
       emptyStateEl.style.display = "block";
       copyYesterdayBtnEl.hidden = previousDayEntries().length === 0;
     } else {
       emptyStateEl.style.display = "none";
-      entries.forEach((entry) => {
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-          <button type="button" class="row-main row-edit" data-id="${entry.id}">
-            <span class="row-name">${escapeHtml(entry.name)}</span>
-            <span class="row-qty">${entry.qtyLabel ? entry.qtyLabel + " · " : ""}${formatTime(entry.addedAt)}</span>
-            ${(entry.protein || entry.fat || entry.carbs)
-              ? `<span class="row-macros">${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C</span>`
-              : ""}
-          </button>
-          <span class="row-amount">${Math.round(entry.calories)} kcal</span>
-          <button class="row-del" data-id="${entry.id}" aria-label="Quitar">✕</button>
-        `;
-        entryListEl.appendChild(row);
-      });
+      renderEntryTimeline(entries);
     }
 
     const total = entries.reduce((sum, e) => sum + e.calories, 0);
@@ -435,24 +503,133 @@
     quickRowEl.innerHTML = "";
     if (items.length === 0) {
       quickSectionEl.hidden = true;
+    } else {
+      quickSectionEl.hidden = false;
+      items.forEach((item) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "quick-chip";
+        chip.innerHTML = `
+          <span class="quick-chip-name">${escapeHtml(item.name)}</span>
+          <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
+        `;
+        chip.addEventListener("click", () => {
+          addEntryToCurrentDay(item);
+          saveData(state);
+          render();
+          showToast("Añadido");
+        });
+        quickRowEl.appendChild(chip);
+      });
+    }
+    renderFavorites();
+    renderRecipes();
+  }
+
+  let favoritesEditMode = false;
+  let recipesEditMode = false;
+
+  favoritesEditToggleEl.addEventListener("click", () => {
+    favoritesEditMode = !favoritesEditMode;
+    favoritesEditToggleEl.textContent = favoritesEditMode ? "Listo" : "Editar";
+    renderFavorites();
+  });
+
+  recipesEditToggleEl.addEventListener("click", () => {
+    recipesEditMode = !recipesEditMode;
+    recipesEditToggleEl.textContent = recipesEditMode ? "Listo" : "Editar";
+    renderRecipes();
+  });
+
+  function renderFavorites() {
+    favoritesRowEl.innerHTML = "";
+    if (state.favorites.length === 0) {
+      favoritesSectionEl.hidden = true;
+      favoritesEditMode = false;
+      favoritesEditToggleEl.textContent = "Editar";
       return;
     }
-    quickSectionEl.hidden = false;
-    items.forEach((item) => {
+    favoritesSectionEl.hidden = false;
+    state.favorites.forEach((fav) => {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "quick-chip";
       chip.innerHTML = `
-        <span class="quick-chip-name">${escapeHtml(item.name)}</span>
-        <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
+        <span class="quick-chip-name">${escapeHtml(fav.name)}</span>
+        <span class="quick-chip-kcal">${Math.round(fav.calories)} kcal</span>
+        ${favoritesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">✕</span>` : ""}
       `;
       chip.addEventListener("click", () => {
-        addEntryToCurrentDay(item);
+        if (favoritesEditMode) {
+          state.favorites = state.favorites.filter((f) => f.id !== fav.id);
+          saveData(state);
+          renderFavorites();
+          return;
+        }
+        addEntryToCurrentDay(fav);
         saveData(state);
         render();
         showToast("Añadido");
       });
-      quickRowEl.appendChild(chip);
+      favoritesRowEl.appendChild(chip);
+    });
+  }
+
+  function logRecipe(recipe) {
+    const entries = currentDayEntries();
+    const totals = recipe.items.reduce((acc, it) => {
+      acc.calories += it.calories;
+      acc.protein += it.protein || 0;
+      acc.fat += it.fat || 0;
+      acc.carbs += it.carbs || 0;
+      return acc;
+    }, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+    entries.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: recipe.name,
+      calories: totals.calories,
+      qtyLabel: `receta · ${recipe.items.length} ingr.`,
+      protein: totals.protein,
+      fat: totals.fat,
+      carbs: totals.carbs,
+      recipeIngredients: recipe.items.map((it) => it.name),
+      addedAt: Date.now()
+    });
+  }
+
+  function renderRecipes() {
+    recipesRowEl.innerHTML = "";
+    recipesEditToggleEl.hidden = state.recipes.length === 0;
+    if (state.recipes.length === 0) {
+      recipesEmptyHintEl.hidden = false;
+      recipesEditMode = false;
+      recipesEditToggleEl.textContent = "Editar";
+      return;
+    }
+    recipesEmptyHintEl.hidden = true;
+    state.recipes.forEach((recipe) => {
+      const totalKcal = recipe.items.reduce((sum, it) => sum + it.calories, 0);
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-chip";
+      chip.innerHTML = `
+        <span class="quick-chip-name">${escapeHtml(recipe.name)}</span>
+        <span class="quick-chip-kcal">${Math.round(totalKcal)} kcal</span>
+        ${recipesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">✕</span>` : ""}
+      `;
+      chip.addEventListener("click", () => {
+        if (recipesEditMode) {
+          state.recipes = state.recipes.filter((r) => r.id !== recipe.id);
+          saveData(state);
+          renderRecipes();
+          return;
+        }
+        logRecipe(recipe);
+        saveData(state);
+        render();
+        showToast("Receta añadida");
+      });
+      recipesRowEl.appendChild(chip);
     });
   }
 
@@ -640,6 +817,98 @@
     showToast("Perfil guardado");
   });
 
+  /* ---------- Recipe builder ---------- */
+
+  const recipeModal = document.getElementById("recipeModal");
+  const recipeNameInputEl = document.getElementById("recipeNameInput");
+  const recipeIngredientsListEl = document.getElementById("recipeIngredientsList");
+  const recipeIngredientsEmptyEl = document.getElementById("recipeIngredientsEmpty");
+  const recipeIngredientForm = document.getElementById("recipeIngredientForm");
+  const recipeIngNameEl = document.getElementById("recipeIngName");
+  const recipeIngKcalEl = document.getElementById("recipeIngKcal");
+  const recipeIngProteinEl = document.getElementById("recipeIngProtein");
+  const recipeIngFatEl = document.getElementById("recipeIngFat");
+  const recipeIngCarbsEl = document.getElementById("recipeIngCarbs");
+
+  let draftRecipeItems = [];
+
+  function renderRecipeIngredients() {
+    recipeIngredientsListEl.innerHTML = "";
+    recipeIngredientsEmptyEl.hidden = draftRecipeItems.length > 0;
+    draftRecipeItems.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="row-main">
+          <span class="row-name">${escapeHtml(item.name)}</span>
+          <span class="row-macros">${Math.round(item.protein || 0)}P · ${Math.round(item.fat || 0)}F · ${Math.round(item.carbs || 0)}C</span>
+        </div>
+        <span class="row-amount">${Math.round(item.calories)} kcal</span>
+        <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">✕</button>
+      `;
+      recipeIngredientsListEl.appendChild(row);
+    });
+  }
+
+  recipeIngredientsListEl.addEventListener("click", (e) => {
+    const delBtn = e.target.closest(".row-del");
+    if (!delBtn) return;
+    draftRecipeItems.splice(parseInt(delBtn.dataset.index, 10), 1);
+    renderRecipeIngredients();
+  });
+
+  document.getElementById("addRecipeBtn").addEventListener("click", () => {
+    draftRecipeItems = [];
+    recipeNameInputEl.value = "";
+    recipeIngredientForm.reset();
+    renderRecipeIngredients();
+    openModal(recipeModal);
+    setTimeout(() => recipeNameInputEl.focus(), 50);
+  });
+  document.getElementById("closeRecipeModal").addEventListener("click", () => closeModal(recipeModal));
+
+  recipeIngredientForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = recipeIngNameEl.value.trim();
+    const kcal = parseFloat(recipeIngKcalEl.value);
+    if (!name || isNaN(kcal) || kcal < 0) {
+      showToast("Indica nombre y kcal del ingrediente");
+      return;
+    }
+    draftRecipeItems.push({
+      name,
+      calories: kcal,
+      protein: parseFloat(recipeIngProteinEl.value) || 0,
+      fat: parseFloat(recipeIngFatEl.value) || 0,
+      carbs: parseFloat(recipeIngCarbsEl.value) || 0
+    });
+    renderRecipeIngredients();
+    recipeIngredientForm.reset();
+    recipeIngNameEl.focus();
+  });
+
+  document.getElementById("saveRecipeBtn").addEventListener("click", () => {
+    const name = recipeNameInputEl.value.trim();
+    if (!name) {
+      showToast("Indica el nombre de la receta");
+      return;
+    }
+    if (draftRecipeItems.length === 0) {
+      showToast("Añade al menos un ingrediente");
+      return;
+    }
+    state.recipes.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      items: draftRecipeItems,
+      createdAt: Date.now()
+    });
+    saveData(state);
+    renderRecipes();
+    closeModal(recipeModal);
+    showToast("Receta guardada");
+  });
+
   /* ---------- Data export / import ---------- */
 
   document.getElementById("exportDataBtn").addEventListener("click", () => {
@@ -820,8 +1089,29 @@
   const entryKcalTotalLabelEl = document.getElementById("entryKcalTotalLabel");
   const entryMacrosLabelEl = document.getElementById("entryMacrosLabel");
   const entrySubmitBtnEl = document.getElementById("entrySubmitBtn");
+  const entryLivePreviewEl = document.getElementById("entryLivePreview");
+  const entryFavoriteBtnEl = document.getElementById("entryFavoriteBtn");
 
   let editingEntryId = null;
+
+  function updateLivePreview() {
+    if (entryKcalTotalEl.value.trim() !== "") {
+      entryLivePreviewEl.hidden = true;
+      return;
+    }
+    const kcalPer100 = parseFloat(entryKcalPer100El.value);
+    const grams = parseFloat(entryGramsEl.value);
+    if (isNaN(kcalPer100) || kcalPer100 < 0 || isNaN(grams) || grams < 0) {
+      entryLivePreviewEl.hidden = true;
+      return;
+    }
+    entryLivePreviewEl.hidden = false;
+    entryLivePreviewEl.textContent = `≈ ${Math.round((kcalPer100 * grams) / 100)} kcal`;
+  }
+
+  [entryKcalPer100El, entryGramsEl, entryKcalTotalEl].forEach((el) => {
+    el.addEventListener("input", updateLivePreview);
+  });
 
   function resetFoodSearch() {
     foodSearchInputEl.value = "";
@@ -896,6 +1186,7 @@
     if (typeof n.fat_100g === "number") entryFatPer100El.value = Math.round(n.fat_100g);
     if (typeof n.carbohydrates_100g === "number") entryCarbsPer100El.value = Math.round(n.carbohydrates_100g);
     resetFoodSearch();
+    updateLivePreview();
   }
 
   function setEntryFormMode(isEditing) {
@@ -920,6 +1211,7 @@
     if (entry.protein) entryProteinPer100El.value = Math.round(entry.protein);
     if (entry.fat) entryFatPer100El.value = Math.round(entry.fat);
     if (entry.carbs) entryCarbsPer100El.value = Math.round(entry.carbs);
+    updateLivePreview();
     openModal(entryModal);
   }
 
@@ -930,15 +1222,15 @@
     entryGramsEl.value = 100;
     resetFoodSearch();
     setEntryFormMode(false);
+    updateLivePreview();
     openModal(entryModal);
     setTimeout(() => foodSearchInputEl.focus(), 50);
   });
   document.getElementById("closeEntryModal").addEventListener("click", () => closeModal(entryModal));
 
-  entryForm.addEventListener("submit", (e) => {
-    e.preventDefault();
+  function readEntryFormValues() {
     const name = entryNameEl.value.trim();
-    if (!name) return;
+    if (!name) return null;
 
     const kcalTotal = parseFloat(entryKcalTotalEl.value);
     const kcalPer100 = parseFloat(entryKcalPer100El.value);
@@ -952,8 +1244,7 @@
       calories = (kcalPer100 * grams) / 100;
       qtyLabel = `${grams} g`;
     } else {
-      showToast("Indica las kcal");
-      return;
+      return null;
     }
 
     const proteinPer100 = parseFloat(entryProteinPer100El.value);
@@ -961,15 +1252,29 @@
     const carbsPer100 = parseFloat(entryCarbsPer100El.value);
     const scale = (v) => (!isNaN(v) && v >= 0 ? (v * grams) / 100 : 0);
 
+    return {
+      name,
+      calories,
+      qtyLabel,
+      protein: scale(proteinPer100),
+      fat: scale(fatPer100),
+      carbs: scale(carbsPer100)
+    };
+  }
+
+  entryForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!entryNameEl.value.trim()) return;
+    const values = readEntryFormValues();
+    if (!values) {
+      showToast("Indica las kcal");
+      return;
+    }
+
     if (editingEntryId) {
       const entry = currentDayEntries().find((en) => en.id === editingEntryId);
       if (!entry) return;
-      entry.name = name;
-      entry.calories = calories;
-      entry.qtyLabel = qtyLabel;
-      entry.protein = scale(proteinPer100);
-      entry.fat = scale(fatPer100);
-      entry.carbs = scale(carbsPer100);
+      Object.assign(entry, values);
       saveData(state);
       render();
       closeModal(entryModal);
@@ -980,18 +1285,29 @@
     const entries = currentDayEntries();
     entries.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name,
-      calories,
-      qtyLabel,
-      protein: scale(proteinPer100),
-      fat: scale(fatPer100),
-      carbs: scale(carbsPer100),
+      ...values,
       addedAt: Date.now()
     });
     saveData(state);
     render();
     closeModal(entryModal);
     showToast("Añadido");
+  });
+
+  entryFavoriteBtnEl.addEventListener("click", () => {
+    const values = readEntryFormValues();
+    if (!values) {
+      showToast("Indica nombre y kcal para guardarlo");
+      return;
+    }
+    state.favorites.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      ...values,
+      addedAt: Date.now()
+    });
+    saveData(state);
+    renderQuickAdd();
+    showToast("Guardado en favoritos");
   });
 
   /* ---------- Modal helpers ---------- */
@@ -1191,6 +1507,7 @@
         entryForm.reset();
         entryGramsEl.value = 100;
         resetFoodSearch();
+        updateLivePreview();
         openModal(entryModal);
         return;
       }
@@ -1213,6 +1530,7 @@
       if (typeof nutriments.proteins_100g === "number") entryProteinPer100El.value = Math.round(nutriments.proteins_100g);
       if (typeof nutriments.fat_100g === "number") entryFatPer100El.value = Math.round(nutriments.fat_100g);
       if (typeof nutriments.carbohydrates_100g === "number") entryCarbsPer100El.value = Math.round(nutriments.carbohydrates_100g);
+      updateLivePreview();
       openModal(entryModal);
       setTimeout(() => entryGramsEl.focus(), 50);
     } catch (err) {
@@ -1606,43 +1924,65 @@
     return result;
   }
 
+  const CHART_LEFT_MARGIN = 32;
+
+  function buildYAxis(maxVal, minVal, yFor, w, tickCount = 3, formatTick = Math.round) {
+    let gridlines = "";
+    for (let t = 0; t <= tickCount; t++) {
+      const v = minVal + ((maxVal - minVal) / tickCount) * t;
+      const y = yFor(v);
+      gridlines += `<line x1="${CHART_LEFT_MARGIN}" y1="${y.toFixed(1)}" x2="${w}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"></line>`;
+      gridlines += `<text x="${(CHART_LEFT_MARGIN - 6).toFixed(1)}" y="${(y + 3).toFixed(1)}" font-size="9" text-anchor="end" fill="var(--ink-faint)">${formatTick(v)}</text>`;
+    }
+    return gridlines;
+  }
+
+  function buildXAxisDates(days, x, h) {
+    const showEvery = days.length > 10 ? Math.ceil(days.length / 7) : 1;
+    let labels = "";
+    days.forEach((d, i) => {
+      if (i % showEvery !== 0 && i !== days.length - 1) return;
+      const day = Number(d.date.slice(8, 10));
+      labels += `<text x="${x(i).toFixed(1)}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${day}</text>`;
+    });
+    return labels;
+  }
+
   function buildCalorieChart(days, min, max) {
-    const h = 140, padBottom = 18;
-    const chartH = h - padBottom;
+    const h = 150, padTop = 6, padBottom = 20;
+    const chartH = h - padTop - padBottom;
     const scrollable = days.length > 30;
-    const w = scrollable ? days.length * 16 : 300;
-    const barW = w / days.length;
+    const plotW = scrollable ? days.length * 16 : 300 - CHART_LEFT_MARGIN;
+    const w = plotW + CHART_LEFT_MARGIN;
+    const barW = plotW / days.length;
     const maxVal = Math.max(max || 0, ...days.map((d) => d.total), 1) * 1.08;
+    const yFor = (v) => padTop + chartH - (v / maxVal) * chartH;
+    const xFor = (i) => CHART_LEFT_MARGIN + i * barW + barW / 2;
+
+    const gridlines = buildYAxis(maxVal, 0, yFor, w);
 
     let band = "";
     if (max > min) {
-      const bandY1 = chartH - (min / maxVal) * chartH;
-      const bandY2 = chartH - (max / maxVal) * chartH;
-      band = `<rect x="0" y="${bandY2.toFixed(1)}" width="${w}" height="${(bandY1 - bandY2).toFixed(1)}" fill="var(--accent-soft)"></rect>`;
+      const bandY1 = yFor(min);
+      const bandY2 = yFor(max);
+      band = `<rect x="${CHART_LEFT_MARGIN}" y="${bandY2.toFixed(1)}" width="${plotW}" height="${(bandY1 - bandY2).toFixed(1)}" fill="var(--accent-soft)"></rect>`;
     }
 
     let bars = "";
     days.forEach((d, i) => {
       const barH = (d.total / maxVal) * chartH;
-      const x = i * barW + barW * 0.18;
+      const x = CHART_LEFT_MARGIN + i * barW + barW * 0.18;
       const bw = barW * 0.64;
-      const y = chartH - barH;
+      const y = padTop + chartH - barH;
       const inRange = d.total >= min && d.total <= max;
       const fill = d.total === 0 ? "var(--line)" : inRange ? "var(--accent)" : "var(--ink-faint)";
       bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${fill}"></rect>`;
     });
 
-    const showEvery = days.length > 10 ? Math.ceil(days.length / 7) : 1;
-    let labels = "";
-    days.forEach((d, i) => {
-      if (i % showEvery !== 0 && i !== days.length - 1) return;
-      const x = i * barW + barW / 2;
-      const day = Number(d.date.slice(8, 10));
-      labels += `<text x="${x.toFixed(1)}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${day}</text>`;
-    });
+    const labels = buildXAxisDates(days, xFor, h);
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${band}${bars}${labels}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${band}${bars}${labels}</svg>`;
   }
 
   function computeEma(sortedEntries, alpha = 0.25) {
@@ -1656,34 +1996,43 @@
   function buildWeightChart(entries) {
     const sorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
     const withEma = computeEma(sorted);
-    const h = 140, pad = 12;
+    const h = 150, padTop = 10, padBottom = 20;
+    const chartH = h - padTop - padBottom;
     const scrollable = withEma.length > 20;
-    const w = scrollable ? Math.max(300, withEma.length * 20) : 300;
+    const plotW = scrollable ? Math.max(300, withEma.length * 20) : 300 - CHART_LEFT_MARGIN;
+    const w = plotW + CHART_LEFT_MARGIN;
     const values = withEma.flatMap((p) => [p.raw, p.ema]);
     const minV = Math.min(...values), maxV = Math.max(...values);
     const range = Math.max(maxV - minV, 0.5);
-    const x = (i) => (withEma.length <= 1 ? w / 2 : (i / (withEma.length - 1)) * (w - pad * 2) + pad);
-    const y = (v) => h - pad - ((v - minV) / range) * (h - pad * 2);
+    const x = (i) => (withEma.length <= 1 ? CHART_LEFT_MARGIN + plotW / 2 : (i / (withEma.length - 1)) * plotW + CHART_LEFT_MARGIN);
+    const y = (v) => padTop + chartH - ((v - minV) / range) * chartH;
+
+    const gridlines = buildYAxis(maxV, minV, y, w, 3, (v) => v.toFixed(1));
 
     const dots = withEma.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.raw).toFixed(1)}" r="2.5" fill="var(--ink-faint)"></circle>`).join("");
     const linePoints = withEma.map((p, i) => `${x(i).toFixed(1)},${y(p.ema).toFixed(1)}`).join(" ");
     const line = withEma.length > 1
       ? `<polyline points="${linePoints}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`
       : "";
+    const labels = buildXAxisDates(withEma, x, h);
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${line}${dots}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${line}${dots}${labels}</svg>`;
   }
 
   const MACRO_COLORS = { protein: "var(--accent)", fat: "#D97706", carbs: "#6366F1" };
 
   function buildMacroChart(days) {
-    const h = 140, pad = 12;
+    const h = 150, padTop = 10, padBottom = 20;
+    const chartH = h - padTop - padBottom;
     const scrollable = days.length > 30;
-    const w = scrollable ? days.length * 16 : 300;
+    const plotW = scrollable ? days.length * 16 : 300 - CHART_LEFT_MARGIN;
+    const w = plotW + CHART_LEFT_MARGIN;
     const maxVal = Math.max(...days.map((d) => Math.max(d.protein, d.fat, d.carbs)), 1) * 1.1;
-    const x = (i) => (days.length <= 1 ? w / 2 : (i / (days.length - 1)) * (w - pad * 2) + pad);
-    const y = (v) => h - pad - (v / maxVal) * (h - pad * 2);
+    const x = (i) => (days.length <= 1 ? CHART_LEFT_MARGIN + plotW / 2 : (i / (days.length - 1)) * plotW + CHART_LEFT_MARGIN);
+    const y = (v) => padTop + chartH - (v / maxVal) * chartH;
+
+    const gridlines = buildYAxis(maxVal, 0, y, w);
 
     const lineFor = (key, color) => {
       if (days.length < 2) return "";
@@ -1692,8 +2041,9 @@
     };
 
     const lines = lineFor("protein", MACRO_COLORS.protein) + lineFor("fat", MACRO_COLORS.fat) + lineFor("carbs", MACRO_COLORS.carbs);
+    const labels = buildXAxisDates(days, x, h);
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${lines}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${lines}${labels}</svg>`;
   }
 
   function computeTopContributors(days) {
