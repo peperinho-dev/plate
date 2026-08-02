@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
 
@@ -24,12 +24,12 @@
   <div class="view" id="nutritionView">
   <header class="topbar">
     <div class="day-nav">
-      <button id="prevDay" class="icon-btn" aria-label="Día anterior">‹</button>
+      <button id="prevDay" class="icon-btn" aria-label="Día anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <span id="dateLabel" class="day-label">Hoy</span>
-      <button id="nextDay" class="icon-btn" aria-label="Día siguiente">›</button>
+      <button id="nextDay" class="icon-btn" aria-label="Día siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
     <div class="topbar-actions">
-      <button id="profileBtn" class="icon-btn" aria-label="Perfil">⚙</button>
+      <button id="profileBtn" class="icon-btn" aria-label="Perfil"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
       <button id="targetBtn" class="chip">
         <span id="targetMinEl">1900</span>–<span id="targetMaxEl">2100</span> kcal
       </button>
@@ -94,7 +94,7 @@
 
   <div class="action-bar">
     <button id="scanBtn" class="btn btn--primary btn--block">
-      <span class="btn-icon">▤</span> Escanear
+      <span class="btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span> Escanear
     </button>
     <button id="manualBtn" class="btn btn--secondary btn--block">
       <span class="btn-icon">+</span> Añadir a mano
@@ -105,9 +105,9 @@
   <div class="view" id="workoutView" hidden>
     <header class="topbar">
       <div class="day-nav">
-        <button id="prevWorkoutDay" class="icon-btn" aria-label="Día anterior">‹</button>
+        <button id="prevWorkoutDay" class="icon-btn" aria-label="Día anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
         <span id="workoutDateLabel" class="day-label">Hoy</span>
-        <button id="nextWorkoutDay" class="icon-btn" aria-label="Día siguiente">›</button>
+        <button id="nextWorkoutDay" class="icon-btn" aria-label="Día siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <span class="chip" id="sessionCountChip">0 sesiones</span>
     </header>
@@ -159,8 +159,8 @@
         <div class="card-date">Macros</div>
         <div class="chart-legend">
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Prot.</span>
-          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#D97706"></span>Grasa</span>
-          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#6366F1"></span>Carbos</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--macro-fat)"></span>Grasa</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--macro-carbs)"></span>Carbos</span>
         </div>
         <div id="macroChart" class="chart-scroll"></div>
         <p class="empty-state" id="macroChartEmpty" hidden>Registra comidas con macros para ver la tendencia.</p>
@@ -204,13 +204,13 @@
 
 <nav class="tabbar">
   <button class="tab-btn active" id="tabNutrition" data-view="nutritionView">
-    <span class="tab-icon">🍽</span> Nutrición
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></span> Nutrición
   </button>
   <button class="tab-btn" id="tabWorkout" data-view="workoutView">
-    <span class="tab-icon">🏋</span> Entreno
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="9" width="3.5" height="6" rx="1"/><rect x="19.5" y="9" width="3.5" height="6" rx="1"/><rect x="4.8" y="7.2" width="2.2" height="9.6" rx="1"/><rect x="17" y="7.2" width="2.2" height="9.6" rx="1"/><rect x="7" y="10.8" width="10" height="2.4" rx="1.2"/></svg></span> Entreno
   </button>
   <button class="tab-btn" id="tabAnalytics" data-view="analyticsView">
-    <span class="tab-icon">📊</span> Análisis
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="15"/></svg></span> Análisis
   </button>
 </nav>
 
@@ -220,12 +220,12 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span>Escanear código de barras</span>
-      <button class="modal-close" id="closeScanModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeScanModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div id="scannerViewport" class="scanner-viewport">
       <video id="scannerVideo" playsinline muted></video>
       <div class="scanner-frame" aria-hidden="true"></div>
-      <button type="button" class="scanner-torch" id="scannerTorchBtn" hidden aria-label="Linterna">🔦</button>
+      <button type="button" class="scanner-torch" id="scannerTorchBtn" hidden aria-label="Linterna"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
     </div>
     <p class="scanner-hint" id="scannerHint">Apunta al código de barras del producto.</p>
     <button type="button" class="link-btn" id="scannerManualToggle">Introducir código a mano</button>
@@ -245,7 +245,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span id="entryModalTitle">Añadir alimento</span>
-      <button class="modal-close" id="closeEntryModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeEntryModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div id="foodBrowseSection">
@@ -278,7 +278,7 @@
           <span>Buscar alimento</span>
           <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
         </label>
-        <button type="button" class="btn btn--secondary btn--icon-only" id="modalScanBtn" aria-label="Escanear código de barras">▤</button>
+        <button type="button" class="btn btn--secondary btn--icon-only" id="modalScanBtn" aria-label="Escanear código de barras"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
       </div>
       <div class="log-list" id="foodSearchResults"></div>
       <p class="modal-hint" id="foodSearchHint" hidden></p>
@@ -325,7 +325,7 @@
 
       <div class="field-row">
         <button type="submit" class="btn btn--primary btn--block" id="entrySubmitBtn">Añadir</button>
-        <button type="button" class="btn btn--secondary btn--icon-only" id="entryFavoriteBtn" aria-label="Guardar como favorito">☆</button>
+        <button type="button" class="btn btn--secondary btn--icon-only" id="entryFavoriteBtn" aria-label="Guardar como favorito"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button>
       </div>
     </form>
   </div>
@@ -337,7 +337,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span>Nueva receta</span>
-      <button class="modal-close" id="closeRecipeModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeRecipeModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
     <label class="field">
@@ -360,7 +360,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span>Meta diaria</span>
-      <button class="modal-close" id="closeTargetModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeTargetModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
     <p class="modal-hint" id="targetIncompleteHint" hidden>
@@ -396,7 +396,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span>Perfil</span>
-      <button class="modal-close" id="closeProfileModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeProfileModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <form id="profileForm" class="form">
       <div class="field-row">
@@ -462,9 +462,9 @@
   <div class="modal-sheet">
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
-      <button type="button" class="modal-back" id="weightBackBtn" aria-label="Volver al perfil">‹ Perfil</button>
+      <button type="button" class="modal-back" id="weightBackBtn" aria-label="Volver al perfil"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Perfil</button>
       <span>Registro de peso</span>
-      <button class="modal-close" id="closeWeightModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeWeightModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div class="log-list" id="weightList"></div>
@@ -492,7 +492,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span>Añadir ejercicio</span>
-      <button class="modal-close" id="closeAddExerciseModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeAddExerciseModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <form id="addExerciseForm" class="form">
       <label class="field">
@@ -510,7 +510,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
       <span id="exerciseDetailTitle">Ejercicio</span>
-      <button class="modal-close" id="closeExerciseDetailModal" aria-label="Cerrar">✕</button>
+      <button class="modal-close" id="closeExerciseDetailModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
     <p class="modal-hint" id="lastPerformanceHint" hidden></p>
@@ -536,6 +536,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

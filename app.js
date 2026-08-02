@@ -17,6 +17,9 @@
   const FAT_BAND_G = 10;
   const CARBS_BAND_G = 25; // carbs fill whatever calories remain after protein+fat
 
+  const ICON_X = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+  const ICON_CHEVRON_DOWN = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+
   /* ---------- Data layer ---------- */
 
   // Local-calendar-day helpers. Deliberately never use toISOString() for date
@@ -302,7 +305,7 @@
           : ""}
       </button>
       <span class="row-amount">${Math.round(entry.calories)} kcal</span>
-      <button class="row-del" data-id="${entry.id}" aria-label="Quitar">✕</button>
+      <button class="row-del" data-id="${entry.id}" aria-label="Quitar">${ICON_X}</button>
     `;
     return row;
   }
@@ -340,7 +343,7 @@
       header.innerHTML = `
         <span class="hour-time">${String(hour).padStart(2, "0")}:00</span>
         <span class="hour-summary">${groupEntries.length} · ${Math.round(total)} kcal</span>
-        <span class="hour-chevron">${collapsed ? "›" : "⌄"}</span>
+        <span class="hour-chevron${collapsed ? " is-collapsed" : ""}">${ICON_CHEVRON_DOWN}</span>
       `;
       header.addEventListener("click", () => {
         if (collapsedHourGroups.has(groupKey)) collapsedHourGroups.delete(groupKey);
@@ -563,7 +566,7 @@
       chip.innerHTML = `
         <span class="quick-chip-name">${escapeHtml(fav.name)}</span>
         <span class="quick-chip-kcal">${Math.round(fav.calories)} kcal</span>
-        ${favoritesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">✕</span>` : ""}
+        ${favoritesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">${ICON_X}</span>` : ""}
       `;
       chip.addEventListener("click", () => {
         if (favoritesEditMode) {
@@ -623,7 +626,7 @@
       chip.innerHTML = `
         <span class="quick-chip-name">${escapeHtml(recipe.name)}</span>
         <span class="quick-chip-kcal">${Math.round(totalKcal)} kcal</span>
-        ${recipesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">✕</span>` : ""}
+        ${recipesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">${ICON_X}</span>` : ""}
       `;
       chip.addEventListener("click", () => {
         if (recipesEditMode) {
@@ -868,7 +871,7 @@
           <span class="row-macros">${Math.round(item.protein || 0)}P · ${Math.round(item.fat || 0)}F · ${Math.round(item.carbs || 0)}C</span>
         </div>
         <span class="row-amount">${Math.round(item.calories)} kcal</span>
-        <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">✕</button>
+        <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">${ICON_X}</button>
       `;
       recipeIngredientsListEl.appendChild(row);
     });
@@ -1001,7 +1004,7 @@
             <span class="row-name">${formatShortDate(w.date)}</span>
           </button>
           <span class="row-amount">${w.weightKg} kg</span>
-          <button class="row-del" data-id="${w.id}" aria-label="Quitar">✕</button>
+          <button class="row-del" data-id="${w.id}" aria-label="Quitar">${ICON_X}</button>
         `;
         weightListEl.appendChild(row);
       });
@@ -1714,7 +1717,7 @@
             <span class="row-name">${escapeHtml(ex.name)}</span>
             <span class="row-qty">${summarizeExercise(ex)}</span>
           </button>
-          <button class="row-del" data-id="${ex.id}" aria-label="Quitar">✕</button>
+          <button class="row-del" data-id="${ex.id}" aria-label="Quitar">${ICON_X}</button>
         `;
         exerciseListEl.appendChild(row);
       });
@@ -1824,7 +1827,7 @@
             <span class="row-name">Serie ${i + 1}</span>
             <span class="row-qty">${formatSet(s)}</span>
           </button>
-          <button class="row-del" data-id="${s.id}" aria-label="Quitar">✕</button>
+          <button class="row-del" data-id="${s.id}" aria-label="Quitar">${ICON_X}</button>
         `;
         setListEl.appendChild(row);
       });
@@ -2052,7 +2055,7 @@
     return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${gridlines}${line}${dots}${labels}</svg>`;
   }
 
-  const MACRO_COLORS = { protein: "var(--accent)", fat: "#D97706", carbs: "#6366F1" };
+  const MACRO_COLORS = { protein: "var(--accent)", fat: "var(--macro-fat)", carbs: "var(--macro-carbs)" };
 
   function buildMacroChart(days) {
     const h = 150, padTop = 10, padBottom = 20;
