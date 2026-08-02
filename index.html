@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=24">
+<link rel="stylesheet" href="styles.css?v=25">
 </head>
 <body>
 
@@ -51,6 +51,7 @@
         <div class="card-date-actions">
           <button type="button" class="link-btn link-btn--muted" id="copyDayBtn" hidden>Copiar</button>
           <button type="button" class="link-btn" id="pasteDayBtn" hidden>Pegar</button>
+          <button type="button" class="link-btn" id="selectEntriesToggleBtn" hidden>Seleccionar</button>
         </div>
       </div>
 
@@ -107,6 +108,7 @@
     <button id="manualBtn" class="btn btn--secondary btn--block">
       <span class="btn-icon">+</span> Añadir a mano
     </button>
+    <button type="button" id="groupSelectedBtn" class="btn btn--primary btn--block" hidden disabled>Agrupar (0)</button>
   </div>
   </div>
 
@@ -404,6 +406,47 @@
 
     <button type="button" class="btn btn--secondary btn--block" id="addRecipeIngredientBtn">+ Añadir ingrediente</button>
     <button type="button" class="btn btn--primary btn--block" id="saveRecipeBtn">Guardar receta</button>
+  </div>
+</div>
+
+<!-- Ingredient grams editor (recipe draft items + logged meal-group items) -->
+<div class="modal" id="ingredientGramsModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span id="ingredientGramsTitle">Editar cantidad</span>
+      <button class="modal-close" id="closeIngredientGramsModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <label class="field">
+      <span>Cantidad (g)</span>
+      <input type="number" id="ingredientGramsInput" min="1" step="1" inputmode="numeric">
+    </label>
+    <p class="live-preview" id="ingredientGramsPreview" hidden></p>
+    <button type="button" class="btn btn--primary btn--block" id="saveIngredientGramsBtn">Guardar</button>
+  </div>
+</div>
+
+<!-- Group entries into a meal (and optionally save as a recipe) -->
+<div class="modal" id="groupMealModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Agrupar en comida</span>
+      <button class="modal-close" id="closeGroupMealModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <label class="field">
+      <span>Nombre de la comida</span>
+      <input type="text" id="groupMealNameInput" placeholder="p. ej. Desayuno">
+    </label>
+
+    <label class="field-check">
+      <input type="checkbox" id="groupMealSaveRecipeInput" checked>
+      <span>También guardar como receta</span>
+    </label>
+
+    <button type="button" class="btn btn--primary btn--block" id="confirmGroupMealBtn">Agrupar</button>
   </div>
 </div>
 
@@ -712,6 +755,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=27"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

@@ -1125,6 +1125,133 @@ button.row-main:active { opacity: 0.55; }
 
 #scannerManualForm { margin-top: 12px; }
 
+/* ---------- Grouped meal entries (collapse/expand, ingredients) ---------- */
+.row.row-group {
+  flex-direction: column;
+  align-items: stretch;
+}
+.row-main-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row-chevron-inline {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 2px;
+  color: var(--ink-faint);
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1);
+}
+.row-chevron-inline.is-expanded { transform: rotate(180deg); }
+
+.group-items {
+  padding: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sub-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 8px 16px;
+  border-left: 2px solid var(--line);
+}
+.sub-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.sub-row-main:active { opacity: 0.6; }
+.sub-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub-row-qty {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.sub-row-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sub-row-del {
+  background: var(--surface-alt);
+  border: none;
+  color: var(--ink-faint);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.sub-row-del:active { background: var(--line); transform: scale(0.88); }
+
+.group-update-banner {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--accent-ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 0 4px 16px;
+}
+.group-update-banner:active { opacity: 0.6; }
+
+/* ---------- Entry selection mode (group into meal) ---------- */
+.row-select-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.row-select-check.is-checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  margin: 4px 0 16px;
+}
+.field-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+
 /* ---------- Timer builder (interval rows) ---------- */
 .timer-interval-actions {
   display: flex;

@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "tique-data-v1";
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const SCHEMA_VERSION = 8;
+  const SCHEMA_VERSION = 9;
   const ADAPTIVE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADAPTIVE_MIN_SPAN_DAYS = 14;
   const ADAPTIVE_THRESHOLD_KG_PER_WEEK = 0.15;
@@ -120,6 +120,21 @@
     if (typeof data.workoutGoal.restSeconds !== "number") data.workoutGoal.restSeconds = 90;
     if (!data.favorites) data.favorites = [];
     if (!data.recipes) data.recipes = [];
+    data.recipes.forEach((recipe) => {
+      recipe.items.forEach((item) => {
+        // Older recipes stored only the already-scaled totals with no grams
+        // basis at all. Treat whatever was originally logged as the "100g"
+        // reference point so proportional re-scaling has something sound to
+        // scale from — it's the only anchor available for pre-existing data.
+        if (typeof item.grams !== "number") {
+          item.grams = 100;
+          item.kcalPer100 = item.calories;
+          item.proteinPer100 = item.protein || 0;
+          item.fatPer100 = item.fat || 0;
+          item.carbsPer100 = item.carbs || 0;
+        }
+      });
+    });
     if (!data.routines) data.routines = [];
     if (!data.timers) data.timers = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
@@ -314,12 +329,30 @@
 
   // Which "dayKey-hour" groups are collapsed, in-memory only (not persisted).
   const collapsedHourGroups = new Set();
+  // Which grouped (meal) entries are currently expanded to show ingredients.
+  const expandedGroups = new Set();
+
+  // "Seleccionar" mode: pick several already-logged entries to merge into one
+  // meal. In-memory only, mirrors the Editar/Listo toggle pattern used
+  // elsewhere (favorites, recipes, routines) rather than a gesture.
+  let selectionMode = false;
+  let selectedEntryIds = new Set();
+
+  function buildSelectMark(entryId) {
+    if (!selectionMode) return "";
+    const checked = selectedEntryIds.has(entryId);
+    return `<span class="row-select-check${checked ? " is-checked" : ""}" data-select-id="${entryId}"></span>`;
+  }
 
   function buildEntryRow(entry) {
+    if (entry.items) return buildGroupEntryRow(entry);
+
     const row = document.createElement("div");
     row.className = "row";
+    row.dataset.id = entry.id;
     row.innerHTML = `
-      <button type="button" class="row-main row-edit" data-id="${entry.id}">
+      ${buildSelectMark(entry.id)}
+      <button type="button" class="row-main ${selectionMode ? "row-select" : "row-edit"}" data-id="${entry.id}">
         <span class="row-name">${escapeHtml(entry.name)}</span>
         <span class="row-qty">${entry.qtyLabel ? entry.qtyLabel + " · " : ""}${formatTime(entry.addedAt)}</span>
         ${(entry.protein || entry.fat || entry.carbs)
@@ -327,8 +360,63 @@
           : ""}
       </button>
       <span class="row-amount">${Math.round(entry.calories)} kcal</span>
-      <button class="row-del" data-id="${entry.id}" aria-label="Quitar">${ICON_X}</button>
+      ${selectionMode ? "" : `<button class="row-del" data-id="${entry.id}" aria-label="Quitar">${ICON_X}</button>`}
     `;
+    return row;
+  }
+
+  function buildGroupEntryRow(entry) {
+    const row = document.createElement("div");
+    row.className = "row row-group";
+    row.dataset.id = entry.id;
+    const isExpanded = !selectionMode && expandedGroups.has(entry.id);
+
+    const mainLine = document.createElement("div");
+    mainLine.className = "row-main-line";
+    mainLine.innerHTML = `
+      ${buildSelectMark(entry.id)}
+      <button type="button" class="row-main ${selectionMode ? "row-select" : "row-group-toggle"}" data-id="${entry.id}">
+        <span class="row-name">${escapeHtml(entry.name)} <span class="row-chevron-inline${isExpanded ? " is-expanded" : ""}">${ICON_CHEVRON_DOWN}</span></span>
+        <span class="row-qty">${entry.qtyLabel ? entry.qtyLabel + " · " : ""}${formatTime(entry.addedAt)}</span>
+        ${(entry.protein || entry.fat || entry.carbs)
+          ? `<span class="row-macros">${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C</span>`
+          : ""}
+      </button>
+      <span class="row-amount">${Math.round(entry.calories)} kcal</span>
+      ${selectionMode ? "" : `<button class="row-del" data-id="${entry.id}" aria-label="Quitar">${ICON_X}</button>`}
+    `;
+    row.appendChild(mainLine);
+
+    if (isExpanded) {
+      const sub = document.createElement("div");
+      sub.className = "group-items";
+      entry.items.forEach((item, i) => {
+        const scaled = scaleFoodItem(item);
+        const subRow = document.createElement("div");
+        subRow.className = "sub-row";
+        subRow.innerHTML = `
+          <button type="button" class="sub-row-main" data-entry-id="${entry.id}" data-item-index="${i}">
+            <span class="sub-row-name">${escapeHtml(item.name)}</span>
+            <span class="sub-row-qty">${Math.round(item.grams)} g</span>
+          </button>
+          <span class="sub-row-amount">${Math.round(scaled.calories)} kcal</span>
+          <button class="sub-row-del" data-entry-id="${entry.id}" data-item-index="${i}" aria-label="Quitar">${ICON_X}</button>
+        `;
+        sub.appendChild(subRow);
+      });
+      row.appendChild(sub);
+
+      const recipe = entry.sourceRecipeId ? state.recipes.find((r) => r.id === entry.sourceRecipeId) : null;
+      if (recipe && recipeItemsDiffer(recipe.items, entry.items)) {
+        const banner = document.createElement("button");
+        banner.type = "button";
+        banner.className = "group-update-banner";
+        banner.dataset.id = entry.id;
+        banner.textContent = "Actualizar receta con estos cambios →";
+        row.appendChild(banner);
+      }
+    }
+
     return row;
   }
 
@@ -430,6 +518,7 @@
       copyYesterdayBtnEl.hidden = hasNutritionClipboard || previousDayEntries().length === 0;
       copyDayBtnEl.hidden = true;
       pasteDayBtnEl.hidden = true;
+      selectEntriesToggleBtnEl.hidden = true;
     } else {
       emptyStateEl.style.display = "none";
       renderEntryTimeline(entries);
@@ -437,6 +526,7 @@
       pasteDayBtnEl.hidden = !hasNutritionClipboard;
       pasteDayEmptyBtnEl.hidden = true;
       copyYesterdayBtnEl.hidden = true;
+      selectEntriesToggleBtnEl.hidden = false;
     }
 
     const total = entries.reduce((sum, e) => sum + e.calories, 0);
@@ -499,7 +589,83 @@
     return div.innerHTML;
   }
 
+  // A "food item" (recipe ingredient, or an ingredient inside a merged meal)
+  // stores its macros per 100g plus a grams amount, so it can be rescaled
+  // later without losing the original per-100g basis.
+  function scaleFoodItem(item) {
+    const factor = item.grams / 100;
+    return {
+      calories: item.kcalPer100 * factor,
+      protein: (item.proteinPer100 || 0) * factor,
+      fat: (item.fatPer100 || 0) * factor,
+      carbs: (item.carbsPer100 || 0) * factor
+    };
+  }
+
+  function sumFoodItems(items) {
+    return items.reduce((acc, it) => {
+      const s = scaleFoodItem(it);
+      acc.calories += s.calories;
+      acc.protein += s.protein;
+      acc.fat += s.fat;
+      acc.carbs += s.carbs;
+      return acc;
+    }, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+  }
+
+  // Recomputes a grouped entry's displayed totals from its current items —
+  // called after any per-ingredient grams edit or deletion.
+  function recomputeGroupEntry(entry) {
+    const totals = sumFoodItems(entry.items);
+    entry.calories = totals.calories;
+    entry.protein = totals.protein;
+    entry.fat = totals.fat;
+    entry.carbs = totals.carbs;
+    entry.qtyLabel = `${entry.items.length} ingr.`;
+  }
+
+  // Positional comparison — good enough to decide whether a logged group's
+  // items have drifted from the recipe it was started from.
+  function recipeItemsDiffer(a, b) {
+    if (a.length !== b.length) return true;
+    return a.some((item, i) => {
+      const other = b[i];
+      return !other || item.name !== other.name || item.grams !== other.grams ||
+        item.kcalPer100 !== other.kcalPer100 || item.proteinPer100 !== other.proteinPer100 ||
+        item.fatPer100 !== other.fatPer100 || item.carbsPer100 !== other.carbsPer100;
+    });
+  }
+
   entryListEl.addEventListener("click", (e) => {
+    const bannerBtn = e.target.closest(".group-update-banner");
+    if (bannerBtn) {
+      commitGroupToRecipe(bannerBtn.dataset.id);
+      return;
+    }
+
+    const subDelBtn = e.target.closest(".sub-row-del");
+    if (subDelBtn) {
+      const entry = currentDayEntries().find((en) => en.id === subDelBtn.dataset.entryId);
+      if (entry) {
+        entry.items.splice(parseInt(subDelBtn.dataset.itemIndex, 10), 1);
+        if (entry.items.length === 0) {
+          const entries = currentDayEntries();
+          entries.splice(entries.indexOf(entry), 1);
+        } else {
+          recomputeGroupEntry(entry);
+        }
+        saveData(state);
+        render();
+      }
+      return;
+    }
+
+    const subMainBtn = e.target.closest(".sub-row-main");
+    if (subMainBtn) {
+      openIngredientGramsEditor({ type: "logged", entryId: subMainBtn.dataset.entryId, index: parseInt(subMainBtn.dataset.itemIndex, 10) });
+      return;
+    }
+
     const delBtn = e.target.closest(".row-del");
     if (delBtn) {
       const id = delBtn.dataset.id;
@@ -512,9 +678,148 @@
       }
       return;
     }
+
+    if (selectionMode) {
+      const rowEl = e.target.closest(".row");
+      if (rowEl && rowEl.dataset.id) toggleEntrySelection(rowEl.dataset.id);
+      return;
+    }
+
+    const groupToggle = e.target.closest(".row-group-toggle");
+    if (groupToggle) {
+      const id = groupToggle.dataset.id;
+      if (expandedGroups.has(id)) expandedGroups.delete(id);
+      else expandedGroups.add(id);
+      render();
+      return;
+    }
+
     const editBtn = e.target.closest(".row-edit");
     if (editBtn) openEntryForEdit(editBtn.dataset.id);
   });
+
+  /* ---------- Selection mode: merge logged entries into a meal ---------- */
+
+  const selectEntriesToggleBtnEl = document.getElementById("selectEntriesToggleBtn");
+  const groupSelectedBtnEl = document.getElementById("groupSelectedBtn");
+  const groupMealModal = document.getElementById("groupMealModal");
+  const groupMealNameInputEl = document.getElementById("groupMealNameInput");
+  const groupMealSaveRecipeInputEl = document.getElementById("groupMealSaveRecipeInput");
+
+  function updateGroupSelectedBtn() {
+    const n = selectedEntryIds.size;
+    groupSelectedBtnEl.textContent = `Agrupar (${n})`;
+    groupSelectedBtnEl.disabled = n < 2;
+  }
+
+  function toggleEntrySelection(id) {
+    if (selectedEntryIds.has(id)) selectedEntryIds.delete(id);
+    else selectedEntryIds.add(id);
+    updateGroupSelectedBtn();
+    render();
+  }
+
+  function setSelectionMode(on) {
+    selectionMode = on;
+    selectedEntryIds = new Set();
+    selectEntriesToggleBtnEl.textContent = on ? "Cancelar" : "Seleccionar";
+    document.getElementById("scanBtn").hidden = on;
+    document.getElementById("manualBtn").hidden = on;
+    groupSelectedBtnEl.hidden = !on;
+    updateGroupSelectedBtn();
+    render();
+  }
+
+  selectEntriesToggleBtnEl.addEventListener("click", () => setSelectionMode(!selectionMode));
+
+  groupSelectedBtnEl.addEventListener("click", () => {
+    if (selectedEntryIds.size < 2) return;
+    groupMealNameInputEl.value = "";
+    groupMealSaveRecipeInputEl.checked = true;
+    openModal(groupMealModal);
+    setTimeout(() => groupMealNameInputEl.focus(), 50);
+  });
+
+  document.getElementById("closeGroupMealModal").addEventListener("click", () => closeModal(groupMealModal));
+
+  // Converts an already-logged (flat) entry into a re-scalable food item,
+  // using the same "treat the logged amount as the 100g reference" fallback
+  // convention applied everywhere else an item lacks an explicit basis.
+  function entryToFoodItem(entry) {
+    return {
+      name: entry.name,
+      grams: 100,
+      kcalPer100: entry.calories,
+      proteinPer100: entry.protein || 0,
+      fatPer100: entry.fat || 0,
+      carbsPer100: entry.carbs || 0
+    };
+  }
+
+  document.getElementById("confirmGroupMealBtn").addEventListener("click", () => {
+    const name = groupMealNameInputEl.value.trim();
+    if (!name) {
+      showToast("Indica el nombre de la comida");
+      return;
+    }
+    const entries = currentDayEntries();
+    const selected = entries.filter((e) => selectedEntryIds.has(e.id));
+    if (selected.length < 2) return;
+
+    // Existing grouped entries contribute their own items rather than being
+    // re-wrapped as a single opaque ingredient, so grouping never nests.
+    const items = selected.flatMap((e) => (e.items ? e.items.map((it) => ({ ...it })) : [entryToFoodItem(e)]));
+    const earliestAddedAt = Math.min(...selected.map((e) => e.addedAt));
+
+    selectedEntryIds.forEach((id) => {
+      const idx = entries.findIndex((e) => e.id === id);
+      if (idx >= 0) entries.splice(idx, 1);
+    });
+
+    const totals = sumFoodItems(items);
+    const grouped = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      calories: totals.calories,
+      qtyLabel: `${items.length} ingr.`,
+      protein: totals.protein,
+      fat: totals.fat,
+      carbs: totals.carbs,
+      items,
+      addedAt: earliestAddedAt
+    };
+
+    if (groupMealSaveRecipeInputEl.checked) {
+      const recipe = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name,
+        items: items.map((it) => ({ ...it })),
+        createdAt: Date.now()
+      };
+      state.recipes.push(recipe);
+      grouped.sourceRecipeId = recipe.id;
+    }
+
+    entries.push(grouped);
+    saveData(state);
+    closeModal(groupMealModal);
+    setSelectionMode(false);
+    showToast(groupMealSaveRecipeInputEl.checked ? "Comida agrupada y guardada como receta" : "Comida agrupada");
+  });
+
+  // Pushes a logged group's current (possibly grams-edited) items back onto
+  // the saved recipe it came from — an explicit, opt-in action so a one-off
+  // "just today" tweak never silently changes the template.
+  function commitGroupToRecipe(entryId) {
+    const entry = currentDayEntries().find((e) => e.id === entryId);
+    if (!entry || !entry.sourceRecipeId) return;
+    const recipe = state.recipes.find((r) => r.id === entry.sourceRecipeId);
+    if (!recipe) return;
+    recipe.items = entry.items.map((it) => ({ ...it }));
+    saveData(state);
+    render();
+    showToast(`Receta "${recipe.name}" actualizada`);
+  }
 
   /* ---------- Quick add & copy from yesterday ---------- */
 
@@ -562,7 +867,7 @@
 
   function copyEntryToDay(entry, targetDayKey) {
     if (!state.days[targetDayKey]) state.days[targetDayKey] = { entries: [] };
-    state.days[targetDayKey].entries.push({
+    const copy = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: entry.name,
       calories: entry.calories,
@@ -571,7 +876,11 @@
       fat: entry.fat || 0,
       carbs: entry.carbs || 0,
       addedAt: rebaseTimeToDay(entry.addedAt, targetDayKey)
-    });
+    };
+    if (entry.recipeIngredients) copy.recipeIngredients = entry.recipeIngredients.slice();
+    if (entry.items) copy.items = entry.items.map((it) => ({ ...it }));
+    if (entry.sourceRecipeId) copy.sourceRecipeId = entry.sourceRecipeId;
+    state.days[targetDayKey].entries.push(copy);
   }
 
   // Where a food selected/logged from the add-food modal should go: either
@@ -581,12 +890,18 @@
 
   function commitFoodItem(item) {
     if (foodBrowseContext === "recipe-ingredient") {
+      const hasBasis = typeof item.grams === "number" && typeof item.kcalPer100 === "number";
       draftRecipeItems.push({
         name: item.name,
-        calories: item.calories,
-        protein: item.protein || 0,
-        fat: item.fat || 0,
-        carbs: item.carbs || 0
+        // Fall back to treating the item's already-scaled totals as the
+        // "100g" reference when no explicit basis is available (favorites
+        // committed before this existed, etc.) — same convention used for
+        // migrating old saved recipes.
+        grams: hasBasis ? item.grams : 100,
+        kcalPer100: hasBasis ? item.kcalPer100 : item.calories,
+        proteinPer100: hasBasis ? item.proteinPer100 : (item.protein || 0),
+        fatPer100: hasBasis ? item.fatPer100 : (item.fat || 0),
+        carbsPer100: hasBasis ? item.carbsPer100 : (item.carbs || 0)
       });
       closeModal(entryModal);
       renderRecipeIngredients();
@@ -649,6 +964,10 @@
           renderModalFavorites();
           return;
         }
+        if (foodBrowseContext === "recipe-ingredient") {
+          openFoodItemForRecipeAdjust(fav);
+          return;
+        }
         commitFoodItem(fav);
       });
       modalFavoritesRowEl.appendChild(chip);
@@ -657,22 +976,21 @@
 
   function logRecipe(recipe) {
     const entries = currentDayEntries();
-    const totals = recipe.items.reduce((acc, it) => {
-      acc.calories += it.calories;
-      acc.protein += it.protein || 0;
-      acc.fat += it.fat || 0;
-      acc.carbs += it.carbs || 0;
-      return acc;
-    }, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+    // Deep-clone the recipe's items into the logged entry — this is a
+    // snapshot, not a live reference, so adjusting grams "just for today"
+    // (or the recipe changing later) never silently affects the other side.
+    const items = recipe.items.map((it) => ({ ...it }));
+    const totals = sumFoodItems(items);
     entries.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: recipe.name,
       calories: totals.calories,
-      qtyLabel: `receta · ${recipe.items.length} ingr.`,
+      qtyLabel: `${items.length} ingr.`,
       protein: totals.protein,
       fat: totals.fat,
       carbs: totals.carbs,
-      recipeIngredients: recipe.items.map((it) => it.name),
+      items,
+      sourceRecipeId: recipe.id,
       addedAt: Date.now()
     });
   }
@@ -693,7 +1011,7 @@
       return;
     }
     state.recipes.forEach((recipe) => {
-      const totalKcal = recipe.items.reduce((sum, it) => sum + it.calories, 0);
+      const totalKcal = sumFoodItems(recipe.items).calories;
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "quick-chip";
@@ -735,7 +1053,13 @@
         <span class="quick-chip-name">${escapeHtml(item.name)}</span>
         <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
       `;
-      chip.addEventListener("click", () => commitFoodItem(item));
+      chip.addEventListener("click", () => {
+        if (foodBrowseContext === "recipe-ingredient") {
+          openFoodItemForRecipeAdjust(item);
+          return;
+        }
+        commitFoodItem(item);
+      });
       modalRecentRowEl.appendChild(chip);
     });
   }
@@ -753,7 +1077,13 @@
   copyDayBtnEl.addEventListener("click", () => {
     const entries = currentDayEntries();
     if (entries.length === 0) return;
-    dayClipboard = { type: "nutrition", entries: entries.map((e) => ({ ...e })) };
+    dayClipboard = {
+      type: "nutrition",
+      entries: entries.map((e) => ({
+        ...e,
+        ...(e.items ? { items: e.items.map((it) => ({ ...it })) } : {})
+      }))
+    };
     showToast("Día copiado. Ve a otro día y pulsa Pegar.");
     render();
   });
@@ -957,14 +1287,16 @@
     recipeIngredientsListEl.innerHTML = "";
     recipeIngredientsEmptyEl.hidden = draftRecipeItems.length > 0;
     draftRecipeItems.forEach((item, i) => {
+      const scaled = scaleFoodItem(item);
       const row = document.createElement("div");
       row.className = "row";
       row.innerHTML = `
-        <div class="row-main">
+        <button type="button" class="row-main row-edit" data-index="${i}">
           <span class="row-name">${escapeHtml(item.name)}</span>
-          <span class="row-macros">${Math.round(item.protein || 0)}P · ${Math.round(item.fat || 0)}F · ${Math.round(item.carbs || 0)}C</span>
-        </div>
-        <span class="row-amount">${Math.round(item.calories)} kcal</span>
+          <span class="row-qty">${Math.round(item.grams)} g</span>
+          <span class="row-macros">${Math.round(scaled.protein)}P · ${Math.round(scaled.fat)}F · ${Math.round(scaled.carbs)}C</span>
+        </button>
+        <span class="row-amount">${Math.round(scaled.calories)} kcal</span>
         <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">${ICON_X}</button>
       `;
       recipeIngredientsListEl.appendChild(row);
@@ -973,9 +1305,74 @@
 
   recipeIngredientsListEl.addEventListener("click", (e) => {
     const delBtn = e.target.closest(".row-del");
-    if (!delBtn) return;
-    draftRecipeItems.splice(parseInt(delBtn.dataset.index, 10), 1);
-    renderRecipeIngredients();
+    if (delBtn) {
+      draftRecipeItems.splice(parseInt(delBtn.dataset.index, 10), 1);
+      renderRecipeIngredients();
+      return;
+    }
+    const editBtn = e.target.closest(".row-edit");
+    if (editBtn) openIngredientGramsEditor({ type: "draft", index: parseInt(editBtn.dataset.index, 10) });
+  });
+
+  /* ---------- Ingredient grams editor (shared: recipe draft + logged meal groups) ---------- */
+
+  const ingredientGramsModal = document.getElementById("ingredientGramsModal");
+  const ingredientGramsTitleEl = document.getElementById("ingredientGramsTitle");
+  const ingredientGramsInputEl = document.getElementById("ingredientGramsInput");
+  const ingredientGramsPreviewEl = document.getElementById("ingredientGramsPreview");
+
+  let ingredientEditContext = null; // { type: "draft", index } | { type: "logged", entryId, index }
+
+  function updateIngredientGramsPreview() {
+    const grams = parseFloat(ingredientGramsInputEl.value);
+    if (!ingredientEditContext || isNaN(grams) || grams <= 0) {
+      ingredientGramsPreviewEl.hidden = true;
+      return;
+    }
+    const scaled = scaleFoodItem({ ...ingredientEditContext.item, grams });
+    ingredientGramsPreviewEl.hidden = false;
+    ingredientGramsPreviewEl.textContent = `${Math.round(scaled.calories)} kcal · ${Math.round(scaled.protein)}P · ${Math.round(scaled.fat)}F · ${Math.round(scaled.carbs)}C`;
+  }
+  ingredientGramsInputEl.addEventListener("input", updateIngredientGramsPreview);
+
+  function openIngredientGramsEditor(context) {
+    let item;
+    if (context.type === "draft") {
+      item = draftRecipeItems[context.index];
+    } else {
+      const entry = currentDayEntries().find((e) => e.id === context.entryId);
+      item = entry && entry.items[context.index];
+    }
+    if (!item) return;
+    ingredientEditContext = { ...context, item };
+    ingredientGramsTitleEl.textContent = item.name;
+    ingredientGramsInputEl.value = Math.round(item.grams);
+    updateIngredientGramsPreview();
+    openModal(ingredientGramsModal);
+    setTimeout(() => ingredientGramsInputEl.focus(), 50);
+  }
+
+  document.getElementById("closeIngredientGramsModal").addEventListener("click", () => closeModal(ingredientGramsModal));
+
+  document.getElementById("saveIngredientGramsBtn").addEventListener("click", () => {
+    const grams = parseFloat(ingredientGramsInputEl.value);
+    if (!(grams > 0)) {
+      showToast("Indica una cantidad válida");
+      return;
+    }
+    if (ingredientEditContext.type === "draft") {
+      draftRecipeItems[ingredientEditContext.index].grams = grams;
+      renderRecipeIngredients();
+    } else {
+      const entry = currentDayEntries().find((e) => e.id === ingredientEditContext.entryId);
+      if (entry) {
+        entry.items[ingredientEditContext.index].grams = grams;
+        recomputeGroupEntry(entry);
+        saveData(state);
+        render();
+      }
+    }
+    closeModal(ingredientGramsModal);
   });
 
   document.getElementById("addRecipeBtn").addEventListener("click", () => {
@@ -1310,6 +1707,30 @@
     });
   }
 
+  // Reopens the entry form pre-filled from an already-baked item (a favorite
+  // or a recently-logged food) so its grams can be adjusted before it's
+  // committed — used only when building a recipe, where the exact amount
+  // matters. Regular quick-add stays a single instant tap.
+  function openFoodItemForRecipeAdjust(item) {
+    editingEntryId = null;
+    entryModalTitleEl.textContent = "Ajustar cantidad";
+    entryForm.reset();
+    setEntryFormMode(false);
+    foodBrowseSectionEl.hidden = true;
+    entryNameEl.value = item.name;
+    const hasBasis = typeof item.grams === "number" && typeof item.kcalPer100 === "number";
+    entryGramsEl.value = hasBasis ? item.grams : 100;
+    entryKcalPer100El.value = Math.round(hasBasis ? item.kcalPer100 : item.calories);
+    const proteinPer100 = hasBasis ? item.proteinPer100 : (item.protein || 0);
+    const fatPer100 = hasBasis ? item.fatPer100 : (item.fat || 0);
+    const carbsPer100 = hasBasis ? item.carbsPer100 : (item.carbs || 0);
+    if (proteinPer100) entryProteinPer100El.value = Math.round(proteinPer100);
+    if (fatPer100) entryFatPer100El.value = Math.round(fatPer100);
+    if (carbsPer100) entryCarbsPer100El.value = Math.round(carbsPer100);
+    resetFoodSearch();
+    updateLivePreview();
+  }
+
   function applyFoodSearchResult(product, name, kcal) {
     editingEntryId = null;
     entryModalTitleEl.textContent = "Confirmar producto";
@@ -1388,32 +1809,46 @@
     if (!name) return null;
 
     const kcalTotal = parseFloat(entryKcalTotalEl.value);
-    const kcalPer100 = parseFloat(entryKcalPer100El.value);
+    const kcalPer100Raw = parseFloat(entryKcalPer100El.value);
     const grams = parseFloat(entryGramsEl.value) || 100;
 
-    let calories, qtyLabel;
+    let calories, qtyLabel, kcalPer100Basis;
     if (!isNaN(kcalTotal) && kcalTotal >= 0) {
       calories = kcalTotal;
       qtyLabel = "";
-    } else if (!isNaN(kcalPer100) && kcalPer100 >= 0) {
-      calories = (kcalPer100 * grams) / 100;
+      // Direct-total entry ignores the grams field for the calorie figure
+      // itself, but a per-100g basis is still derived from it so the item
+      // can be proportionally re-scaled later (recipe ingredient, merged meal).
+      kcalPer100Basis = grams > 0 ? (kcalTotal * 100) / grams : kcalTotal;
+    } else if (!isNaN(kcalPer100Raw) && kcalPer100Raw >= 0) {
+      calories = (kcalPer100Raw * grams) / 100;
       qtyLabel = `${grams} g`;
+      kcalPer100Basis = kcalPer100Raw;
     } else {
       return null;
     }
 
-    const proteinPer100 = parseFloat(entryProteinPer100El.value);
-    const fatPer100 = parseFloat(entryFatPer100El.value);
-    const carbsPer100 = parseFloat(entryCarbsPer100El.value);
-    const scale = (v) => (!isNaN(v) && v >= 0 ? (v * grams) / 100 : 0);
+    const proteinPer100Raw = parseFloat(entryProteinPer100El.value);
+    const fatPer100Raw = parseFloat(entryFatPer100El.value);
+    const carbsPer100Raw = parseFloat(entryCarbsPer100El.value);
+    const basis = (v) => (!isNaN(v) && v >= 0 ? v : 0);
+    const scale = (v) => (basis(v) * grams) / 100;
 
     return {
       name,
       calories,
       qtyLabel,
-      protein: scale(proteinPer100),
-      fat: scale(fatPer100),
-      carbs: scale(carbsPer100)
+      protein: scale(proteinPer100Raw),
+      fat: scale(fatPer100Raw),
+      carbs: scale(carbsPer100Raw),
+      // Per-100g basis, kept alongside the computed totals above so callers
+      // that need a re-scalable item (recipe ingredients, merged meals) can
+      // use it without re-deriving it from the already-scaled totals.
+      grams,
+      kcalPer100: kcalPer100Basis,
+      proteinPer100: basis(proteinPer100Raw),
+      fatPer100: basis(fatPer100Raw),
+      carbsPer100: basis(carbsPer100Raw)
     };
   }
 
