@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "tique-data-v1";
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const SCHEMA_VERSION = 6;
+  const SCHEMA_VERSION = 7;
   const ADAPTIVE_CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADAPTIVE_MIN_SPAN_DAYS = 14;
   const ADAPTIVE_THRESHOLD_KG_PER_WEEK = 0.15;
@@ -63,7 +63,7 @@
   }
 
   function defaultWorkoutGoal() {
-    return { weeklySessions: 4 };
+    return { weeklySessions: 4, restSeconds: 90 };
   }
 
   function defaultState() {
@@ -79,6 +79,7 @@
       workoutGoal: defaultWorkoutGoal(),
       favorites: [],
       recipes: [],
+      routines: [],
       onboardingShown: false
     };
   }
@@ -115,8 +116,10 @@
     if (!data.adaptive) data.adaptive = defaultAdaptive();
     if (!data.workouts) data.workouts = {};
     if (!data.workoutGoal) data.workoutGoal = defaultWorkoutGoal();
+    if (typeof data.workoutGoal.restSeconds !== "number") data.workoutGoal.restSeconds = 90;
     if (!data.favorites) data.favorites = [];
     if (!data.recipes) data.recipes = [];
+    if (!data.routines) data.routines = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
     return data;
   }
@@ -1464,6 +1467,7 @@
       if (e.target !== modal) return;
       if (modal.id === "entryModal") closeEntryModalAndReturn();
       else closeModal(modal);
+      if (modal.id === "exerciseDetailModal") stopRestTimer();
     });
   });
 
@@ -1710,6 +1714,9 @@
   const workoutFullDateLabelEl = document.getElementById("workoutFullDateLabel");
   const exerciseQuickSectionEl = document.getElementById("exerciseQuickSection");
   const exerciseQuickRowEl = document.getElementById("exerciseQuickRow");
+  const routineQuickSectionEl = document.getElementById("routineQuickSection");
+  const routineQuickRowEl = document.getElementById("routineQuickRow");
+  const routinesEditToggleEl = document.getElementById("routinesEditToggle");
   const sessionCountChipEl = document.getElementById("sessionCountChip");
   const copyWorkoutDayBtnEl = document.getElementById("copyWorkoutDayBtn");
   const pasteWorkoutDayBtnEl = document.getElementById("pasteWorkoutDayBtn");
@@ -1726,6 +1733,7 @@
         id: `${newExerciseId}-${Math.random().toString(36).slice(2, 7)}`,
         weightKg: s.weightKg,
         reps: s.reps,
+        type: s.type || "normal",
         addedAt: rebaseTimeToDay(s.addedAt, targetDayKey)
       }))
     });
@@ -1809,6 +1817,50 @@
     });
   }
 
+  let routinesEditMode = false;
+
+  routinesEditToggleEl.addEventListener("click", () => {
+    routinesEditMode = !routinesEditMode;
+    routinesEditToggleEl.textContent = routinesEditMode ? "Listo" : "Editar";
+    renderRoutineQuickRow();
+  });
+
+  function startRoutine(routine) {
+    routine.exerciseNames.forEach((name) => createExercise(name));
+    showToast(`${routine.name} añadida`);
+  }
+
+  function renderRoutineQuickRow() {
+    routineQuickRowEl.innerHTML = "";
+    routineQuickSectionEl.hidden = false;
+    routinesEditToggleEl.hidden = state.routines.length === 0;
+    if (state.routines.length === 0) {
+      routinesEditMode = false;
+      routinesEditToggleEl.textContent = "Editar";
+      return;
+    }
+    state.routines.forEach((routine) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-chip";
+      chip.innerHTML = `
+        <span class="quick-chip-name">${escapeHtml(routine.name)}</span>
+        <span class="quick-chip-kcal">${routine.exerciseNames.length} ej.</span>
+        ${routinesEditMode ? `<span class="quick-chip-del" aria-label="Quitar">${ICON_X}</span>` : ""}
+      `;
+      chip.addEventListener("click", () => {
+        if (routinesEditMode) {
+          state.routines = state.routines.filter((r) => r.id !== routine.id);
+          saveData(state);
+          renderRoutineQuickRow();
+          return;
+        }
+        startRoutine(routine);
+      });
+      routineQuickRowEl.appendChild(chip);
+    });
+  }
+
   function summarizeExercise(ex) {
     const n = ex.sets.length;
     if (n === 0) return "Sin series";
@@ -1836,6 +1888,7 @@
     const sessions = countWorkoutSessions();
     sessionCountChipEl.textContent = `${sessions} ${sessions === 1 ? "sesión" : "sesiones"}`;
 
+    renderRoutineQuickRow();
     renderExerciseQuickAdd();
 
     const hasWorkoutClipboard = !!(dayClipboard && dayClipboard.type === "workout");
@@ -1932,6 +1985,87 @@
     openExerciseDetail(ex.id);
   });
 
+  /* ---------- Routine builder modal ---------- */
+
+  const routineModal = document.getElementById("routineModal");
+  const routineNameInputEl = document.getElementById("routineNameInput");
+  const routineExercisesListEl = document.getElementById("routineExercisesList");
+  const routineExercisesEmptyEl = document.getElementById("routineExercisesEmpty");
+  const routineExerciseNameInputEl = document.getElementById("routineExerciseNameInput");
+
+  let draftRoutineExercises = [];
+
+  function renderRoutineExercises() {
+    routineExercisesListEl.innerHTML = "";
+    routineExercisesEmptyEl.hidden = draftRoutineExercises.length > 0;
+    draftRoutineExercises.forEach((name, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="row-main">
+          <span class="row-name">${escapeHtml(name)}</span>
+        </div>
+        <button class="row-del" type="button" data-index="${i}" aria-label="Quitar">${ICON_X}</button>
+      `;
+      routineExercisesListEl.appendChild(row);
+    });
+  }
+
+  routineExercisesListEl.addEventListener("click", (e) => {
+    const delBtn = e.target.closest(".row-del");
+    if (!delBtn) return;
+    draftRoutineExercises.splice(parseInt(delBtn.dataset.index, 10), 1);
+    renderRoutineExercises();
+  });
+
+  document.getElementById("addRoutineBtn").addEventListener("click", () => {
+    draftRoutineExercises = [];
+    routineNameInputEl.value = "";
+    routineExerciseNameInputEl.value = "";
+    renderRoutineExercises();
+    openModal(routineModal);
+    setTimeout(() => routineNameInputEl.focus(), 50);
+  });
+  document.getElementById("closeRoutineModal").addEventListener("click", () => closeModal(routineModal));
+
+  function addDraftRoutineExercise() {
+    const name = routineExerciseNameInputEl.value.trim();
+    if (!name) return;
+    draftRoutineExercises.push(name);
+    routineExerciseNameInputEl.value = "";
+    renderRoutineExercises();
+    routineExerciseNameInputEl.focus();
+  }
+  document.getElementById("addRoutineExerciseBtn").addEventListener("click", addDraftRoutineExercise);
+  routineExerciseNameInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addDraftRoutineExercise();
+    }
+  });
+
+  document.getElementById("saveRoutineBtn").addEventListener("click", () => {
+    const name = routineNameInputEl.value.trim();
+    if (!name) {
+      showToast("Indica el nombre de la rutina");
+      return;
+    }
+    if (draftRoutineExercises.length === 0) {
+      showToast("Añade al menos un ejercicio");
+      return;
+    }
+    state.routines.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      exerciseNames: draftRoutineExercises,
+      createdAt: Date.now()
+    });
+    saveData(state);
+    renderRoutineQuickRow();
+    closeModal(routineModal);
+    showToast("Rutina guardada");
+  });
+
   /* ---------- Exercise detail modal (sets) ---------- */
 
   const exerciseDetailModal = document.getElementById("exerciseDetailModal");
@@ -1943,12 +2077,109 @@
   const setWeightEl = document.getElementById("setWeight");
   const setRepsEl = document.getElementById("setReps");
   const setSubmitBtnEl = document.getElementById("setSubmitBtn");
+  const setTypeToggleEl = document.getElementById("setTypeToggle");
+  const suggestedSetHintEl = document.getElementById("suggestedSetHint");
+  const suggestedSetValueEl = document.getElementById("suggestedSetValue");
+  const useSuggestedSetBtnEl = document.getElementById("useSuggestedSetBtn");
+  const restTimerBannerEl = document.getElementById("restTimerBanner");
+  const restTimerTimeEl = document.getElementById("restTimerTime");
+  const restTimerSkipBtnEl = document.getElementById("restTimerSkipBtn");
+
+  const SET_TYPE_LABELS = { warmup: "Calent.", failure: "Fallo", dropset: "Drop" };
 
   let editingSetId = null;
+  let currentSetType = "normal";
+  let currentLastPerformance = null;
 
   function formatSet(s) {
     return s.weightKg !== null && s.weightKg !== undefined ? `${s.weightKg}×${s.reps}` : `${s.reps} reps`;
   }
+
+  function setActiveSetTypeButton(type) {
+    setTypeToggleEl.querySelectorAll(".segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.type === type));
+  }
+
+  setTypeToggleEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".segmented-btn");
+    if (!btn) return;
+    currentSetType = btn.dataset.type;
+    setActiveSetTypeButton(currentSetType);
+  });
+
+  function nextSuggestedSet(ex, last) {
+    if (!last) return null;
+    return last.ex.sets[ex.sets.length] || null;
+  }
+
+  function renderSuggestedSetHint(ex) {
+    const suggestion = ex ? nextSuggestedSet(ex, currentLastPerformance) : null;
+    if (!suggestion) {
+      suggestedSetHintEl.hidden = true;
+      return;
+    }
+    suggestedSetHintEl.hidden = false;
+    suggestedSetValueEl.textContent = formatSet(suggestion);
+  }
+
+  useSuggestedSetBtnEl.addEventListener("click", () => {
+    const ex = currentWorkoutExercises().find((e) => e.id === currentExerciseId);
+    const suggestion = ex ? nextSuggestedSet(ex, currentLastPerformance) : null;
+    if (!suggestion) return;
+    setWeightEl.value = suggestion.weightKg !== null && suggestion.weightKg !== undefined ? suggestion.weightKg : "";
+    setRepsEl.value = suggestion.reps;
+    setRepsEl.focus();
+  });
+
+  /* ---------- Rest timer ---------- */
+
+  let restTimerInterval = null;
+  let restTimerRemaining = 0;
+
+  function formatRestTime(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function stopRestTimer() {
+    if (restTimerInterval) {
+      clearInterval(restTimerInterval);
+      restTimerInterval = null;
+    }
+    restTimerBannerEl.hidden = true;
+  }
+
+  function tickRestTimer() {
+    restTimerRemaining -= 1;
+    if (restTimerRemaining <= 0) {
+      stopRestTimer();
+      showToast("Descanso terminado");
+      return;
+    }
+    restTimerTimeEl.textContent = formatRestTime(restTimerRemaining);
+  }
+
+  function startRestTimer(seconds) {
+    const duration = seconds || state.workoutGoal.restSeconds || 90;
+    if (restTimerInterval) clearInterval(restTimerInterval);
+    restTimerRemaining = duration;
+    restTimerTimeEl.textContent = formatRestTime(restTimerRemaining);
+    restTimerBannerEl.hidden = false;
+    restTimerBannerEl.querySelectorAll(".rest-timer-preset").forEach((b) => {
+      b.classList.toggle("active", parseInt(b.dataset.secs, 10) === duration);
+    });
+    restTimerInterval = setInterval(tickRestTimer, 1000);
+  }
+
+  restTimerBannerEl.addEventListener("click", (e) => {
+    const presetBtn = e.target.closest(".rest-timer-preset");
+    if (!presetBtn) return;
+    const secs = parseInt(presetBtn.dataset.secs, 10);
+    state.workoutGoal.restSeconds = secs;
+    saveData(state);
+    startRestTimer(secs);
+  });
+  restTimerSkipBtnEl.addEventListener("click", stopRestTimer);
 
   function openExerciseDetail(exerciseId) {
     currentExerciseId = exerciseId;
@@ -1956,17 +2187,20 @@
     if (!ex) return;
     exerciseDetailTitleEl.textContent = ex.name;
 
-    const last = findLastExerciseSets(ex.name, currentWorkoutDayKey());
-    if (last) {
+    currentLastPerformance = findLastExerciseSets(ex.name, currentWorkoutDayKey());
+    if (currentLastPerformance) {
       lastPerformanceHintEl.hidden = false;
-      lastPerformanceHintEl.textContent = `Última vez (${formatShortDate(last.dayKey)}): ${last.ex.sets.map(formatSet).join(", ")}`;
+      lastPerformanceHintEl.textContent = `Última vez (${formatShortDate(currentLastPerformance.dayKey)}): ${currentLastPerformance.ex.sets.map(formatSet).join(", ")}`;
     } else {
       lastPerformanceHintEl.hidden = true;
     }
 
+    stopRestTimer();
     renderSetList();
     editingSetId = null;
     setForm.reset();
+    currentSetType = "normal";
+    setActiveSetTypeButton("normal");
     setSubmitBtnEl.textContent = "Añadir serie";
     openModal(exerciseDetailModal);
     setTimeout(() => setRepsEl.focus(), 50);
@@ -1982,19 +2216,30 @@
       ex.sets.forEach((s, i) => {
         const row = document.createElement("div");
         row.className = "row";
+        const prevSet = currentLastPerformance ? currentLastPerformance.ex.sets[i] : null;
+        const tag = s.type && s.type !== "normal"
+          ? `<span class="set-type-tag set-type-tag--${s.type}">${SET_TYPE_LABELS[s.type]}</span>`
+          : "";
         row.innerHTML = `
           <button type="button" class="row-main row-edit" data-id="${s.id}">
-            <span class="row-name">Serie ${i + 1}</span>
-            <span class="row-qty">${formatSet(s)}</span>
+            <span class="row-name-line">
+              <span class="row-name">Serie ${i + 1}</span>
+              ${tag}
+            </span>
+            <span class="row-qty">${formatSet(s)}${prevSet ? ` · <span class="row-prev">antes ${formatSet(prevSet)}</span>` : ""}</span>
           </button>
           <button class="row-del" data-id="${s.id}" aria-label="Quitar">${ICON_X}</button>
         `;
         setListEl.appendChild(row);
       });
     }
+    renderSuggestedSetHint(ex);
   }
 
-  document.getElementById("closeExerciseDetailModal").addEventListener("click", () => closeModal(exerciseDetailModal));
+  document.getElementById("closeExerciseDetailModal").addEventListener("click", () => {
+    closeModal(exerciseDetailModal);
+    stopRestTimer();
+  });
 
   setListEl.addEventListener("click", (e) => {
     const delBtn = e.target.closest(".row-del");
@@ -2010,6 +2255,8 @@
         if (editingSetId === delBtn.dataset.id) {
           editingSetId = null;
           setForm.reset();
+          currentSetType = "normal";
+          setActiveSetTypeButton("normal");
           setSubmitBtnEl.textContent = "Añadir serie";
         }
       }
@@ -2023,6 +2270,8 @@
       editingSetId = s.id;
       setWeightEl.value = s.weightKg !== null && s.weightKg !== undefined ? s.weightKg : "";
       setRepsEl.value = s.reps;
+      currentSetType = s.type || "normal";
+      setActiveSetTypeButton(currentSetType);
       setSubmitBtnEl.textContent = "Guardar cambios";
       setRepsEl.focus();
     }
@@ -2045,20 +2294,24 @@
       if (!s) return;
       s.weightKg = weight;
       s.reps = reps;
+      s.type = currentSetType;
       saveData(state);
       renderSetList();
       renderWorkoutDay();
       editingSetId = null;
       setForm.reset();
+      currentSetType = "normal";
+      setActiveSetTypeButton("normal");
       setSubmitBtnEl.textContent = "Añadir serie";
       setRepsEl.focus();
       return;
     }
 
-    ex.sets.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weightKg: weight, reps, addedAt: Date.now() });
+    ex.sets.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weightKg: weight, reps, type: currentSetType, addedAt: Date.now() });
     saveData(state);
     renderSetList();
     renderWorkoutDay();
+    startRestTimer();
     // deliberately don't reset the form — same weight/reps stay filled in so
     // repeating an identical set (e.g. "3 sets of the same") is a single tap
     setRepsEl.focus();

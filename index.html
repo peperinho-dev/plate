@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=23">
 </head>
 <body>
 
@@ -128,6 +128,17 @@
             <button type="button" class="link-btn link-btn--muted" id="copyWorkoutDayBtn" hidden>Copiar</button>
             <button type="button" class="link-btn" id="pasteWorkoutDayBtn" hidden>Pegar</button>
           </div>
+        </div>
+
+        <div class="quick-section" id="routineQuickSection" hidden>
+          <div class="quick-label-row">
+            <div class="quick-label">Rutinas</div>
+            <div class="quick-label-actions">
+              <button type="button" class="link-btn" id="addRoutineBtn">+ Nueva</button>
+              <button type="button" class="link-btn link-btn--muted" id="routinesEditToggle">Editar</button>
+            </div>
+          </div>
+          <div class="quick-row" id="routineQuickRow"></div>
         </div>
 
         <div class="quick-section" id="exerciseQuickSection" hidden>
@@ -372,6 +383,35 @@
   </div>
 </div>
 
+<!-- Routine builder modal -->
+<div class="modal" id="routineModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Nueva rutina</span>
+      <button class="modal-close" id="closeRoutineModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <label class="field">
+      <span>Nombre de la rutina</span>
+      <input type="text" id="routineNameInput" placeholder="p. ej. Empuje">
+    </label>
+
+    <span class="field-group-label">Ejercicios</span>
+    <div class="log-list" id="routineExercisesList"></div>
+    <p class="empty-state" id="routineExercisesEmpty">Añade al menos un ejercicio.</p>
+
+    <div class="field-row" id="routineAddExerciseRow">
+      <label class="field">
+        <span>Ejercicio</span>
+        <input type="text" id="routineExerciseNameInput" placeholder="p. ej. Sentadilla">
+      </label>
+      <button type="button" class="btn btn--secondary btn--icon-only" id="addRoutineExerciseBtn" aria-label="Añadir ejercicio">+</button>
+    </div>
+    <button type="button" class="btn btn--primary btn--block" id="saveRoutineBtn">Guardar rutina</button>
+  </div>
+</div>
+
 <!-- Target modal -->
 <div class="modal" id="targetModal" hidden>
   <div class="modal-sheet">
@@ -539,7 +579,34 @@
     <div class="log-list" id="setList"></div>
     <p class="empty-state" id="setEmptyState">Sin series todavía.</p>
 
+    <p class="modal-hint modal-hint--suggested" id="suggestedSetHint" hidden>
+      <span>Sugerido: <strong id="suggestedSetValue">—</strong></span>
+      <button type="button" class="link-btn" id="useSuggestedSetBtn">Usar</button>
+    </p>
+
+    <div class="rest-timer" id="restTimerBanner" hidden>
+      <div class="rest-timer-info">
+        <span class="rest-timer-label">Descanso</span>
+        <span class="rest-timer-time" id="restTimerTime">1:30</span>
+      </div>
+      <div class="rest-timer-actions">
+        <button type="button" class="rest-timer-preset" data-secs="60">60s</button>
+        <button type="button" class="rest-timer-preset" data-secs="90">90s</button>
+        <button type="button" class="rest-timer-preset" data-secs="120">120s</button>
+        <button type="button" class="rest-timer-skip" id="restTimerSkipBtn">Saltar</button>
+      </div>
+    </div>
+
     <form id="setForm" class="form form--divided">
+      <div class="field">
+        <span>Tipo de serie</span>
+        <div class="segmented segmented--compact" id="setTypeToggle">
+          <button type="button" class="segmented-btn active" data-type="normal">Normal</button>
+          <button type="button" class="segmented-btn" data-type="warmup">Calent.</button>
+          <button type="button" class="segmented-btn" data-type="failure">Fallo</button>
+          <button type="button" class="segmented-btn" data-type="dropset">Drop</button>
+        </div>
+      </div>
       <div class="field-row">
         <label class="field">
           <span>Peso (kg) — opcional</span>
@@ -557,6 +624,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
