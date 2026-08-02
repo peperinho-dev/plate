@@ -2802,6 +2802,37 @@
 
   /* ---------- Timer run (warmup / stretch playback) ---------- */
 
+  /* ---------- Timer beep (synthesized via Web Audio, no asset needed) ---------- */
+
+  // Must only ever be created/resumed from inside a real user-gesture call
+  // stack (a click/submit handler) — browsers refuse to play audio otherwise.
+  // Once unlocked it stays usable for the rest of the page's life, so later
+  // beeps fired from a setInterval tick (not a gesture) still work fine.
+  let audioCtx = null;
+  function ensureAudioContext() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playBeep(freq = 880, duration = 0.15) {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration + 0.02);
+  }
+
   const timerRunModal = document.getElementById("timerRunModal");
   const timerRunTitleEl = document.getElementById("timerRunTitle");
   const timerRunStepLabelEl = document.getElementById("timerRunStepLabel");
@@ -2817,8 +2848,10 @@
 
   const TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * 90;
   timerRunRingProgressEl.style.strokeDasharray = `${TIMER_RING_CIRCUMFERENCE}`;
+  const TIMER_COUNTDOWN_SECONDS = 5;
 
   let runningTimer = null;
+  let runningPhase = "active"; // "countdown" (5s lead-in) | "active" | (is-complete handled via CSS class)
   let runningIntervalIndex = 0;
   let runningRemaining = 0;
   let runningTickHandle = null;
@@ -2836,6 +2869,15 @@
   }
 
   function updateTimerRunUI() {
+    if (runningPhase === "countdown") {
+      timerRunStepLabelEl.textContent = "Preparando";
+      timerRunTimeEl.textContent = formatDuration(runningRemaining);
+      timerRunIntervalNameEl.textContent = runningTimer.intervals[0].name;
+      timerRunNextEl.textContent = "Prepárate…";
+      const fraction = (TIMER_COUNTDOWN_SECONDS - runningRemaining) / TIMER_COUNTDOWN_SECONDS;
+      timerRunRingProgressEl.style.strokeDashoffset = `${TIMER_RING_CIRCUMFERENCE * (1 - fraction)}`;
+      return;
+    }
     const iv = runningTimer.intervals[runningIntervalIndex];
     timerRunStepLabelEl.textContent = `Paso ${runningIntervalIndex + 1} de ${runningTimer.intervals.length}`;
     timerRunTimeEl.textContent = formatDuration(runningRemaining);
@@ -2859,6 +2901,15 @@
     }
   }
 
+  function startFirstInterval() {
+    runningPhase = "active";
+    runningIntervalIndex = 0;
+    runningRemaining = runningTimer.intervals[0].seconds;
+    updateTimerRunUI();
+    flashTimerRing();
+    playBeep();
+  }
+
   function advanceTimerRun() {
     runningIntervalIndex += 1;
     if (runningIntervalIndex >= runningTimer.intervals.length) {
@@ -2868,12 +2919,14 @@
     runningRemaining = runningTimer.intervals[runningIntervalIndex].seconds;
     updateTimerRunUI();
     flashTimerRing();
+    playBeep();
   }
 
   function tickTimerRun() {
     runningRemaining -= 1;
     if (runningRemaining <= 0) {
-      advanceTimerRun();
+      if (runningPhase === "countdown") startFirstInterval();
+      else advanceTimerRun();
       return;
     }
     updateTimerRunUI();
@@ -2903,9 +2956,11 @@
   }
 
   function openTimerRun(timer) {
+    playBeep(); // called first, still synchronously inside the triggering click — required to unlock audio
     runningTimer = timer;
-    runningIntervalIndex = 0;
-    runningRemaining = timer.intervals[0].seconds;
+    runningPhase = "countdown";
+    runningIntervalIndex = -1;
+    runningRemaining = TIMER_COUNTDOWN_SECONDS;
     timerRunPauseBtnEl.textContent = "Pausar";
     timerRunControlsEl.classList.remove("is-complete");
     timerRunRingProgressEl.classList.toggle("timer-run-ring-progress--stretch", timer.category === "stretch");
@@ -2934,7 +2989,8 @@
   });
   timerRunSkipBtnEl.addEventListener("click", () => {
     if (timerRunControlsEl.classList.contains("is-complete")) return;
-    advanceTimerRun();
+    if (runningPhase === "countdown") startFirstInterval();
+    else advanceTimerRun();
   });
   timerRunStopBtnEl.addEventListener("click", () => {
     stopTimerRunEngine();
@@ -3032,6 +3088,7 @@
     restTimerRemaining -= 1;
     if (restTimerRemaining <= 0) {
       stopRestTimer();
+      playBeep();
       showToast("Descanso terminado");
       return;
     }
@@ -3039,6 +3096,10 @@
   }
 
   function startRestTimer(seconds) {
+    // Rest starts immediately (no lead-in, no start beep) — this just
+    // primes the audio context from the current user gesture so the
+    // end-of-rest beep, fired later from a setInterval tick, is allowed to play.
+    ensureAudioContext();
     const duration = seconds || state.workoutGoal.restSeconds || 90;
     if (restTimerInterval) clearInterval(restTimerInterval);
     restTimerRemaining = duration;
