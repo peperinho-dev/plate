@@ -352,6 +352,13 @@ button.row-main:active { opacity: 0.55; }
 }
 .empty-state p { margin: 0 0 10px; }
 .empty-state .link-btn { font-size: 13px; }
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+}
 
 .chart-legend {
   display: flex;
@@ -483,9 +490,9 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .totals-value {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -532,7 +539,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .goal-progress-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;

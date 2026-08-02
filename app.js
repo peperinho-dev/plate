@@ -363,6 +363,36 @@
     });
   }
 
+  const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Animates the big daily total counting up/down when it changes for the
+  // *same* day (a log/delete happened), but snaps instantly when the value
+  // changes because the user navigated to a different day — a count-up
+  // during day navigation would read as sluggish rather than satisfying.
+  let lastTotalsDayKey = null;
+  let lastTotalsValue = null;
+  function setTotalKcalText(dayKey, total) {
+    const target = Math.round(total);
+    const sameDay = dayKey === lastTotalsDayKey;
+    const start = sameDay && lastTotalsValue !== null ? lastTotalsValue : target;
+    lastTotalsDayKey = dayKey;
+    lastTotalsValue = target;
+
+    if (start === target || prefersReducedMotion) {
+      totalKcalEl.textContent = `${target} kcal`;
+      return;
+    }
+    const duration = 450;
+    const t0 = performance.now();
+    function tick(now) {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      totalKcalEl.textContent = `${Math.round(start + (target - start) * eased)} kcal`;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
   function render() {
     const entries = currentDayEntries();
     const label = formatDateLabel(dayOffset);
@@ -380,7 +410,7 @@
     }
 
     const total = entries.reduce((sum, e) => sum + e.calories, 0);
-    totalKcalEl.textContent = `${Math.round(total)} kcal`;
+    setTotalKcalText(currentDayKey(), total);
 
     const { min, max } = state.calorieTarget;
     targetMinChipEl.textContent = min;
