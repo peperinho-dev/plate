@@ -1952,6 +1952,7 @@
     modal.addEventListener("click", (e) => {
       if (e.target !== modal) return;
       if (modal.id === "entryModal") closeEntryModalAndReturn();
+      else if (modal.id === "exerciseEditModal") closeExerciseEditModalAndReturn();
       else closeModal(modal);
       if (modal.id === "exerciseDetailModal") stopRestTimer();
       if (modal.id === "timerRunModal") stopTimerRunEngine();
@@ -2208,6 +2209,9 @@
   const copyWorkoutDayBtnEl = document.getElementById("copyWorkoutDayBtn");
   const pasteWorkoutDayBtnEl = document.getElementById("pasteWorkoutDayBtn");
   const pasteWorkoutDayEmptyBtnEl = document.getElementById("pasteWorkoutDayEmptyBtn");
+  const workoutTotalsEl = document.getElementById("workoutTotals");
+  const workoutTotalSetsEl = document.getElementById("workoutTotalSets");
+  const workoutTotalNoteEl = document.getElementById("workoutTotalNote");
 
   function copyExerciseToDay(exercise, targetDayKey) {
     if (!state.workouts[targetDayKey]) state.workouts[targetDayKey] = { exercises: [] };
@@ -2411,6 +2415,27 @@
         exerciseListEl.appendChild(row);
       });
     }
+
+    const totals = computeWorkoutDayTotals(exercises);
+    workoutTotalsEl.hidden = totals.sets === 0;
+    if (totals.sets > 0) {
+      workoutTotalSetsEl.textContent = `${totals.sets} ${totals.sets === 1 ? "serie" : "series"}`;
+      workoutTotalNoteEl.textContent = totals.volume > 0
+        ? `${Math.round(totals.volume)} kg de volumen total`
+        : `${totals.reps} reps totales`;
+    }
+  }
+
+  function computeWorkoutDayTotals(exercises) {
+    let sets = 0, volume = 0, reps = 0;
+    exercises.forEach((ex) => {
+      ex.sets.forEach((s) => {
+        sets += 1;
+        reps += s.reps;
+        if (s.weightKg !== null && s.weightKg !== undefined) volume += s.weightKg * s.reps;
+      });
+    });
+    return { sets, volume, reps };
   }
 
   document.getElementById("prevWorkoutDay").addEventListener("click", () => {
@@ -2466,6 +2491,7 @@
 
   document.getElementById("addExerciseBtn").addEventListener("click", () => {
     addExerciseForm.reset();
+    refreshExerciseNameList();
     openModal(addExerciseModal);
     setTimeout(() => exerciseNameInputEl.focus(), 50);
   });
@@ -2518,6 +2544,7 @@
     routineNameInputEl.value = "";
     routineExerciseNameInputEl.value = "";
     renderRoutineExercises();
+    refreshExerciseNameList();
     openModal(routineModal);
     setTimeout(() => routineNameInputEl.focus(), 50);
   });
@@ -3093,6 +3120,72 @@
     stopRestTimer();
   });
 
+  /* ---------- Exercise edit (rename + progression group) ---------- */
+
+  const exerciseEditModal = document.getElementById("exerciseEditModal");
+  const exerciseEditNameInputEl = document.getElementById("exerciseEditNameInput");
+  const exerciseEditProgressionInputEl = document.getElementById("exerciseEditProgressionInput");
+  const progressionGroupListEl = document.getElementById("progressionGroupList");
+  const exerciseNameListEl = document.getElementById("exerciseNameList");
+
+  function collectAllExerciseNames() {
+    const names = new Set();
+    Object.values(state.workouts).forEach((day) => {
+      day.exercises.forEach((ex) => names.add(ex.name));
+    });
+    return Array.from(names).sort();
+  }
+
+  function collectProgressionGroups() {
+    const groups = new Set();
+    Object.values(state.workouts).forEach((day) => {
+      day.exercises.forEach((ex) => { if (ex.progressionGroup) groups.add(ex.progressionGroup); });
+    });
+    return Array.from(groups).sort();
+  }
+
+  function refreshExerciseNameList() {
+    exerciseNameListEl.innerHTML = collectAllExerciseNames().map((n) => `<option value="${escapeHtml(n)}"></option>`).join("");
+  }
+
+  function openExerciseEdit() {
+    const ex = currentWorkoutExercises().find((e) => e.id === currentExerciseId);
+    if (!ex) return;
+    exerciseEditNameInputEl.value = ex.name;
+    exerciseEditProgressionInputEl.value = ex.progressionGroup || "";
+    refreshExerciseNameList();
+    progressionGroupListEl.innerHTML = collectProgressionGroups().map((g) => `<option value="${escapeHtml(g)}"></option>`).join("");
+    openModal(exerciseEditModal);
+    setTimeout(() => exerciseEditNameInputEl.focus(), 50);
+  }
+
+  document.getElementById("editExerciseBtn").addEventListener("click", () => {
+    closeModal(exerciseDetailModal);
+    openExerciseEdit();
+  });
+
+  function closeExerciseEditModalAndReturn() {
+    closeModal(exerciseEditModal);
+    openExerciseDetail(currentExerciseId);
+  }
+  document.getElementById("closeExerciseEditModal").addEventListener("click", closeExerciseEditModalAndReturn);
+
+  document.getElementById("saveExerciseEditBtn").addEventListener("click", () => {
+    const name = exerciseEditNameInputEl.value.trim();
+    if (!name) {
+      showToast("Indica un nombre");
+      return;
+    }
+    const ex = currentWorkoutExercises().find((e) => e.id === currentExerciseId);
+    if (!ex) return;
+    ex.name = name;
+    ex.progressionGroup = exerciseEditProgressionInputEl.value.trim() || null;
+    saveData(state);
+    closeModal(exerciseEditModal);
+    renderWorkoutDay();
+    openExerciseDetail(ex.id);
+  });
+
   setListEl.addEventListener("click", (e) => {
     const delBtn = e.target.closest(".row-del");
     if (delBtn) {
@@ -3442,7 +3535,100 @@
     chartEl.innerHTML = weeks.length > 1 ? buildSessionsChart(weeks) : "";
 
     renderSessionGoalProgress();
+    renderProgressionsCard();
   }
+
+  // A "progression group" is a free-text tag shared by two or more exercise
+  // variants (e.g. "Flexiones de rodillas" and "Flexiones" both tagged
+  // "Flexiones") — grouping by chronological first-use gives a natural
+  // difficulty timeline without needing to predefine stages up front.
+  function collectExercisesByProgressionGroup() {
+    const groups = new Map();
+    Object.entries(state.workouts).forEach(([dayKey, day]) => {
+      day.exercises.forEach((ex) => {
+        if (!ex.progressionGroup) return;
+        if (!groups.has(ex.progressionGroup)) groups.set(ex.progressionGroup, new Map());
+        const variants = groups.get(ex.progressionGroup);
+        const key = ex.name.trim().toLowerCase();
+        if (!variants.has(key)) {
+          variants.set(key, { name: ex.name, firstDate: dayKey, lastDate: dayKey, sessionCount: 0, bestSet: null });
+        }
+        const v = variants.get(key);
+        if (dayKey < v.firstDate) v.firstDate = dayKey;
+        if (dayKey > v.lastDate) { v.lastDate = dayKey; v.name = ex.name; }
+        if (ex.sets.length > 0) v.sessionCount += 1;
+        ex.sets.forEach((s) => {
+          if (!v.bestSet || isBetterSet(s, v.bestSet)) v.bestSet = s;
+        });
+      });
+    });
+    return groups;
+  }
+
+  function isBetterSet(a, b) {
+    const aw = a.weightKg || 0, bw = b.weightKg || 0;
+    if (aw !== bw) return aw > bw;
+    return a.reps > b.reps;
+  }
+
+  function sortedVariantList(variants) {
+    return Array.from(variants.values()).sort((a, b) => (a.firstDate < b.firstDate ? -1 : 1));
+  }
+
+  function renderProgressionsCard() {
+    const groups = collectExercisesByProgressionGroup();
+    const cardEl = document.getElementById("progressionsCard");
+    const listEl = document.getElementById("progressionsList");
+    listEl.innerHTML = "";
+    if (groups.size === 0) {
+      cardEl.hidden = true;
+      return;
+    }
+    cardEl.hidden = false;
+    Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach((groupName) => {
+      const variantList = sortedVariantList(groups.get(groupName));
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <button type="button" class="row-main" data-group="${escapeHtml(groupName)}">
+          <span class="row-name">${escapeHtml(groupName)}</span>
+          <span class="row-qty">${variantList.length} variante${variantList.length === 1 ? "" : "s"} · actual: ${escapeHtml(variantList[variantList.length - 1].name)}</span>
+        </button>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  function openProgressionDetail(groupName) {
+    const groups = collectExercisesByProgressionGroup();
+    const variants = groups.get(groupName);
+    if (!variants) return;
+    document.getElementById("progressionDetailTitle").textContent = groupName;
+    const listEl = document.getElementById("progressionDetailList");
+    listEl.innerHTML = "";
+    sortedVariantList(variants).forEach((v) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <div class="row-main">
+          <span class="row-name">${escapeHtml(v.name)}</span>
+          <span class="row-qty">${formatShortDate(v.firstDate)} – ${formatShortDate(v.lastDate)} · ${v.sessionCount} sesión${v.sessionCount === 1 ? "" : "es"}</span>
+        </div>
+        <span class="row-amount">${v.bestSet ? formatSet(v.bestSet) : "—"}</span>
+      `;
+      listEl.appendChild(row);
+    });
+    openModal(document.getElementById("progressionDetailModal"));
+  }
+
+  document.getElementById("progressionsList").addEventListener("click", (e) => {
+    const btn = e.target.closest(".row-main");
+    if (btn) openProgressionDetail(btn.dataset.group);
+  });
+
+  document.getElementById("closeProgressionDetailModal").addEventListener("click", () => {
+    closeModal(document.getElementById("progressionDetailModal"));
+  });
 
   function mondayOf(date) {
     const d = new Date(date);
