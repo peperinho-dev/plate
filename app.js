@@ -889,7 +889,10 @@
     openModal(recipeModal);
     setTimeout(() => recipeNameInputEl.focus(), 50);
   });
-  document.getElementById("closeRecipeModal").addEventListener("click", () => closeModal(recipeModal));
+  document.getElementById("closeRecipeModal").addEventListener("click", () => {
+    foodBrowseContext = "log";
+    closeModal(recipeModal);
+  });
 
   document.getElementById("addRecipeIngredientBtn").addEventListener("click", () => {
     closeModal(recipeModal);
@@ -914,6 +917,7 @@
     });
     saveData(state);
     renderModalRecipes();
+    foodBrowseContext = "log";
     closeModal(recipeModal);
     showToast("Receta guardada");
   });
@@ -1212,6 +1216,7 @@
   function openEntryForEdit(entryId) {
     const entry = currentDayEntries().find((en) => en.id === entryId);
     if (!entry) return;
+    foodBrowseContext = "log"; // editing never routes into a recipe draft
     editingEntryId = entryId;
     entryModalTitleEl.textContent = "Editar alimento";
     entryForm.reset();
@@ -1246,13 +1251,14 @@
 
   document.getElementById("manualBtn").addEventListener("click", () => openAddFoodModal("log"));
 
-  document.getElementById("closeEntryModal").addEventListener("click", () => {
+  function closeEntryModalAndReturn() {
     closeModal(entryModal);
     if (foodBrowseContext === "recipe-ingredient") {
       foodBrowseContext = "log";
       openModal(recipeModal);
     }
-  });
+  }
+  document.getElementById("closeEntryModal").addEventListener("click", closeEntryModalAndReturn);
 
   function readEntryFormValues() {
     const name = entryNameEl.value.trim();
@@ -1337,7 +1343,9 @@
   }
   document.querySelectorAll(".modal").forEach((modal) => {
     modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal(modal);
+      if (e.target !== modal) return;
+      if (modal.id === "entryModal") closeEntryModalAndReturn();
+      else closeModal(modal);
     });
   });
 
