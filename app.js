@@ -406,15 +406,25 @@
       });
       row.appendChild(sub);
 
+      const actions = document.createElement("div");
+      actions.className = "group-actions";
+      const renameBtn = document.createElement("button");
+      renameBtn.type = "button";
+      renameBtn.className = "link-btn link-btn--muted group-rename-btn";
+      renameBtn.dataset.id = entry.id;
+      renameBtn.textContent = "Renombrar";
+      actions.appendChild(renameBtn);
+
       const recipe = entry.sourceRecipeId ? state.recipes.find((r) => r.id === entry.sourceRecipeId) : null;
       if (recipe && recipeItemsDiffer(recipe.items, entry.items)) {
         const banner = document.createElement("button");
         banner.type = "button";
-        banner.className = "group-update-banner";
+        banner.className = "link-btn group-update-banner";
         banner.dataset.id = entry.id;
         banner.textContent = "Actualizar receta con estos cambios →";
-        row.appendChild(banner);
+        actions.appendChild(banner);
       }
+      row.appendChild(actions);
     }
 
     return row;
@@ -643,6 +653,12 @@
       return;
     }
 
+    const renameBtn = e.target.closest(".group-rename-btn");
+    if (renameBtn) {
+      openRenameGroup(renameBtn.dataset.id);
+      return;
+    }
+
     const subDelBtn = e.target.closest(".sub-row-del");
     if (subDelBtn) {
       const entry = currentDayEntries().find((en) => en.id === subDelBtn.dataset.entryId);
@@ -820,6 +836,39 @@
     render();
     showToast(`Receta "${recipe.name}" actualizada`);
   }
+
+  // Renaming only ever touches the logged entry, never the recipe it came
+  // from — the recipe's own name is a separate, deliberate decision (via
+  // "Actualizar receta"), same split as grams edits.
+  const renameGroupModal = document.getElementById("renameGroupModal");
+  const renameGroupInputEl = document.getElementById("renameGroupInput");
+  let renameGroupEntryId = null;
+
+  function openRenameGroup(entryId) {
+    const entry = currentDayEntries().find((e) => e.id === entryId);
+    if (!entry) return;
+    renameGroupEntryId = entryId;
+    renameGroupInputEl.value = entry.name;
+    openModal(renameGroupModal);
+    setTimeout(() => renameGroupInputEl.focus(), 50);
+  }
+
+  document.getElementById("closeRenameGroupModal").addEventListener("click", () => closeModal(renameGroupModal));
+
+  document.getElementById("saveRenameGroupBtn").addEventListener("click", () => {
+    const name = renameGroupInputEl.value.trim();
+    if (!name) {
+      showToast("Indica un nombre");
+      return;
+    }
+    const entry = currentDayEntries().find((e) => e.id === renameGroupEntryId);
+    if (entry) {
+      entry.name = name;
+      saveData(state);
+      render();
+    }
+    closeModal(renameGroupModal);
+  });
 
   /* ---------- Quick add & copy from yesterday ---------- */
 

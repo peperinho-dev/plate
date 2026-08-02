@@ -1208,19 +1208,13 @@ button.row-main:active { opacity: 0.55; }
 }
 .sub-row-del:active { background: var(--line); transform: scale(0.88); }
 
-.group-update-banner {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  color: var(--accent-ink);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
+.group-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
   padding: 6px 0 4px 16px;
 }
-.group-update-banner:active { opacity: 0.6; }
+.group-actions .link-btn { font-size: 12px; }
 
 /* ---------- Entry selection mode (group into meal) ---------- */
 .row-select-check {
