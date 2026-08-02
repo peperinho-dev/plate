@@ -771,6 +771,12 @@ button.row-main:active { opacity: 0.55; }
   padding: 12px 14px;
   margin: 0 0 16px;
 }
+.modal-hint--loading { animation: hintPulse 1.3s ease-in-out infinite; }
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
 .link-btn {
   background: none;
@@ -938,6 +944,25 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 12px;
   box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35);
   pointer-events: none;
+  overflow: hidden;
+}
+.scanner-frame::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  box-shadow: 0 0 8px 1px var(--accent);
+  animation: scanSweep 2.2s ease-in-out infinite;
+}
+
+@keyframes scanSweep {
+  0% { top: 4%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 94%; opacity: 0; }
 }
 
 .scanner-torch {
@@ -1000,5 +1025,7 @@ button:focus-visible, input:focus-visible {
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .row, .modal-sheet, .toast, .modal, .view, .tab-btn .tab-icon, .hour-chevron { animation: none !important; transition: none !important; }
+  .row, .modal-sheet, .toast, .modal, .view, .tab-btn .tab-icon, .hour-chevron,
+  .chart-scroll svg, .scanner-frame::after, .modal-hint--loading { animation: none !important; transition: none !important; }
+  .scanner-frame::after { opacity: 0.6; top: 50%; }
 }

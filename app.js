@@ -1167,6 +1167,12 @@
 
   let foodSearchDebounce = null;
 
+  function setSearchHintLoading() {
+    foodSearchHintEl.hidden = false;
+    foodSearchHintEl.classList.add("modal-hint--loading");
+    foodSearchHintEl.textContent = "Buscando…";
+  }
+
   foodSearchInputEl.addEventListener("input", () => {
     clearTimeout(foodSearchDebounce);
     const query = foodSearchInputEl.value.trim();
@@ -1174,10 +1180,10 @@
     foodBrowseSectionEl.hidden = query.length > 0;
     if (query.length < 2) {
       foodSearchHintEl.hidden = true;
+      foodSearchHintEl.classList.remove("modal-hint--loading");
       return;
     }
-    foodSearchHintEl.hidden = false;
-    foodSearchHintEl.textContent = "Buscando…";
+    setSearchHintLoading();
     foodSearchDebounce = setTimeout(() => searchFoods(query), 450);
   });
 
@@ -1204,9 +1210,10 @@
       console.error(err);
       if (foodSearchInputEl.value.trim() !== query) return;
       foodSearchHintEl.hidden = false;
+      foodSearchHintEl.classList.remove("modal-hint--loading");
       foodSearchHintEl.innerHTML = `Error al buscar. Revisa tu conexión. <button type="button" class="link-btn" id="foodSearchRetryBtn">Reintentar</button>`;
       document.getElementById("foodSearchRetryBtn").addEventListener("click", () => {
-        foodSearchHintEl.textContent = "Buscando…";
+        setSearchHintLoading();
         searchFoods(query, 0);
       });
     }
@@ -1216,6 +1223,7 @@
     if (foodSearchInputEl.value.trim() !== query) return; // stale response, a newer search superseded it
     foodSearchResultsEl.innerHTML = "";
     const valid = products.filter((p) => (p.product_name_es || p.product_name) && p.nutriments && typeof p.nutriments["energy-kcal_100g"] === "number");
+    foodSearchHintEl.classList.remove("modal-hint--loading");
     if (valid.length === 0) {
       foodSearchHintEl.hidden = false;
       foodSearchHintEl.textContent = "Sin resultados. Añádelo a mano abajo.";
@@ -2009,6 +2017,26 @@
 
   const CHART_LEFT_MARGIN = 32;
 
+  // Catmull-Rom-to-bezier smoothing (tension 6, the standard conversion) so
+  // trend lines read as curves instead of sharp polyline angles.
+  function smoothPath(points) {
+    if (points.length < 2) return "";
+    if (points.length === 2) return `M${points[0].x.toFixed(1)},${points[0].y.toFixed(1)} L${points[1].x.toFixed(1)},${points[1].y.toFixed(1)}`;
+    let d = `M${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+    }
+    return d;
+  }
+
   function buildYAxis(maxVal, minVal, yFor, w, tickCount = 3, formatTick = Math.round) {
     let gridlines = "";
     for (let t = 0; t <= tickCount; t++) {
@@ -2094,14 +2122,14 @@
     const gridlines = buildYAxis(maxV, minV, y, w, 3, (v) => v.toFixed(1));
 
     const dots = withEma.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.raw).toFixed(1)}" r="2.5" fill="var(--ink-faint)"></circle>`).join("");
-    const emaPoints = withEma.map((p, i) => `${x(i).toFixed(1)},${y(p.ema).toFixed(1)}`);
-    const linePoints = emaPoints.join(" ");
+    const emaPts = withEma.map((p, i) => ({ x: x(i), y: y(p.ema) }));
+    const curvePath = smoothPath(emaPts);
     const baseline = (h - padBottom).toFixed(1);
     const area = withEma.length > 1
-      ? `<path d="M${emaPoints[0]} L${emaPoints.slice(1).join(" L")} L${x(withEma.length - 1).toFixed(1)},${baseline} L${x(0).toFixed(1)},${baseline} Z" fill="url(#weightAreaGradient)" stroke="none"></path>`
+      ? `<path d="${curvePath} L${x(withEma.length - 1).toFixed(1)},${baseline} L${x(0).toFixed(1)},${baseline} Z" fill="url(#weightAreaGradient)" stroke="none"></path>`
       : "";
     const line = withEma.length > 1
-      ? `<polyline points="${linePoints}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`
+      ? `<path d="${curvePath}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>`
       : "";
     const labels = buildXAxisDates(withEma, x, h);
     const defs = `<defs><linearGradient id="weightAreaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"></stop><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"></stop></linearGradient></defs>`;
@@ -2126,8 +2154,8 @@
 
     const lineFor = (key, color) => {
       if (days.length < 2) return "";
-      const points = days.map((d, i) => `${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
-      return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+      const pts = days.map((d, i) => ({ x: x(i), y: y(d[key]) }));
+      return `<path d="${smoothPath(pts)}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>`;
     };
 
     const lines = lineFor("protein", MACRO_COLORS.protein) + lineFor("fat", MACRO_COLORS.fat) + lineFor("carbs", MACRO_COLORS.carbs);
