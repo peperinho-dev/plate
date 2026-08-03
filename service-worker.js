@@ -1,4 +1,4 @@
-const CACHE_NAME = "tique-cache-v40";
+const CACHE_NAME = "tique-cache-v41";
 // Keep these query strings in sync with the versioned URLs index.html actually
 // requests (styles.css?vN, app.js?vN) — cache lookups match the full URL
 // including the query string, so a stale/mismatched version here is never
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=30",
-  "./app.js?v=38",
+  "./app.js?v=39",
   "./manifest.json?v=2",
   "./icons/icon-192.png?v=2",
   "./icons/icon-512.png?v=2",

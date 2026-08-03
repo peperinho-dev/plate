@@ -2686,6 +2686,20 @@
   document.getElementById("routineSectionToggle").addEventListener("click", () => toggleWorkoutSection("routines"));
   document.getElementById("exerciseSectionToggle").addEventListener("click", () => toggleWorkoutSection("exercises"));
 
+  // The four setup pickers (Calentamiento/Rutinas/Estiramientos/Ejercicios
+  // recientes) sit behind one master toggle, collapsed by default — without
+  // it, their header rows were always visible even with nothing left to add,
+  // cluttering the view once you're mid-workout.
+  const workoutSetupSectionsEl = document.getElementById("workoutSetupSections");
+  const workoutSetupChevronEl = document.getElementById("workoutSetupChevron");
+  let workoutSetupExpanded = false;
+
+  document.getElementById("workoutSetupToggleBtn").addEventListener("click", () => {
+    workoutSetupExpanded = !workoutSetupExpanded;
+    workoutSetupSectionsEl.hidden = !workoutSetupExpanded;
+    workoutSetupChevronEl.classList.toggle("is-collapsed", !workoutSetupExpanded);
+  });
+
   let routinesEditMode = false;
 
   routinesEditToggleEl.addEventListener("click", () => {

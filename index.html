@@ -144,56 +144,67 @@
 
         <div class="log-list" id="timerLogList"></div>
 
-        <div class="quick-section" id="warmupQuickSection" hidden>
+        <div class="quick-section" id="workoutSetupToggleSection">
           <div class="quick-label-row">
-            <button type="button" class="quick-label-toggle" id="warmupSectionToggle">
-              <span class="quick-label">Calentamiento</span>
-              <span class="quick-label-chevron" id="warmupSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+            <button type="button" class="quick-label-toggle" id="workoutSetupToggleBtn">
+              <span class="quick-label">+ Calentamiento, rutinas y estiramientos</span>
+              <span class="quick-label-chevron is-collapsed" id="workoutSetupChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
             </button>
-            <div class="quick-label-actions" id="warmupQuickActions">
-              <button type="button" class="link-btn" id="addWarmupTimerBtn">+ Nueva</button>
-              <button type="button" class="link-btn link-btn--muted" id="warmupTimersEditToggle">Editar</button>
-            </div>
           </div>
-          <div class="quick-row" id="warmupTimerQuickRow"></div>
         </div>
 
-        <div class="quick-section" id="stretchQuickSection" hidden>
-          <div class="quick-label-row">
-            <button type="button" class="quick-label-toggle" id="stretchSectionToggle">
-              <span class="quick-label">Estiramientos</span>
-              <span class="quick-label-chevron" id="stretchSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <div class="quick-label-actions" id="stretchQuickActions">
-              <button type="button" class="link-btn" id="addStretchTimerBtn">+ Nueva</button>
-              <button type="button" class="link-btn link-btn--muted" id="stretchTimersEditToggle">Editar</button>
+        <div id="workoutSetupSections" hidden>
+          <div class="quick-section" id="warmupQuickSection" hidden>
+            <div class="quick-label-row">
+              <button type="button" class="quick-label-toggle" id="warmupSectionToggle">
+                <span class="quick-label">Calentamiento</span>
+                <span class="quick-label-chevron" id="warmupSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+              <div class="quick-label-actions" id="warmupQuickActions">
+                <button type="button" class="link-btn" id="addWarmupTimerBtn">+ Nueva</button>
+                <button type="button" class="link-btn link-btn--muted" id="warmupTimersEditToggle">Editar</button>
+              </div>
             </div>
+            <div class="quick-row" id="warmupTimerQuickRow"></div>
           </div>
-          <div class="quick-row" id="stretchTimerQuickRow"></div>
-        </div>
 
-        <div class="quick-section" id="routineQuickSection" hidden>
-          <div class="quick-label-row">
-            <button type="button" class="quick-label-toggle" id="routineSectionToggle">
-              <span class="quick-label">Rutinas</span>
-              <span class="quick-label-chevron" id="routineSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <div class="quick-label-actions" id="routineQuickActions">
-              <button type="button" class="link-btn" id="addRoutineBtn">+ Nueva</button>
-              <button type="button" class="link-btn link-btn--muted" id="routinesEditToggle">Editar</button>
+          <div class="quick-section" id="routineQuickSection" hidden>
+            <div class="quick-label-row">
+              <button type="button" class="quick-label-toggle" id="routineSectionToggle">
+                <span class="quick-label">Rutinas</span>
+                <span class="quick-label-chevron" id="routineSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+              <div class="quick-label-actions" id="routineQuickActions">
+                <button type="button" class="link-btn" id="addRoutineBtn">+ Nueva</button>
+                <button type="button" class="link-btn link-btn--muted" id="routinesEditToggle">Editar</button>
+              </div>
             </div>
+            <div class="quick-row" id="routineQuickRow"></div>
           </div>
-          <div class="quick-row" id="routineQuickRow"></div>
-        </div>
 
-        <div class="quick-section" id="exerciseQuickSection" hidden>
-          <div class="quick-label-row">
-            <button type="button" class="quick-label-toggle" id="exerciseSectionToggle">
-              <span class="quick-label">Ejercicios recientes</span>
-              <span class="quick-label-chevron" id="exerciseSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
+          <div class="quick-section" id="stretchQuickSection" hidden>
+            <div class="quick-label-row">
+              <button type="button" class="quick-label-toggle" id="stretchSectionToggle">
+                <span class="quick-label">Estiramientos</span>
+                <span class="quick-label-chevron" id="stretchSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+              <div class="quick-label-actions" id="stretchQuickActions">
+                <button type="button" class="link-btn" id="addStretchTimerBtn">+ Nueva</button>
+                <button type="button" class="link-btn link-btn--muted" id="stretchTimersEditToggle">Editar</button>
+              </div>
+            </div>
+            <div class="quick-row" id="stretchTimerQuickRow"></div>
           </div>
-          <div class="quick-row" id="exerciseQuickRow"></div>
+
+          <div class="quick-section" id="exerciseQuickSection" hidden>
+            <div class="quick-label-row">
+              <button type="button" class="quick-label-toggle" id="exerciseSectionToggle">
+                <span class="quick-label">Ejercicios recientes</span>
+                <span class="quick-label-chevron" id="exerciseSectionChevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+            </div>
+            <div class="quick-row" id="exerciseQuickRow"></div>
+          </div>
         </div>
 
         <div class="log-list" id="exerciseList"></div>
@@ -889,6 +900,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=38"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
