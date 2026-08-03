@@ -16,6 +16,7 @@
   const FAT_PCT_OF_CALORIES = 0.25; // fat as a share of the calorie-target center
   const FAT_BAND_G = 10;
   const CARBS_BAND_G = 25; // carbs fill whatever calories remain after protein+fat
+  const BACKUP_REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
   const ICON_X = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
   const ICON_CHEVRON_DOWN = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
@@ -81,7 +82,8 @@
       recipes: [],
       routines: [],
       timers: [],
-      onboardingShown: false
+      onboardingShown: false,
+      lastExportedAt: null
     };
   }
 
@@ -138,6 +140,7 @@
     if (!data.routines) data.routines = [];
     if (!data.timers) data.timers = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
+    if (typeof data.lastExportedAt !== "number") data.lastExportedAt = null;
     return data;
   }
 
@@ -589,6 +592,7 @@
     dateLabelEl.textContent = label.short;
     fullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, c => c.toUpperCase());
     renderWeekStrip();
+    renderBackupBanner();
 
     const hasNutritionClipboard = !!(dayClipboard && dayClipboard.type === "nutrition");
     if (entries.length === 0) {
@@ -1600,7 +1604,7 @@
 
   /* ---------- Data export / import ---------- */
 
-  document.getElementById("exportDataBtn").addEventListener("click", () => {
+  function exportData() {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1610,8 +1614,13 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    state.lastExportedAt = Date.now();
+    saveData(state);
+    renderBackupBanner();
     showToast("Datos exportados");
-  });
+  }
+
+  document.getElementById("exportDataBtn").addEventListener("click", exportData);
 
   const importDataInputEl = document.getElementById("importDataInput");
   document.getElementById("importDataBtn").addEventListener("click", () => importDataInputEl.click());
@@ -1641,6 +1650,34 @@
       showToast("Datos importados");
     };
     reader.readAsText(file);
+  });
+
+  // iOS treats deleting a home-screen web app's icon as uninstalling it —
+  // its whole storage container (this data included) gets wiped, with no
+  // warning. The export file is the only thing that survives that, so nag
+  // periodically until the user actually has one.
+  function hasBackupWorthyData() {
+    return state.weightLog.length > 0 ||
+      Object.values(state.days).some((d) => d.entries.length > 0) ||
+      Object.keys(state.workouts).length > 0;
+  }
+
+  let backupBannerDismissedThisSession = false;
+
+  function renderBackupBanner() {
+    const bannerEl = document.getElementById("backupBanner");
+    const overdue = Date.now() - (state.lastExportedAt || 0) > BACKUP_REMINDER_INTERVAL_MS;
+    if (backupBannerDismissedThisSession || !overdue || !hasBackupWorthyData()) {
+      bannerEl.hidden = true;
+      return;
+    }
+    bannerEl.hidden = false;
+  }
+
+  document.getElementById("backupExportBtn").addEventListener("click", exportData);
+  document.getElementById("backupDismissBtn").addEventListener("click", () => {
+    backupBannerDismissedThisSession = true;
+    renderBackupBanner();
   });
 
   /* ---------- Weight log modal ---------- */

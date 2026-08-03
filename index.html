@@ -38,6 +38,14 @@
 
   <div class="week-strip" id="weekStrip"></div>
 
+  <div class="adaptive-banner" id="backupBanner" hidden>
+    <p>No hay copia de seguridad reciente. Si borras el icono de la app (o cambias de teléfono), perderás todos tus datos.</p>
+    <div class="adaptive-banner-actions">
+      <button type="button" id="backupExportBtn" class="link-btn">Exportar ahora</button>
+      <button type="button" id="backupDismissBtn" class="link-btn link-btn--muted">Ahora no</button>
+    </div>
+  </div>
+
   <div class="adaptive-banner" id="adaptiveBanner" hidden>
     <p id="adaptiveBannerText"></p>
     <div class="adaptive-banner-actions">
@@ -876,6 +884,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=36"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>
