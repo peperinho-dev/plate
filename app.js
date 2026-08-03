@@ -393,8 +393,11 @@
     return (state.days[key] && state.days[key].entries) || [];
   }
 
-  // Which "dayKey-hour" groups are collapsed, in-memory only (not persisted).
-  const collapsedHourGroups = new Set();
+  // Which "dayKey-hour" groups the user has explicitly expanded, in-memory
+  // only (not persisted) — groups default to collapsed on every fresh load
+  // so the day view opens tidy, and only the ones tapped open stay open for
+  // the rest of this session.
+  const expandedHourGroups = new Set();
   // Which grouped (meal) entries are currently expanded to show ingredients.
   const expandedGroups = new Set();
 
@@ -518,7 +521,7 @@
     const groups = groupEntriesByHour(entries);
     groups.forEach(({ hour, entries: groupEntries, total }) => {
       const groupKey = `${dayKey}-${hour}`;
-      const collapsed = collapsedHourGroups.has(groupKey);
+      const collapsed = !expandedHourGroups.has(groupKey);
 
       const wrap = document.createElement("div");
       wrap.className = "hour-group";
@@ -532,8 +535,8 @@
         <span class="hour-chevron${collapsed ? " is-collapsed" : ""}">${ICON_CHEVRON_DOWN}</span>
       `;
       header.addEventListener("click", () => {
-        if (collapsedHourGroups.has(groupKey)) collapsedHourGroups.delete(groupKey);
-        else collapsedHourGroups.add(groupKey);
+        if (expandedHourGroups.has(groupKey)) expandedHourGroups.delete(groupKey);
+        else expandedHourGroups.add(groupKey);
         render();
       });
       wrap.appendChild(header);
