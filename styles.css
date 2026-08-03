@@ -203,6 +203,47 @@ button {
   gap: 8px;
 }
 
+.week-strip {
+  display: flex;
+  gap: 6px;
+  margin: -8px 0 18px;
+}
+
+.week-strip-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: background 0.15s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.week-strip-day:active { transform: scale(0.94); }
+.week-strip-letter {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.week-strip-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.week-strip-day.is-selected {
+  background: var(--ink);
+}
+.week-strip-day.is-selected .week-strip-letter { color: var(--surface); opacity: 0.65; }
+.week-strip-day.is-selected .week-strip-num { color: var(--surface); }
+.week-strip-day.is-future {
+  opacity: 0.35;
+}
+.week-strip-day:disabled { pointer-events: none; }
+
 .chip {
   background: var(--accent-soft);
   border: none;
@@ -435,6 +476,43 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 50%;
   display: inline-block;
 }
+
+.chart-legend-dash {
+  width: 14px;
+  height: 0;
+  border-top: 1.5px dashed var(--ink);
+  display: inline-block;
+}
+
+.insights-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.insights-carousel::-webkit-scrollbar { display: none; }
+
+.insight-card {
+  flex: 0 0 136px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.insight-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.insight-card-value { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.insight-card-sub { font-size: 11px; color: var(--ink-faint); }
+.insight-card-spark { margin-top: 2px; }
 
 /* ---------- Quick add ---------- */
 .quick-section { margin-bottom: 16px; }
@@ -738,6 +816,15 @@ button.row-main:active { opacity: 0.55; }
 .btn--secondary:active { background: var(--line); }
 
 .btn-icon { font-size: 15px; }
+.btn--small { padding: 8px 14px; font-size: 13px; }
+
+.search-select-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: -2px;
+}
 
 /* ---------- Modals ---------- */
 .modal {

@@ -221,6 +221,24 @@
     return { min, max };
   }
 
+  // Current estimated maintenance expenditure (TDEE), with no goal
+  // surplus/deficit applied — the "calories out" side of the energy-balance
+  // comparison against logged intake. We only ever have one live estimate
+  // (recalculated as the profile/weight change), not a day-by-day history,
+  // so this is plotted as a flat reference line rather than a fluctuating one.
+  function estimateCurrentTdee() {
+    const profile = state.profile;
+    const latest = latestWeightEntry(state.weightLog);
+    if (!profile || !latest) return null;
+    const { sex, age, heightCm, activityLevel } = profile;
+    if (!sex || !age || !heightCm || !activityLevel) return null;
+    const latestWeightKg = latest.weightKg;
+    const bmr = sex === "female"
+      ? 10 * latestWeightKg + 6.25 * heightCm - 5 * age - 161
+      : 10 * latestWeightKg + 6.25 * heightCm - 5 * age + 5;
+    return bmr * (ACTIVITY_MULTIPLIERS[activityLevel] || ACTIVITY_MULTIPLIERS.sedentary);
+  }
+
   function calculateMacroTargets(latestWeightKg, calorieCenter) {
     if (!latestWeightKg || !calorieCenter) return null;
 
@@ -277,6 +295,9 @@
   const browseRecipesRowEl = document.getElementById("browseRecipesRow");
   const modalRecipesRowEl = document.getElementById("modalRecipesRow");
   const recipesEditToggleEl = document.getElementById("recipesEditToggle");
+  const browseGoToRowEl = document.getElementById("browseGoToRow");
+  const modalGoToRowEl = document.getElementById("modalGoToRow");
+  const goToLabelEl = document.getElementById("goToLabel");
   const browseRecentRowEl = document.getElementById("browseRecentRow");
   const modalRecentRowEl = document.getElementById("modalRecentRow");
   const totalKcalEl = document.getElementById("totalKcal");
@@ -303,6 +324,51 @@
 
   const WEEKDAYS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
   const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const WEEKDAY_LETTERS_MON = ["L","M","X","J","V","S","D"]; // Monday-first, matches the week strip
+
+  const weekStripEl = document.getElementById("weekStrip");
+
+  // The Mon–Sun week containing `offset` (days from today), each day tagged
+  // with its own offset-from-today so a tap can jump straight to it.
+  function getWeekStripDays(offset) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(today);
+    selected.setDate(selected.getDate() + offset);
+    const dow = selected.getDay(); // 0=Sun..6=Sat
+    const mondayDelta = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(selected);
+    monday.setDate(monday.getDate() + mondayDelta);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      const dOffset = Math.round((d - today) / DAY_MS);
+      days.push({ date: d, offset: dOffset, isFuture: dOffset > 0, isSelected: dOffset === offset });
+    }
+    return days;
+  }
+
+  function renderWeekStrip() {
+    const days = getWeekStripDays(dayOffset);
+    weekStripEl.innerHTML = "";
+    days.forEach((d) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
+      btn.disabled = d.isFuture;
+      btn.innerHTML = `
+        <span class="week-strip-letter">${WEEKDAY_LETTERS_MON[(d.date.getDay() + 6) % 7]}</span>
+        <span class="week-strip-num">${d.date.getDate()}</span>
+      `;
+      btn.addEventListener("click", () => {
+        dayOffset = d.offset;
+        render();
+      });
+      weekStripEl.appendChild(btn);
+    });
+  }
 
   function formatDateLabel(offset) {
     const d = new Date();
@@ -519,6 +585,7 @@
 
     dateLabelEl.textContent = label.short;
     fullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, c => c.toUpperCase());
+    renderWeekStrip();
 
     const hasNutritionClipboard = !!(dayClipboard && dayClipboard.type === "nutrition");
     if (entries.length === 0) {
@@ -900,6 +967,39 @@
       .slice(0, limit);
   }
 
+  // Foods you specifically tend to log around the current hour of day (e.g.
+  // your usual 8am breakfast), distinct from computeFrequentItems' overall
+  // "most logged" ranking which ignores time of day entirely.
+  function computeHourlyGoTos(limit = 6) {
+    const hour = new Date().getHours();
+    const tally = new Map();
+    Object.values(state.days).forEach((day) => {
+      day.entries.forEach((e) => {
+        if (!e.addedAt || new Date(e.addedAt).getHours() !== hour) return;
+        const key = e.name.trim().toLowerCase();
+        if (!key) return;
+        const existing = tally.get(key);
+        if (existing) {
+          existing.count += 1;
+          if (e.addedAt > existing.lastAddedAt) {
+            existing.lastAddedAt = e.addedAt;
+            existing.calories = e.calories;
+            existing.qtyLabel = e.qtyLabel;
+            existing.name = e.name;
+            existing.protein = e.protein;
+            existing.fat = e.fat;
+            existing.carbs = e.carbs;
+          }
+        } else {
+          tally.set(key, { name: e.name, calories: e.calories, qtyLabel: e.qtyLabel, protein: e.protein, fat: e.fat, carbs: e.carbs, count: 1, lastAddedAt: e.addedAt });
+        }
+      });
+    });
+    return Array.from(tally.values())
+      .sort((a, b) => b.count - a.count || b.lastAddedAt - a.lastAddedAt)
+      .slice(0, limit);
+  }
+
   function addEntryToCurrentDay(item) {
     const entries = currentDayEntries();
     entries.push({
@@ -970,6 +1070,7 @@
   function renderFoodBrowseSection() {
     renderModalFavorites();
     renderModalRecipes();
+    renderModalGoTos();
     renderModalRecent();
   }
 
@@ -1083,6 +1184,35 @@
         showToast("Receta añadida");
       });
       modalRecipesRowEl.appendChild(chip);
+    });
+  }
+
+  function renderModalGoTos() {
+    const items = computeHourlyGoTos();
+    modalGoToRowEl.innerHTML = "";
+    if (items.length === 0) {
+      browseGoToRowEl.hidden = true;
+      return;
+    }
+    browseGoToRowEl.hidden = false;
+    const hour = new Date().getHours();
+    goToLabelEl.textContent = `Habituales a las ${String(hour).padStart(2, "0")}:00`;
+    items.forEach((item) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-chip";
+      chip.innerHTML = `
+        <span class="quick-chip-name">${escapeHtml(item.name)}</span>
+        <span class="quick-chip-kcal">${Math.round(item.calories)} kcal</span>
+      `;
+      chip.addEventListener("click", () => {
+        if (foodBrowseContext === "recipe-ingredient") {
+          openFoodItemForRecipeAdjust(item);
+          return;
+        }
+        commitFoodItem(item);
+      });
+      modalGoToRowEl.appendChild(chip);
     });
   }
 
@@ -1529,7 +1659,54 @@
     });
   }
 
+  // A GitHub-style contribution calendar of which days have a weigh-in,
+  // giving an at-a-glance read on consistency that a plain list can't.
+  function buildWeighInHeatmap(weightLog, weeks = 20) {
+    const dateSet = new Set(weightLog.map((w) => w.date));
+    const today = parseDateKey(todayKey(0));
+    const dow = today.getDay();
+    const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(endOfWeek.getDate() + (6 - daysSinceMonday));
+    const start = new Date(endOfWeek);
+    start.setDate(start.getDate() - weeks * 7 + 1);
+
+    const cell = 11, gap = 3;
+    const colW = cell + gap, rowH = cell + gap;
+    const w = weeks * colW + gap;
+    const h = 7 * rowH + gap;
+
+    let rects = "";
+    for (let col = 0; col < weeks; col++) {
+      for (let row = 0; row < 7; row++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + col * 7 + row);
+        if (d > today) continue;
+        const key = formatDateKey(d);
+        const tracked = dateSet.has(key);
+        const x = col * colW + gap;
+        const y = row * rowH + gap;
+        const fill = tracked ? "var(--accent)" : "var(--surface-alt)";
+        rects += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2.5" fill="${fill}"><title>${key}${tracked ? " · registrado" : ""}</title></rect>`;
+      }
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="display:block">${rects}</svg>`;
+  }
+
+  function renderWeighInHeatmap() {
+    const heatmapEl = document.getElementById("weighInHeatmap");
+    const labelEl = document.getElementById("weighInHeatmapLabel");
+    if (state.weightLog.length === 0) {
+      heatmapEl.innerHTML = "";
+      labelEl.hidden = true;
+      return;
+    }
+    labelEl.hidden = false;
+    heatmapEl.innerHTML = buildWeighInHeatmap(state.weightLog);
+  }
+
   function renderWeightList() {
+    renderWeighInHeatmap();
     const sorted = sortedWeightLog();
     weightListEl.innerHTML = "";
     if (sorted.length === 0) {
@@ -1641,6 +1818,9 @@
   const foodSearchResultsEl = document.getElementById("foodSearchResults");
   const foodSearchHintEl = document.getElementById("foodSearchHint");
   const foodSearchSectionEl = document.getElementById("foodSearchSection");
+  const searchSelectBarEl = document.getElementById("searchSelectBar");
+  const searchSelectToggleBtnEl = document.getElementById("searchSelectToggleBtn");
+  const searchLogSelectedBtnEl = document.getElementById("searchLogSelectedBtn");
   const entryPer100RowEl = document.getElementById("entryPer100Row");
   const entryKcalTotalLabelEl = document.getElementById("entryKcalTotalLabel");
   const entryMacrosLabelEl = document.getElementById("entryMacrosLabel");
@@ -1669,10 +1849,20 @@
     el.addEventListener("input", updateLivePreview);
   });
 
+  let lastSearchResults = [];
+  let searchSelectMode = false;
+  let searchSelectedIndices = new Set();
+
   function resetFoodSearch() {
     foodSearchInputEl.value = "";
     foodSearchResultsEl.innerHTML = "";
     foodSearchHintEl.hidden = true;
+    lastSearchResults = [];
+    searchSelectMode = false;
+    searchSelectedIndices = new Set();
+    searchSelectBarEl.hidden = true;
+    searchSelectToggleBtnEl.textContent = "Seleccionar varios";
+    searchLogSelectedBtnEl.hidden = true;
   }
 
   let foodSearchDebounce = null;
@@ -1687,6 +1877,8 @@
     clearTimeout(foodSearchDebounce);
     const query = foodSearchInputEl.value.trim();
     foodSearchResultsEl.innerHTML = "";
+    searchSelectBarEl.hidden = true;
+    searchLogSelectedBtnEl.hidden = true;
     foodBrowseSectionEl.hidden = query.length > 0;
     if (query.length < 2) {
       foodSearchHintEl.hidden = true;
@@ -1731,30 +1923,90 @@
 
   function renderFoodSearchResults(products, query) {
     if (foodSearchInputEl.value.trim() !== query) return; // stale response, a newer search superseded it
-    foodSearchResultsEl.innerHTML = "";
     const valid = products.filter((p) => (p.product_name_es || p.product_name) && p.nutriments && typeof p.nutriments["energy-kcal_100g"] === "number");
     foodSearchHintEl.classList.remove("modal-hint--loading");
+    lastSearchResults = valid;
+    searchSelectMode = false;
+    searchSelectedIndices = new Set();
+    searchSelectToggleBtnEl.textContent = "Seleccionar varios";
     if (valid.length === 0) {
+      foodSearchResultsEl.innerHTML = "";
       foodSearchHintEl.hidden = false;
       foodSearchHintEl.textContent = "Sin resultados. Añádelo a mano abajo.";
+      searchSelectBarEl.hidden = true;
+      searchLogSelectedBtnEl.hidden = true;
       return;
     }
     foodSearchHintEl.hidden = true;
-    valid.forEach((p) => {
+    // Batch-selecting only makes sense when logging straight to today — a
+    // recipe ingredient needs its own grams adjustment, one at a time.
+    searchSelectBarEl.hidden = foodBrowseContext !== "log" || valid.length < 2;
+    renderSearchResultRows();
+  }
+
+  function updateSearchLogSelectedBtn() {
+    const n = searchSelectedIndices.size;
+    searchLogSelectedBtnEl.hidden = n === 0;
+    searchLogSelectedBtnEl.textContent = `Registrar (${n})`;
+  }
+
+  function renderSearchResultRows() {
+    foodSearchResultsEl.innerHTML = "";
+    lastSearchResults.forEach((p, idx) => {
       const name = p.product_name_es || p.product_name;
       const kcal = Math.round(p.nutriments["energy-kcal_100g"]);
       const row = document.createElement("div");
       row.className = "row";
+      const checked = searchSelectedIndices.has(idx);
       row.innerHTML = `
         <button type="button" class="row-main">
+          ${searchSelectMode ? `<span class="row-select-check${checked ? " is-checked" : ""}"></span>` : ""}
           <span class="row-name">${escapeHtml(name)}</span>
           <span class="row-qty">${kcal} kcal /100g</span>
         </button>
       `;
-      row.querySelector(".row-main").addEventListener("click", () => applyFoodSearchResult(p, name, kcal));
+      row.querySelector(".row-main").addEventListener("click", () => {
+        if (searchSelectMode) {
+          if (searchSelectedIndices.has(idx)) searchSelectedIndices.delete(idx);
+          else searchSelectedIndices.add(idx);
+          updateSearchLogSelectedBtn();
+          renderSearchResultRows();
+          return;
+        }
+        applyFoodSearchResult(p, name, kcal);
+      });
       foodSearchResultsEl.appendChild(row);
     });
   }
+
+  searchSelectToggleBtnEl.addEventListener("click", () => {
+    searchSelectMode = !searchSelectMode;
+    searchSelectedIndices = new Set();
+    searchSelectToggleBtnEl.textContent = searchSelectMode ? "Cancelar" : "Seleccionar varios";
+    updateSearchLogSelectedBtn();
+    renderSearchResultRows();
+  });
+
+  searchLogSelectedBtnEl.addEventListener("click", () => {
+    const items = Array.from(searchSelectedIndices).map((idx) => lastSearchResults[idx]).filter(Boolean);
+    if (items.length === 0) return;
+    items.forEach((p) => {
+      const name = p.product_name_es || p.product_name;
+      const n = p.nutriments;
+      addEntryToCurrentDay({
+        name,
+        calories: Math.round(n["energy-kcal_100g"]),
+        qtyLabel: "100 g",
+        protein: typeof n.proteins_100g === "number" ? Math.round(n.proteins_100g) : 0,
+        fat: typeof n.fat_100g === "number" ? Math.round(n.fat_100g) : 0,
+        carbs: typeof n.carbohydrates_100g === "number" ? Math.round(n.carbohydrates_100g) : 0
+      });
+    });
+    saveData(state);
+    render();
+    closeModal(entryModal);
+    showToast(`${items.length} alimentos añadidos`);
+  });
 
   // Reopens the entry form pre-filled from an already-baked item (a favorite
   // or a recently-logged food) so its grams can be adjusted before it's
@@ -3477,14 +3729,14 @@
     return labels;
   }
 
-  function buildCalorieChart(days, min, max) {
+  function buildCalorieChart(days, min, max, expenditure) {
     const h = 150, padTop = 6, padBottom = 20;
     const chartH = h - padTop - padBottom;
     const scrollable = days.length > 30;
     const plotW = scrollable ? days.length * 16 : 300 - CHART_LEFT_MARGIN;
     const w = plotW + CHART_LEFT_MARGIN;
     const barW = plotW / days.length;
-    const maxVal = Math.max(max || 0, ...days.map((d) => d.total), 1) * 1.08;
+    const maxVal = Math.max(max || 0, expenditure || 0, ...days.map((d) => d.total), 1) * 1.08;
     const yFor = (v) => padTop + chartH - (v / maxVal) * chartH;
     const xFor = (i) => CHART_LEFT_MARGIN + i * barW + barW / 2;
 
@@ -3508,11 +3760,19 @@
       bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, barH).toFixed(1)}" rx="3" fill="${fill}"></rect>`;
     });
 
+    // Flat expenditure (estimated TDEE) reference line — "energy balance":
+    // bars above it mean a surplus that day, below means a deficit.
+    let expenditureLine = "";
+    if (expenditure > 0) {
+      const ey = yFor(expenditure).toFixed(1);
+      expenditureLine = `<line x1="${CHART_LEFT_MARGIN}" y1="${ey}" x2="${w}" y2="${ey}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"></line>`;
+    }
+
     const labels = buildXAxisDates(days, xFor, h);
     const defs = `<defs><linearGradient id="calorieBarGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)"></stop><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.7"></stop></linearGradient></defs>`;
 
     const widthAttr = scrollable ? `width="${w}"` : `width="100%"`;
-    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${defs}${gridlines}${band}${bars}${labels}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" ${widthAttr} style="display:block">${defs}${gridlines}${band}${bars}${expenditureLine}${labels}</svg>`;
   }
 
   function computeEma(sortedEntries, alpha = 0.25) {
@@ -3806,13 +4066,104 @@
     renderSessionGoalProgress();
   });
 
+  // A tiny at-a-glance line, no axes/labels — just shape. Used by the
+  // insights carousel cards, distinct from the full annotated charts below.
+  function buildMiniLineSparkline(values, color) {
+    const w = 100, h = 32;
+    if (values.length < 2) return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"></svg>`;
+    const minV = Math.min(...values), maxV = Math.max(...values);
+    const range = Math.max(maxV - minV, 0.0001);
+    const x = (i) => (i / (values.length - 1)) * w;
+    const y = (v) => 4 + (h - 8) - ((v - minV) / range) * (h - 8);
+    const pts = values.map((v, i) => ({ x: x(i), y: y(v) }));
+    const path = smoothPath(pts);
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
+  }
+
+  function buildMiniBarSparkline(values, color) {
+    const w = 100, h = 32;
+    if (values.length === 0) return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"></svg>`;
+    const maxV = Math.max(...values, 1);
+    const gap = 2;
+    const barW = w / values.length - gap;
+    const bars = values.map((v, i) => {
+      const barH = Math.max(2, (v / maxV) * (h - 4));
+      const x = i * (barW + gap);
+      const y = h - barH;
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" rx="1.5" fill="${color}"></rect>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${bars}</svg>`;
+  }
+
+  // Quick-glance summary cards shown above the full charts — mirrors the
+  // "insights" carousel pattern (small card + sparkline) rather than
+  // duplicating the detailed charts' axes/labels.
+  function renderInsightsCarousel(days) {
+    const carouselEl = document.getElementById("insightsCarousel");
+    const cards = [];
+
+    const periodDates = new Set(days.map((d) => d.date));
+    const weightEntries = state.weightLog
+      .filter((w) => periodDates.has(w.date))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (weightEntries.length >= 2) {
+      const first = weightEntries[0].weightKg;
+      const last = weightEntries[weightEntries.length - 1].weightKg;
+      const diff = last - first;
+      const sign = diff > 0 ? "+" : "";
+      cards.push(`
+        <div class="insight-card">
+          <span class="insight-card-label">Peso</span>
+          <span class="insight-card-value">${last.toFixed(1)} kg</span>
+          <span class="insight-card-sub">${sign}${diff.toFixed(1)} kg en el periodo</span>
+          <span class="insight-card-spark">${buildMiniLineSparkline(weightEntries.map((w) => w.weightKg), "var(--accent)")}</span>
+        </div>
+      `);
+    }
+
+    const totalKcalDays = days.filter((d) => d.total > 0);
+    if (totalKcalDays.length >= 2) {
+      const avgKcal = totalKcalDays.reduce((sum, d) => sum + d.total, 0) / totalKcalDays.length;
+      const { min, max } = state.calorieTarget;
+      const targetMid = min && max ? (min + max) / 2 : null;
+      const sub = targetMid ? `objetivo ${Math.round(targetMid)} kcal` : "media del periodo";
+      cards.push(`
+        <div class="insight-card">
+          <span class="insight-card-label">Calorías</span>
+          <span class="insight-card-value">${Math.round(avgKcal)} kcal</span>
+          <span class="insight-card-sub">${sub}</span>
+          <span class="insight-card-spark">${buildMiniLineSparkline(days.map((d) => d.total), "var(--accent)")}</span>
+        </div>
+      `);
+    }
+
+    if (days.length >= 2) {
+      const totalSessions = days.filter((d) => hasWorkoutSession(d.date)).length;
+      cards.push(`
+        <div class="insight-card">
+          <span class="insight-card-label">Entrenos</span>
+          <span class="insight-card-value">${totalSessions}</span>
+          <span class="insight-card-sub">sesiones en el periodo</span>
+          <span class="insight-card-spark">${buildMiniBarSparkline(days.map((d) => (hasWorkoutSession(d.date) ? 1 : 0)), "var(--accent)")}</span>
+        </div>
+      `);
+    }
+
+    carouselEl.innerHTML = cards.join("");
+    carouselEl.hidden = cards.length === 0;
+  }
+
   function renderAnalytics() {
     sessionGoalSliderEl.value = state.workoutGoal.weeklySessions;
     sessionGoalValueLabelEl.textContent = state.workoutGoal.weeklySessions;
 
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
+    renderInsightsCarousel(days);
+
     const { min, max } = state.calorieTarget;
-    document.getElementById("calorieChart").innerHTML = buildCalorieChart(days, min, max);
+    const expenditure = estimateCurrentTdee();
+    document.getElementById("calorieChart").innerHTML = buildCalorieChart(days, min, max, expenditure);
+    document.getElementById("calorieChartLegend").hidden = !expenditure;
 
     const hasMacroData = days.some((d) => d.protein || d.fat || d.carbs);
     const macroChartEl = document.getElementById("macroChart");
@@ -3829,12 +4180,28 @@
     const weightEntries = state.weightLog.filter((w) => periodDates.has(w.date));
     const weightChartEl = document.getElementById("weightChart");
     const weightChartEmptyEl = document.getElementById("weightChartEmpty");
+    const weightStatLineEl = document.getElementById("weightStatLine");
+    const weightChartLegendEl = document.getElementById("weightChartLegend");
     if (weightEntries.length === 0) {
       weightChartEl.innerHTML = "";
       weightChartEmptyEl.hidden = false;
+      weightStatLineEl.hidden = true;
+      weightChartLegendEl.hidden = true;
     } else {
       weightChartEmptyEl.hidden = true;
       weightChartEl.innerHTML = buildWeightChart(weightEntries);
+      weightChartLegendEl.hidden = weightEntries.length < 2;
+      if (weightEntries.length < 2) {
+        weightStatLineEl.hidden = true;
+      } else {
+        const sorted = [...weightEntries].sort((a, b) => (a.date < b.date ? -1 : 1));
+        const withEma = computeEma(sorted);
+        const avg = sorted.reduce((sum, w) => sum + w.weightKg, 0) / sorted.length;
+        const diff = withEma[withEma.length - 1].ema - withEma[0].ema;
+        const sign = diff > 0 ? "+" : "";
+        weightStatLineEl.hidden = false;
+        weightStatLineEl.textContent = `Media: ${avg.toFixed(1)} kg · Diferencia: ${sign}${diff.toFixed(1)} kg`;
+      }
     }
 
     const contributors = computeTopContributors(days);

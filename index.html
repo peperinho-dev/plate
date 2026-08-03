@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=30">
 </head>
 <body>
 
@@ -35,6 +35,8 @@
       </button>
     </div>
   </header>
+
+  <div class="week-strip" id="weekStrip"></div>
 
   <div class="adaptive-banner" id="adaptiveBanner" hidden>
     <p id="adaptiveBannerText"></p>
@@ -221,13 +223,24 @@
     </header>
 
     <main class="content">
+      <div class="insights-carousel" id="insightsCarousel"></div>
+
       <div class="card">
         <div class="card-date">Calorías</div>
+        <div class="chart-legend" id="calorieChartLegend" hidden>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Ingesta</span>
+          <span class="chart-legend-item"><span class="chart-legend-dash"></span>Gasto est.</span>
+        </div>
         <div id="calorieChart" class="chart-scroll"></div>
       </div>
 
       <div class="card">
         <div class="card-date">Peso</div>
+        <p class="stat-note" id="weightStatLine" hidden>—</p>
+        <div class="chart-legend" id="weightChartLegend" hidden>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--ink-faint)"></span>Real</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Tendencia</span>
+        </div>
         <div id="weightChart" class="chart-scroll"></div>
         <p class="empty-state" id="weightChartEmpty" hidden>Registra tu peso para ver la tendencia.</p>
       </div>
@@ -348,6 +361,10 @@
         </div>
         <div class="quick-row" id="modalRecipesRow"></div>
       </div>
+      <div class="quick-section" id="browseGoToRow" hidden>
+        <div class="quick-label" id="goToLabel">Habituales a esta hora</div>
+        <div class="quick-row" id="modalGoToRow"></div>
+      </div>
       <div class="quick-section" id="browseRecentRow" hidden>
         <div class="quick-label">Recientes</div>
         <div class="quick-row" id="modalRecentRow"></div>
@@ -361,6 +378,10 @@
           <input type="text" id="foodSearchInput" placeholder="p. ej. yogur natural" autocomplete="off">
         </label>
         <button type="button" class="btn btn--secondary btn--icon-only" id="modalScanBtn" aria-label="Escanear código de barras"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+      </div>
+      <div class="search-select-bar" id="searchSelectBar" hidden>
+        <button type="button" class="link-btn link-btn--muted" id="searchSelectToggleBtn">Seleccionar varios</button>
+        <button type="button" class="btn btn--primary btn--small" id="searchLogSelectedBtn" hidden>Registrar</button>
       </div>
       <div class="log-list" id="foodSearchResults"></div>
       <p class="modal-hint" id="foodSearchHint" hidden></p>
@@ -713,6 +734,9 @@
       <button class="modal-close" id="closeWeightModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
+    <div class="field-group-label" id="weighInHeatmapLabel" hidden>Constancia</div>
+    <div class="chart-scroll" id="weighInHeatmap"></div>
+
     <div class="log-list" id="weightList"></div>
     <div class="empty-state" id="weightEmptyState">
       <div class="empty-state-icon"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
@@ -852,6 +876,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=32"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
