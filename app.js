@@ -2440,7 +2440,22 @@
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js").catch((e) => console.error("SW failed", e));
+      navigator.serviceWorker.register("service-worker.js").then((reg) => {
+        // iOS's home-screen shell doesn't reliably poll for a new SW on its
+        // own — force a check every time the app is opened, on top of the
+        // network-first document fetch that already keeps index.html fresh.
+        reg.update().catch(() => {});
+      }).catch((e) => console.error("SW failed", e));
+
+      // If a new SW takes control while this page is still open (left
+      // running in the background across an update), reload once so the
+      // page matches the new cached assets instead of running stale code.
+      let reloadedForUpdate = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloadedForUpdate) return;
+        reloadedForUpdate = true;
+        window.location.reload();
+      });
     });
   }
 
