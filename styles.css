@@ -456,6 +456,25 @@ button.row-main:active { opacity: 0.55; }
 }
 .quick-label-row .quick-label { margin-bottom: 0; }
 
+.quick-label-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  min-width: 0;
+}
+.quick-label-toggle:active { opacity: 0.6; }
+.quick-label-chevron {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1);
+}
+.quick-label-chevron.is-collapsed { transform: rotate(-90deg); }
+
 .quick-label-actions {
   display: flex;
   gap: 14px;

@@ -2314,6 +2314,60 @@
     });
   }
 
+  // Collapsible "setup" sections (Calentamiento / Estiramientos / Rutinas /
+  // Ejercicios recientes): once you've already used one today it collapses
+  // out of the way automatically, keeping the card focused on what you've
+  // actually logged rather than the pickers. A tap always overrides the
+  // heuristic for the rest of the session on that day; navigating to a
+  // different day resets back to the automatic behavior.
+  let sectionOverrides = {};
+  let sectionOverrideDayKey = null;
+
+  function resetSectionOverridesIfDayChanged() {
+    const dayKey = currentWorkoutDayKey();
+    if (sectionOverrideDayKey !== dayKey) {
+      sectionOverrides = {};
+      sectionOverrideDayKey = dayKey;
+    }
+  }
+
+  function sectionUsedToday(section) {
+    if (section === "warmup") return ensureTimerLogs(currentWorkoutDayKey()).some((l) => l.category === "warmup");
+    if (section === "stretch") return ensureTimerLogs(currentWorkoutDayKey()).some((l) => l.category === "stretch");
+    return currentWorkoutExercises().length > 0; // "routines" and "exercises"
+  }
+
+  function isSectionExpanded(section) {
+    resetSectionOverridesIfDayChanged();
+    if (section in sectionOverrides) return sectionOverrides[section];
+    return !sectionUsedToday(section);
+  }
+
+  function toggleWorkoutSection(section) {
+    resetSectionOverridesIfDayChanged();
+    sectionOverrides[section] = !isSectionExpanded(section);
+    renderWorkoutDay();
+  }
+
+  function applyWorkoutSectionCollapse() {
+    [
+      { key: "warmup", row: warmupTimerQuickRowEl, actions: document.getElementById("warmupQuickActions"), chevron: document.getElementById("warmupSectionChevron") },
+      { key: "stretch", row: stretchTimerQuickRowEl, actions: document.getElementById("stretchQuickActions"), chevron: document.getElementById("stretchSectionChevron") },
+      { key: "routines", row: routineQuickRowEl, actions: document.getElementById("routineQuickActions"), chevron: document.getElementById("routineSectionChevron") },
+      { key: "exercises", row: exerciseQuickRowEl, actions: null, chevron: document.getElementById("exerciseSectionChevron") }
+    ].forEach(({ key, row, actions, chevron }) => {
+      const expanded = isSectionExpanded(key);
+      row.hidden = !expanded;
+      if (actions) actions.hidden = !expanded;
+      if (chevron) chevron.classList.toggle("is-collapsed", !expanded);
+    });
+  }
+
+  document.getElementById("warmupSectionToggle").addEventListener("click", () => toggleWorkoutSection("warmup"));
+  document.getElementById("stretchSectionToggle").addEventListener("click", () => toggleWorkoutSection("stretch"));
+  document.getElementById("routineSectionToggle").addEventListener("click", () => toggleWorkoutSection("routines"));
+  document.getElementById("exerciseSectionToggle").addEventListener("click", () => toggleWorkoutSection("exercises"));
+
   let routinesEditMode = false;
 
   routinesEditToggleEl.addEventListener("click", () => {
@@ -2389,6 +2443,7 @@
     renderTimerQuickRows();
     renderRoutineQuickRow();
     renderExerciseQuickAdd();
+    applyWorkoutSectionCollapse();
 
     const hasWorkoutClipboard = !!(dayClipboard && dayClipboard.type === "workout");
     exerciseListEl.innerHTML = "";
@@ -2945,7 +3000,7 @@
       completedAt: Date.now()
     });
     saveData(state);
-    renderTimerLogList();
+    renderWorkoutDay(); // also collapses the warmup/stretch quick-section now that it's been used today
     timerRunStepLabelEl.textContent = `${runningTimer.intervals.length} de ${runningTimer.intervals.length}`;
     timerRunTimeEl.textContent = "0:00";
     timerRunIntervalNameEl.textContent = "¡Hecho!";
