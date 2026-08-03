@@ -39,7 +39,7 @@
   <div class="week-strip" id="weekStrip"></div>
 
   <div class="adaptive-banner" id="backupBanner" hidden>
-    <p>No hay copia de seguridad reciente. Si borras el icono de la app (o cambias de teléfono), perderás todos tus datos.</p>
+    <p>Sin copia reciente — expórtala para no perder tus datos.</p>
     <div class="adaptive-banner-actions">
       <button type="button" id="backupExportBtn" class="link-btn">Exportar ahora</button>
       <button type="button" id="backupDismissBtn" class="link-btn link-btn--muted">Ahora no</button>
@@ -131,6 +131,8 @@
       </div>
       <span class="chip" id="sessionCountChip">0 sesiones</span>
     </header>
+
+    <div class="week-strip" id="workoutWeekStrip"></div>
 
     <main class="content">
       <div class="card">
@@ -533,7 +535,7 @@
   <div class="modal-sheet">
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="modal-header">
-      <span>Renombrar comida</span>
+      <span>Editar comida</span>
       <button class="modal-close" id="closeRenameGroupModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
 
@@ -541,6 +543,11 @@
       <label class="field">
         <span>Nombre</span>
         <input type="text" id="renameGroupInput" placeholder="p. ej. Desayuno">
+      </label>
+
+      <label class="field">
+        <span>Hora</span>
+        <input type="time" id="renameGroupTimeInput">
       </label>
 
       <button type="button" class="btn btn--primary btn--block" id="saveRenameGroupBtn">Guardar</button>
@@ -900,6 +907,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=39"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>

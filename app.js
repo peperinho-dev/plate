@@ -353,9 +353,9 @@
     return days;
   }
 
-  function renderWeekStrip() {
-    const days = getWeekStripDays(dayOffset);
-    weekStripEl.innerHTML = "";
+  function renderWeekStripInto(containerEl, offset, onSelect) {
+    const days = getWeekStripDays(offset);
+    containerEl.innerHTML = "";
     days.forEach((d) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -365,12 +365,13 @@
         <span class="week-strip-letter">${WEEKDAY_LETTERS_MON[(d.date.getDay() + 6) % 7]}</span>
         <span class="week-strip-num">${d.date.getDate()}</span>
       `;
-      btn.addEventListener("click", () => {
-        dayOffset = d.offset;
-        render();
-      });
-      weekStripEl.appendChild(btn);
+      btn.addEventListener("click", () => onSelect(d.offset));
+      containerEl.appendChild(btn);
     });
+  }
+
+  function renderWeekStrip() {
+    renderWeekStripInto(weekStripEl, dayOffset, (offset) => { dayOffset = offset; render(); });
   }
 
   function formatDateLabel(offset) {
@@ -484,7 +485,7 @@
       renameBtn.type = "button";
       renameBtn.className = "link-btn link-btn--muted group-rename-btn";
       renameBtn.dataset.id = entry.id;
-      renameBtn.textContent = "Renombrar";
+      renameBtn.textContent = "Editar";
       actions.appendChild(renameBtn);
 
       const recipe = entry.sourceRecipeId ? state.recipes.find((r) => r.id === entry.sourceRecipeId) : null;
@@ -916,6 +917,7 @@
   // "Actualizar receta"), same split as grams edits.
   const renameGroupModal = document.getElementById("renameGroupModal");
   const renameGroupInputEl = document.getElementById("renameGroupInput");
+  const renameGroupTimeInputEl = document.getElementById("renameGroupTimeInput");
   let renameGroupEntryId = null;
 
   function openRenameGroup(entryId) {
@@ -923,6 +925,8 @@
     if (!entry) return;
     renameGroupEntryId = entryId;
     renameGroupInputEl.value = entry.name;
+    const entryDate = new Date(entry.addedAt);
+    renameGroupTimeInputEl.value = `${String(entryDate.getHours()).padStart(2, "0")}:${String(entryDate.getMinutes()).padStart(2, "0")}`;
     openModal(renameGroupModal);
     setTimeout(() => renameGroupInputEl.focus(), 50);
   }
@@ -938,6 +942,12 @@
     const entry = currentDayEntries().find((e) => e.id === renameGroupEntryId);
     if (entry) {
       entry.name = name;
+      if (renameGroupTimeInputEl.value) {
+        const [h, m] = renameGroupTimeInputEl.value.split(":").map(Number);
+        const d = new Date(entry.addedAt);
+        d.setHours(h, m, 0, 0);
+        entry.addedAt = d.getTime();
+      }
       saveData(state);
       render();
     }
@@ -946,10 +956,14 @@
 
   /* ---------- Quick add & copy from yesterday ---------- */
 
-  function computeFrequentItems(limit = 8) {
+  // Tallies logged entries by name (case-insensitive), keeping the most
+  // recently-logged values (calories/macros/qtyLabel) for each — shared by
+  // computeFrequentItems (all entries) and computeHourlyGoTos (time-filtered).
+  function tallyEntriesMatching(matches) {
     const tally = new Map();
     Object.values(state.days).forEach((day) => {
       day.entries.forEach((e) => {
+        if (!matches(e)) return;
         const key = e.name.trim().toLowerCase();
         if (!key) return;
         const existing = tally.get(key);
@@ -969,42 +983,35 @@
         }
       });
     });
+    return tally;
+  }
+
+  function rankTally(tally, limit) {
     return Array.from(tally.values())
       .sort((a, b) => b.count - a.count || b.lastAddedAt - a.lastAddedAt)
       .slice(0, limit);
   }
 
-  // Foods you specifically tend to log around the current hour of day (e.g.
+  function computeFrequentItems(limit = 8) {
+    return rankTally(tallyEntriesMatching(() => true), limit);
+  }
+
+  // Foods you specifically tend to log around the current time of day (e.g.
   // your usual 8am breakfast), distinct from computeFrequentItems' overall
-  // "most logged" ranking which ignores time of day entirely.
-  function computeHourlyGoTos(limit = 6) {
-    const hour = new Date().getHours();
-    const tally = new Map();
-    Object.values(state.days).forEach((day) => {
-      day.entries.forEach((e) => {
-        if (!e.addedAt || new Date(e.addedAt).getHours() !== hour) return;
-        const key = e.name.trim().toLowerCase();
-        if (!key) return;
-        const existing = tally.get(key);
-        if (existing) {
-          existing.count += 1;
-          if (e.addedAt > existing.lastAddedAt) {
-            existing.lastAddedAt = e.addedAt;
-            existing.calories = e.calories;
-            existing.qtyLabel = e.qtyLabel;
-            existing.name = e.name;
-            existing.protein = e.protein;
-            existing.fat = e.fat;
-            existing.carbs = e.carbs;
-          }
-        } else {
-          tally.set(key, { name: e.name, calories: e.calories, qtyLabel: e.qtyLabel, protein: e.protein, fat: e.fat, carbs: e.carbs, count: 1, lastAddedAt: e.addedAt });
-        }
-      });
+  // "most logged" ranking which ignores time of day entirely. Matches within
+  // a tolerance window rather than the exact clock hour, so a breakfast
+  // logged at 7:58 one day and 8:02 the next still count as the same habit.
+  function computeHourlyGoTos(limit = 6, windowMinutes = 45) {
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const tally = tallyEntriesMatching((e) => {
+      if (!e.addedAt) return false;
+      const d = new Date(e.addedAt);
+      const entryMinutes = d.getHours() * 60 + d.getMinutes();
+      const diff = Math.abs(entryMinutes - nowMinutes);
+      return Math.min(diff, 1440 - diff) <= windowMinutes;
     });
-    return Array.from(tally.values())
-      .sort((a, b) => b.count - a.count || b.lastAddedAt - a.lastAddedAt)
-      .slice(0, limit);
+    return rankTally(tally, limit);
   }
 
   function addEntryToCurrentDay(item) {
@@ -2518,6 +2525,7 @@
   const workoutEmptyStateEl = document.getElementById("workoutEmptyState");
   const workoutDateLabelEl = document.getElementById("workoutDateLabel");
   const workoutFullDateLabelEl = document.getElementById("workoutFullDateLabel");
+  const workoutWeekStripEl = document.getElementById("workoutWeekStrip");
   const exerciseQuickSectionEl = document.getElementById("exerciseQuickSection");
   const exerciseQuickRowEl = document.getElementById("exerciseQuickRow");
   const routineQuickSectionEl = document.getElementById("routineQuickSection");
@@ -2762,11 +2770,16 @@
     return Object.values(state.workouts).filter((day) => day.exercises.length > 0).length;
   }
 
+  function renderWorkoutWeekStrip() {
+    renderWeekStripInto(workoutWeekStripEl, workoutDayOffset, (offset) => { workoutDayOffset = offset; renderWorkoutDay(); });
+  }
+
   function renderWorkoutDay() {
     const exercises = currentWorkoutExercises();
     const label = formatDateLabel(workoutDayOffset);
     workoutDateLabelEl.textContent = label.short;
     workoutFullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, (c) => c.toUpperCase());
+    renderWorkoutWeekStrip();
 
     const sessions = countWorkoutSessions();
     sessionCountChipEl.textContent = `${sessions} ${sessions === 1 ? "sesión" : "sesiones"}`;
@@ -3863,9 +3876,7 @@
     });
   }
 
-  function buildWeightChart(entries) {
-    const sorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1));
-    const withEma = computeEma(sorted);
+  function buildWeightChart(withEma) {
     const h = 150, padTop = 10, padBottom = 20;
     const chartH = h - padTop - padBottom;
     const scrollable = withEma.length > 20;
@@ -4178,25 +4189,23 @@
   // Quick-glance summary cards shown above the full charts — mirrors the
   // "insights" carousel pattern (small card + sparkline) rather than
   // duplicating the detailed charts' axes/labels.
-  function renderInsightsCarousel(days) {
+  function renderInsightsCarousel(days, weightWithEma) {
     const carouselEl = document.getElementById("insightsCarousel");
     const cards = [];
 
-    const periodDates = new Set(days.map((d) => d.date));
-    const weightEntries = state.weightLog
-      .filter((w) => periodDates.has(w.date))
-      .sort((a, b) => (a.date < b.date ? -1 : 1));
-    if (weightEntries.length >= 2) {
-      const first = weightEntries[0].weightKg;
-      const last = weightEntries[weightEntries.length - 1].weightKg;
-      const diff = last - first;
+    if (weightWithEma.length >= 2) {
+      const last = weightWithEma[weightWithEma.length - 1].raw;
+      // Uses the same EMA-smoothed delta as the Weight chart's stat line
+      // below, rather than raw first/last — otherwise the two "weight
+      // change" figures on this screen can disagree.
+      const diff = weightWithEma[weightWithEma.length - 1].ema - weightWithEma[0].ema;
       const sign = diff > 0 ? "+" : "";
       cards.push(`
         <div class="insight-card">
           <span class="insight-card-label">Peso</span>
           <span class="insight-card-value">${last.toFixed(1)} kg</span>
-          <span class="insight-card-sub">${sign}${diff.toFixed(1)} kg en el periodo</span>
-          <span class="insight-card-spark">${buildMiniLineSparkline(weightEntries.map((w) => w.weightKg), "var(--accent)")}</span>
+          <span class="insight-card-sub">${sign}${diff.toFixed(1)} kg (tendencia)</span>
+          <span class="insight-card-spark">${buildMiniLineSparkline(weightWithEma.map((p) => p.raw), "var(--accent)")}</span>
         </div>
       `);
     }
@@ -4206,7 +4215,12 @@
       const avgKcal = totalKcalDays.reduce((sum, d) => sum + d.total, 0) / totalKcalDays.length;
       const { min, max } = state.calorieTarget;
       const targetMid = min && max ? (min + max) / 2 : null;
-      const sub = targetMid ? `objetivo ${Math.round(targetMid)} kcal` : "media del periodo";
+      // Averages only days that were actually logged (skips 0-kcal gaps),
+      // so it's spelled out here — otherwise it silently disagrees with the
+      // bar chart below, which shows every day including unlogged ones.
+      const sub = targetMid
+        ? `${totalKcalDays.length}/${days.length} días · objetivo ${Math.round(targetMid)}`
+        : `media de ${totalKcalDays.length} días registrados`;
       cards.push(`
         <div class="insight-card">
           <span class="insight-card-label">Calorías</span>
@@ -4238,7 +4252,17 @@
     sessionGoalValueLabelEl.textContent = state.workoutGoal.weeklySessions;
 
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
-    renderInsightsCarousel(days);
+
+    // Computed once and shared by the insights card, the stat line, and the
+    // chart itself, so all three agree on the same sorted/smoothed data
+    // instead of each re-deriving it slightly differently.
+    const periodDates = new Set(days.map((d) => d.date));
+    const weightEntriesSorted = state.weightLog
+      .filter((w) => periodDates.has(w.date))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    const weightWithEma = computeEma(weightEntriesSorted);
+
+    renderInsightsCarousel(days, weightWithEma);
 
     const { min, max } = state.calorieTarget;
     const expenditure = estimateCurrentTdee();
@@ -4256,28 +4280,24 @@
       macroChartEl.innerHTML = buildMacroChart(days);
     }
 
-    const periodDates = new Set(days.map((d) => d.date));
-    const weightEntries = state.weightLog.filter((w) => periodDates.has(w.date));
     const weightChartEl = document.getElementById("weightChart");
     const weightChartEmptyEl = document.getElementById("weightChartEmpty");
     const weightStatLineEl = document.getElementById("weightStatLine");
     const weightChartLegendEl = document.getElementById("weightChartLegend");
-    if (weightEntries.length === 0) {
+    if (weightWithEma.length === 0) {
       weightChartEl.innerHTML = "";
       weightChartEmptyEl.hidden = false;
       weightStatLineEl.hidden = true;
       weightChartLegendEl.hidden = true;
     } else {
       weightChartEmptyEl.hidden = true;
-      weightChartEl.innerHTML = buildWeightChart(weightEntries);
-      weightChartLegendEl.hidden = weightEntries.length < 2;
-      if (weightEntries.length < 2) {
+      weightChartEl.innerHTML = buildWeightChart(weightWithEma);
+      weightChartLegendEl.hidden = weightWithEma.length < 2;
+      if (weightWithEma.length < 2) {
         weightStatLineEl.hidden = true;
       } else {
-        const sorted = [...weightEntries].sort((a, b) => (a.date < b.date ? -1 : 1));
-        const withEma = computeEma(sorted);
-        const avg = sorted.reduce((sum, w) => sum + w.weightKg, 0) / sorted.length;
-        const diff = withEma[withEma.length - 1].ema - withEma[0].ema;
+        const avg = weightEntriesSorted.reduce((sum, w) => sum + w.weightKg, 0) / weightEntriesSorted.length;
+        const diff = weightWithEma[weightWithEma.length - 1].ema - weightWithEma[0].ema;
         const sign = diff > 0 ? "+" : "";
         weightStatLineEl.hidden = false;
         weightStatLineEl.textContent = `Media: ${avg.toFixed(1)} kg · Diferencia: ${sign}${diff.toFixed(1)} kg`;
