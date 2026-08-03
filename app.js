@@ -1847,6 +1847,8 @@
   const entryModal = document.getElementById("entryModal");
   const entryForm = document.getElementById("entryForm");
   const entryNameEl = document.getElementById("entryName");
+  const entryTimeRowEl = document.getElementById("entryTimeRow");
+  const entryTimeEl = document.getElementById("entryTime");
   const entryKcalPer100El = document.getElementById("entryKcalPer100");
   const entryGramsEl = document.getElementById("entryGrams");
   const entryKcalTotalEl = document.getElementById("entryKcalTotal");
@@ -2093,6 +2095,7 @@
     foodSearchSectionEl.hidden = isEditing;
     foodBrowseSectionEl.hidden = isEditing;
     entryPer100RowEl.hidden = isEditing;
+    entryTimeRowEl.hidden = !isEditing;
     entryKcalTotalLabelEl.textContent = isEditing ? "kcal totales" : "o directamente, kcal totales";
     entryMacrosLabelEl.textContent = isEditing ? "Macros (totales, opcional)" : "Macros por 100 g (opcional)";
     entrySubmitBtnEl.textContent = isEditing ? "Guardar cambios" : "Añadir";
@@ -2108,6 +2111,8 @@
     resetFoodSearch();
     setEntryFormMode(true);
     entryNameEl.value = entry.name;
+    const entryDate = new Date(entry.addedAt);
+    entryTimeEl.value = `${String(entryDate.getHours()).padStart(2, "0")}:${String(entryDate.getMinutes()).padStart(2, "0")}`;
     entryGramsEl.value = 100;
     entryKcalTotalEl.value = Math.round(entry.calories);
     if (entry.protein) entryProteinPer100El.value = Math.round(entry.protein);
@@ -2206,6 +2211,12 @@
       const entry = currentDayEntries().find((en) => en.id === editingEntryId);
       if (!entry) return;
       Object.assign(entry, values);
+      if (entryTimeEl.value) {
+        const [h, m] = entryTimeEl.value.split(":").map(Number);
+        const d = new Date(entry.addedAt);
+        d.setHours(h, m, 0, 0);
+        entry.addedAt = d.getTime();
+      }
       saveData(state);
       render();
       closeModal(entryModal);
