@@ -1080,29 +1080,24 @@ button.row-main:active { opacity: 0.55; }
 }
 .calendar-dot--goal { background: var(--macro-carbs); }
 
-.streak-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.streak-row:last-of-type { margin-bottom: 4px; }
+.card-date + .streak-block { margin-top: 12px; }
+.streak-block { margin-bottom: 16px; }
+.streak-block:last-of-type { margin-bottom: 4px; }
 .streak-label {
+  display: block;
   font-size: 12px;
   font-weight: 700;
   color: var(--ink-soft);
-  width: 62px;
-  flex-shrink: 0;
+  margin-bottom: 8px;
 }
 .streak-grid {
-  flex: 1;
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 3px;
+  gap: 4px;
 }
 .streak-cell {
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--line);
 }
 .streak-cell.is-nutrition { background: var(--ink-pressed); }
