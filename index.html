@@ -25,7 +25,7 @@
   <header class="topbar">
     <div class="day-nav">
       <button id="prevDay" class="icon-btn" aria-label="Día anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <span id="dateLabel" class="day-label">Hoy</span>
+      <button type="button" id="dateLabel" class="day-label">Hoy</button>
       <button id="nextDay" class="icon-btn" aria-label="Día siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
     <div class="topbar-actions">
@@ -141,7 +141,7 @@
     <header class="topbar">
       <div class="day-nav">
         <button id="prevWorkoutDay" class="icon-btn" aria-label="Día anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-        <span id="workoutDateLabel" class="day-label">Hoy</span>
+        <button type="button" id="workoutDateLabel" class="day-label">Hoy</button>
         <button id="nextWorkoutDay" class="icon-btn" aria-label="Día siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <span class="chip" id="sessionCountChip">0 sesiones</span>
@@ -852,6 +852,7 @@
     </div>
 
     <p class="modal-hint" id="lastPerformanceHint" hidden></p>
+    <p class="modal-hint modal-hint--pr" id="prHint" hidden></p>
 
     <div class="log-list" id="setList"></div>
     <p class="empty-state" id="setEmptyState">Sin series todavía.</p>
@@ -867,14 +868,21 @@
         <span class="rest-timer-time" id="restTimerTime">1:30</span>
       </div>
       <div class="rest-timer-actions">
+        <button type="button" class="rest-timer-preset" data-secs="45">45s</button>
         <button type="button" class="rest-timer-preset" data-secs="60">60s</button>
         <button type="button" class="rest-timer-preset" data-secs="90">90s</button>
-        <button type="button" class="rest-timer-preset" data-secs="120">120s</button>
         <button type="button" class="rest-timer-skip" id="restTimerSkipBtn">Saltar</button>
       </div>
     </div>
 
     <form id="setForm" class="form form--divided">
+      <div class="field">
+        <span>Modo</span>
+        <div class="segmented segmented--compact" id="setModeToggle">
+          <button type="button" class="segmented-btn active" data-mode="reps">Reps</button>
+          <button type="button" class="segmented-btn" data-mode="hold">Tiempo</button>
+        </div>
+      </div>
       <div class="field">
         <span>Tipo de serie</span>
         <div class="segmented segmented--compact" id="setTypeToggle">
@@ -890,7 +898,7 @@
           <input type="number" id="setWeight" min="0" step="0.5" inputmode="decimal" placeholder="peso corporal">
         </label>
         <label class="field">
-          <span>Reps</span>
+          <span id="setRepsLabel">Reps</span>
           <input type="number" id="setReps" min="1" step="1" inputmode="numeric" required>
         </label>
       </div>
@@ -924,6 +932,31 @@
 <datalist id="progressionGroupList"></datalist>
 <datalist id="exerciseNameList"></datalist>
 
+<!-- Calendar (jump to any day, past or future) -->
+<div class="modal" id="calendarModal" hidden>
+  <div class="modal-sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <span>Calendario</span>
+      <button class="modal-close" id="closeCalendarModal" aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="calendar-nav">
+      <button type="button" class="icon-btn" id="calendarPrevMonth" aria-label="Mes anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <span id="calendarMonthLabel" class="calendar-month-label">—</span>
+      <button type="button" class="icon-btn" id="calendarNextMonth" aria-label="Mes siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="calendar-weekdays">
+      <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="calendar-legend">
+      <span class="calendar-legend-item"><span class="calendar-dot calendar-dot--workout"></span>Entreno</span>
+      <span class="calendar-legend-item"><span class="calendar-dot calendar-dot--goal"></span>Objetivo calórico</span>
+    </div>
+    <button type="button" class="btn btn--secondary btn--block" id="calendarTodayBtn">Hoy</button>
+  </div>
+</div>
+
 <!-- Progression detail (variant timeline for a progression group) -->
 <div class="modal" id="progressionDetailModal" hidden>
   <div class="modal-sheet">
@@ -938,6 +971,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=43"></script>
+<script src="app.js?v=46"></script>
 </body>
 </html>

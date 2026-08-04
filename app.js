@@ -194,6 +194,18 @@
     return state.days[key].entries;
   }
 
+  function dayCalorieTotal(key) {
+    const entries = (state.days[key] && state.days[key].entries) || [];
+    return entries.reduce((sum, e) => sum + e.calories, 0);
+  }
+
+  function dayHitCalorieGoal(key) {
+    const total = dayCalorieTotal(key);
+    if (total <= 0) return false;
+    const { min, max } = state.calorieTarget;
+    return !!(min && max && total >= min && total <= max);
+  }
+
   /* ---------- Calorie target calculation ---------- */
 
   function latestWeightEntry(weightLog) {
@@ -362,13 +374,19 @@
     const days = getWeekStripDays(offset);
     containerEl.innerHTML = "";
     days.forEach((d) => {
+      const key = formatDateKey(d.date);
+      const exercised = hasWorkoutSession(key);
+      const goalHit = dayHitCalorieGoal(key);
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
-      btn.disabled = d.isFuture;
       btn.innerHTML = `
         <span class="week-strip-letter">${WEEKDAY_LETTERS_MON[(d.date.getDay() + 6) % 7]}</span>
         <span class="week-strip-num">${d.date.getDate()}</span>
+        <span class="week-strip-dots">
+          ${exercised ? '<span class="week-strip-dot week-strip-dot--workout"></span>' : ""}
+          ${goalHit ? '<span class="week-strip-dot week-strip-dot--goal"></span>' : ""}
+        </span>
       `;
       btn.addEventListener("click", () => onSelect(d.offset));
       containerEl.appendChild(btn);
@@ -385,7 +403,7 @@
     const weekday = WEEKDAYS[d.getDay()];
     const day = d.getDate();
     const month = MONTHS[d.getMonth()];
-    return { weekday, day, month, short: offset === 0 ? "Hoy" : offset === -1 ? "Ayer" : `${day} ${month}` };
+    return { weekday, day, month, short: offset === 0 ? "Hoy" : offset === -1 ? "Ayer" : offset === 1 ? "Mañana" : `${day} ${month}` };
   }
 
   function formatShortDate(dateStr) {
@@ -1335,7 +1353,7 @@
     render();
   });
   document.getElementById("nextDay").addEventListener("click", () => {
-    if (dayOffset < 0) dayOffset += 1;
+    dayOffset += 1;
     render();
   });
 
@@ -2602,7 +2620,9 @@
 
   /* ---------- Workout tracker ---------- */
 
-  let workoutDayOffset = 0;
+  // Shares `dayOffset` with the nutrition tab (declared above) so switching
+  // days on either tab — via the week strip, arrows, or the calendar — moves
+  // both in lockstep instead of drifting apart when you switch tabs.
   let currentExerciseId = null;
 
   const exerciseListEl = document.getElementById("exerciseList");
@@ -2634,6 +2654,7 @@
         id: `${newExerciseId}-${Math.random().toString(36).slice(2, 7)}`,
         weightKg: s.weightKg,
         reps: s.reps,
+        holdSeconds: s.holdSeconds !== undefined ? s.holdSeconds : null,
         type: s.type || "normal",
         addedAt: rebaseTimeToDay(s.addedAt, targetDayKey)
       }))
@@ -2641,7 +2662,7 @@
   }
 
   function currentWorkoutDayKey() {
-    return todayKey(workoutDayOffset);
+    return todayKey(dayOffset);
   }
 
   function currentWorkoutExercises() {
@@ -2842,8 +2863,13 @@
     const label = `${n} serie${n === 1 ? "" : "s"}`;
     const hasWeight = ex.sets.some((s) => s.weightKg !== null && s.weightKg !== undefined);
     if (hasWeight) {
-      const volume = ex.sets.reduce((sum, s) => sum + (s.weightKg || 0) * s.reps, 0);
+      const volume = ex.sets.reduce((sum, s) => sum + (s.weightKg && s.reps ? s.weightKg * s.reps : 0), 0);
       return `${label} · ${Math.round(volume)} kg vol.`;
+    }
+    const hasHold = ex.sets.some((s) => s.holdSeconds !== null && s.holdSeconds !== undefined);
+    if (hasHold) {
+      const totalSeconds = ex.sets.reduce((sum, s) => sum + (s.holdSeconds || 0), 0);
+      return `${label} · ${formatDuration(totalSeconds)} total`;
     }
     const reps = ex.sets.map((s) => s.reps);
     const allSame = reps.every((r) => r === reps[0]);
@@ -2855,12 +2881,12 @@
   }
 
   function renderWorkoutWeekStrip() {
-    renderWeekStripInto(workoutWeekStripEl, workoutDayOffset, (offset) => { workoutDayOffset = offset; renderWorkoutDay(); });
+    renderWeekStripInto(workoutWeekStripEl, dayOffset, (offset) => { dayOffset = offset; renderWorkoutDay(); });
   }
 
   function renderWorkoutDay() {
     const exercises = currentWorkoutExercises();
-    const label = formatDateLabel(workoutDayOffset);
+    const label = formatDateLabel(dayOffset);
     workoutDateLabelEl.textContent = label.short;
     workoutFullDateLabelEl.textContent = `${label.weekday}, ${label.day} de ${label.month}`.replace(/^./, (c) => c.toUpperCase());
     renderWorkoutWeekStrip();
@@ -2906,30 +2932,142 @@
       workoutTotalSetsEl.textContent = `${totals.sets} ${totals.sets === 1 ? "serie" : "series"}`;
       workoutTotalNoteEl.textContent = totals.volume > 0
         ? `${Math.round(totals.volume)} kg de volumen total`
-        : `${totals.reps} reps totales`;
+        : totals.reps > 0 && totals.holdSeconds > 0
+          ? `${totals.reps} reps · ${formatDuration(totals.holdSeconds)}`
+          : totals.holdSeconds > 0
+            ? `${formatDuration(totals.holdSeconds)} en total`
+            : `${totals.reps} reps totales`;
     }
   }
 
   function computeWorkoutDayTotals(exercises) {
-    let sets = 0, volume = 0, reps = 0;
+    let sets = 0, volume = 0, reps = 0, holdSeconds = 0;
     exercises.forEach((ex) => {
       ex.sets.forEach((s) => {
         sets += 1;
-        reps += s.reps;
-        if (s.weightKg !== null && s.weightKg !== undefined) volume += s.weightKg * s.reps;
+        if (s.holdSeconds !== null && s.holdSeconds !== undefined) {
+          holdSeconds += s.holdSeconds;
+        } else {
+          reps += s.reps || 0;
+        }
+        if (s.weightKg !== null && s.weightKg !== undefined && s.reps) volume += s.weightKg * s.reps;
       });
     });
-    return { sets, volume, reps };
+    return { sets, volume, reps, holdSeconds };
   }
 
   document.getElementById("prevWorkoutDay").addEventListener("click", () => {
-    workoutDayOffset -= 1;
+    dayOffset -= 1;
     renderWorkoutDay();
   });
   document.getElementById("nextWorkoutDay").addEventListener("click", () => {
-    if (workoutDayOffset < 0) workoutDayOffset += 1;
+    dayOffset += 1;
     renderWorkoutDay();
   });
+
+  /* ---------- Calendar (jump to any day, past or future) ---------- */
+
+  const MONTHS_FULL = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const calendarModal = document.getElementById("calendarModal");
+  const calendarMonthLabelEl = document.getElementById("calendarMonthLabel");
+  const calendarGridEl = document.getElementById("calendarGrid");
+
+  let calendarContext = "nutrition"; // which view a selected day should apply to
+  let calendarMonthCursor = new Date();
+
+  function dateOffsetFromToday(d) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(d);
+    target.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / DAY_MS);
+  }
+
+  function openCalendar(context) {
+    calendarContext = context;
+    const base = new Date();
+    base.setDate(base.getDate() + dayOffset);
+    calendarMonthCursor = new Date(base.getFullYear(), base.getMonth(), 1);
+    renderCalendarModal();
+    openModal(calendarModal);
+  }
+
+  function renderCalendarModal() {
+    const year = calendarMonthCursor.getFullYear();
+    const month = calendarMonthCursor.getMonth();
+    calendarMonthLabelEl.textContent = `${MONTHS_FULL[month]} ${year}`;
+
+    const firstOfMonth = new Date(year, month, 1);
+    const startDow = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+    const gridStart = new Date(year, month, 1 - startDow);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const rows = Math.ceil((startDow + daysInMonth) / 7);
+
+    const todayKeyStr = todayKey(0);
+    const selectedKeyStr = todayKey(dayOffset);
+
+    calendarGridEl.innerHTML = "";
+    for (let i = 0; i < rows * 7; i++) {
+      const d = new Date(gridStart);
+      d.setDate(d.getDate() + i);
+      const key = formatDateKey(d);
+      const isOutside = d.getMonth() !== month;
+      const isToday = key === todayKeyStr;
+      const isSelected = key === selectedKeyStr;
+      const exercised = hasWorkoutSession(key);
+      const goalHit = dayHitCalorieGoal(key);
+
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "calendar-day"
+        + (isOutside ? " is-outside" : "")
+        + (isToday ? " is-today" : "")
+        + (isSelected ? " is-selected" : "");
+      cell.dataset.key = key;
+      cell.innerHTML = `
+        <span class="calendar-day-num">${d.getDate()}</span>
+        <span class="calendar-day-dots">
+          ${exercised ? '<span class="calendar-dot calendar-dot--workout"></span>' : ""}
+          ${goalHit ? '<span class="calendar-dot calendar-dot--goal"></span>' : ""}
+        </span>
+      `;
+      calendarGridEl.appendChild(cell);
+    }
+  }
+
+  calendarGridEl.addEventListener("click", (e) => {
+    const cell = e.target.closest(".calendar-day");
+    if (!cell) return;
+    dayOffset = dateOffsetFromToday(parseDateKey(cell.dataset.key));
+    if (calendarContext === "workout") {
+      renderWorkoutDay();
+    } else {
+      render();
+    }
+    closeModal(calendarModal);
+  });
+
+  document.getElementById("calendarPrevMonth").addEventListener("click", () => {
+    calendarMonthCursor.setMonth(calendarMonthCursor.getMonth() - 1);
+    renderCalendarModal();
+  });
+  document.getElementById("calendarNextMonth").addEventListener("click", () => {
+    calendarMonthCursor.setMonth(calendarMonthCursor.getMonth() + 1);
+    renderCalendarModal();
+  });
+  document.getElementById("calendarTodayBtn").addEventListener("click", () => {
+    dayOffset = 0;
+    if (calendarContext === "workout") {
+      renderWorkoutDay();
+    } else {
+      render();
+    }
+    closeModal(calendarModal);
+  });
+  document.getElementById("closeCalendarModal").addEventListener("click", () => closeModal(calendarModal));
+
+  dateLabelEl.addEventListener("click", () => openCalendar("nutrition"));
+  workoutDateLabelEl.addEventListener("click", () => openCalendar("workout"));
 
   copyWorkoutDayBtnEl.addEventListener("click", () => {
     const exercises = currentWorkoutExercises();
@@ -3490,12 +3628,15 @@
   const exerciseDetailModal = document.getElementById("exerciseDetailModal");
   const exerciseDetailTitleEl = document.getElementById("exerciseDetailTitle");
   const lastPerformanceHintEl = document.getElementById("lastPerformanceHint");
+  const prHintEl = document.getElementById("prHint");
   const setListEl = document.getElementById("setList");
   const setEmptyStateEl = document.getElementById("setEmptyState");
   const setForm = document.getElementById("setForm");
   const setWeightEl = document.getElementById("setWeight");
   const setRepsEl = document.getElementById("setReps");
+  const setRepsLabelEl = document.getElementById("setRepsLabel");
   const setSubmitBtnEl = document.getElementById("setSubmitBtn");
+  const setModeToggleEl = document.getElementById("setModeToggle");
   const setTypeToggleEl = document.getElementById("setTypeToggle");
   const suggestedSetHintEl = document.getElementById("suggestedSetHint");
   const suggestedSetValueEl = document.getElementById("suggestedSetValue");
@@ -3508,9 +3649,14 @@
 
   let editingSetId = null;
   let currentSetType = "normal";
+  let currentSetMode = "reps";
   let currentLastPerformance = null;
 
   function formatSet(s) {
+    if (s.holdSeconds !== null && s.holdSeconds !== undefined) {
+      const dur = formatDuration(s.holdSeconds);
+      return s.weightKg !== null && s.weightKg !== undefined ? `${s.weightKg}×${dur}` : dur;
+    }
     return s.weightKg !== null && s.weightKg !== undefined ? `${s.weightKg}×${s.reps}` : `${s.reps} reps`;
   }
 
@@ -3523,6 +3669,24 @@
     if (!btn) return;
     currentSetType = btn.dataset.type;
     setActiveSetTypeButton(currentSetType);
+  });
+
+  function setActiveSetModeButton(mode) {
+    setModeToggleEl.querySelectorAll(".segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  }
+
+  function updateSetModeUI() {
+    const isHold = currentSetMode === "hold";
+    setRepsLabelEl.textContent = isHold ? "Segundos" : "Reps";
+    setRepsEl.placeholder = isHold ? "segundos" : "";
+  }
+
+  setModeToggleEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".segmented-btn");
+    if (!btn) return;
+    currentSetMode = btn.dataset.mode;
+    setActiveSetModeButton(currentSetMode);
+    updateSetModeUI();
   });
 
   function nextSuggestedSet(ex, last) {
@@ -3545,7 +3709,10 @@
     const suggestion = ex ? nextSuggestedSet(ex, currentLastPerformance) : null;
     if (!suggestion) return;
     setWeightEl.value = suggestion.weightKg !== null && suggestion.weightKg !== undefined ? suggestion.weightKg : "";
-    setRepsEl.value = suggestion.reps;
+    currentSetMode = suggestion.holdSeconds !== null && suggestion.holdSeconds !== undefined ? "hold" : "reps";
+    setActiveSetModeButton(currentSetMode);
+    updateSetModeUI();
+    setRepsEl.value = currentSetMode === "hold" ? suggestion.holdSeconds : suggestion.reps;
     setRepsEl.focus();
   });
 
@@ -3605,6 +3772,30 @@
   });
   restTimerSkipBtnEl.addEventListener("click", stopRestTimer);
 
+  function findExercisePR(name) {
+    const key = name.trim().toLowerCase();
+    let best = null;
+    Object.values(state.workouts).forEach((day) => {
+      day.exercises.forEach((ex) => {
+        if (ex.name.trim().toLowerCase() !== key) return;
+        ex.sets.forEach((s) => {
+          if (!best || isBetterSet(s, best)) best = s;
+        });
+      });
+    });
+    return best;
+  }
+
+  function renderPrHint(ex) {
+    const pr = ex ? findExercisePR(ex.name) : null;
+    if (!pr) {
+      prHintEl.hidden = true;
+      return;
+    }
+    prHintEl.hidden = false;
+    prHintEl.textContent = `Mejor marca: ${formatSet(pr)}`;
+  }
+
   function openExerciseDetail(exerciseId) {
     currentExerciseId = exerciseId;
     const ex = currentWorkoutExercises().find((e) => e.id === exerciseId);
@@ -3621,10 +3812,15 @@
 
     stopRestTimer();
     renderSetList();
+    renderPrHint(ex);
     editingSetId = null;
     setForm.reset();
     currentSetType = "normal";
     setActiveSetTypeButton("normal");
+    const lastSet = ex.sets.length ? ex.sets[ex.sets.length - 1] : null;
+    currentSetMode = lastSet && lastSet.holdSeconds !== null && lastSet.holdSeconds !== undefined ? "hold" : "reps";
+    setActiveSetModeButton(currentSetMode);
+    updateSetModeUI();
     setSubmitBtnEl.textContent = "Añadir serie";
     openModal(exerciseDetailModal);
     setTimeout(() => setRepsEl.focus(), 50);
@@ -3741,12 +3937,16 @@
         ex.sets.splice(idx, 1);
         saveData(state);
         renderSetList();
+        renderPrHint(ex);
         renderWorkoutDay();
         if (editingSetId === delBtn.dataset.id) {
           editingSetId = null;
           setForm.reset();
           currentSetType = "normal";
           setActiveSetTypeButton("normal");
+          currentSetMode = "reps";
+          setActiveSetModeButton("reps");
+          updateSetModeUI();
           setSubmitBtnEl.textContent = "Añadir serie";
         }
       }
@@ -3759,7 +3959,10 @@
       if (!s) return;
       editingSetId = s.id;
       setWeightEl.value = s.weightKg !== null && s.weightKg !== undefined ? s.weightKg : "";
-      setRepsEl.value = s.reps;
+      currentSetMode = s.holdSeconds !== null && s.holdSeconds !== undefined ? "hold" : "reps";
+      setActiveSetModeButton(currentSetMode);
+      updateSetModeUI();
+      setRepsEl.value = currentSetMode === "hold" ? s.holdSeconds : s.reps;
       currentSetType = s.type || "normal";
       setActiveSetTypeButton(currentSetType);
       setSubmitBtnEl.textContent = "Guardar cambios";
@@ -3771,11 +3974,14 @@
     e.preventDefault();
     const weightRaw = setWeightEl.value.trim();
     const weight = weightRaw === "" ? null : parseFloat(weightRaw);
-    const reps = parseInt(setRepsEl.value, 10);
-    if ((weight !== null && !(weight >= 0)) || !(reps > 0)) {
-      showToast("Revisa peso y reps");
+    const isHold = currentSetMode === "hold";
+    const rawValue = parseInt(setRepsEl.value, 10);
+    if ((weight !== null && !(weight >= 0)) || !(rawValue > 0)) {
+      showToast(isHold ? "Revisa peso y segundos" : "Revisa peso y reps");
       return;
     }
+    const reps = isHold ? null : rawValue;
+    const holdSeconds = isHold ? rawValue : null;
     const ex = currentWorkoutExercises().find((e2) => e2.id === currentExerciseId);
     if (!ex) return;
 
@@ -3784,9 +3990,11 @@
       if (!s) return;
       s.weightKg = weight;
       s.reps = reps;
+      s.holdSeconds = holdSeconds;
       s.type = currentSetType;
       saveData(state);
       renderSetList();
+      renderPrHint(ex);
       renderWorkoutDay();
       editingSetId = null;
       setForm.reset();
@@ -3797,9 +4005,10 @@
       return;
     }
 
-    ex.sets.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weightKg: weight, reps, type: currentSetType, addedAt: Date.now() });
+    ex.sets.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weightKg: weight, reps, holdSeconds, type: currentSetType, addedAt: Date.now() });
     saveData(state);
     renderSetList();
+    renderPrHint(ex);
     renderWorkoutDay();
     startRestTimer();
     // deliberately don't reset the form — same weight/reps stay filled in so
@@ -4119,7 +4328,9 @@
   function isBetterSet(a, b) {
     const aw = a.weightKg || 0, bw = b.weightKg || 0;
     if (aw !== bw) return aw > bw;
-    return a.reps > b.reps;
+    const aVal = a.holdSeconds !== null && a.holdSeconds !== undefined ? a.holdSeconds : (a.reps || 0);
+    const bVal = b.holdSeconds !== null && b.holdSeconds !== undefined ? b.holdSeconds : (b.reps || 0);
+    return aVal > bVal;
   }
 
   function sortedVariantList(variants) {
@@ -4504,6 +4715,10 @@
   function switchView(viewId) {
     Object.entries(views).forEach(([id, el]) => { el.hidden = id !== viewId; });
     tabButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
+    // Re-render on every switch, not just the first time: dayOffset is
+    // shared with the workout tab, so a day change made there needs to be
+    // picked up here too when you switch back.
+    if (viewId === "nutritionView") render();
     if (viewId === "workoutView") renderWorkoutDay();
     if (viewId === "analyticsView") renderAnalytics();
   }
