@@ -1081,6 +1081,9 @@ button.row-main:active { opacity: 0.55; }
 .calendar-dot--goal { background: var(--macro-carbs); }
 
 .card > .card-date { margin-bottom: 12px; }
+
+.card.is-user-hidden { opacity: 0.4; }
+.analytics-edit-actions .link-btn:disabled { opacity: 0.3; pointer-events: none; }
 .streak-block { margin-bottom: 16px; }
 .streak-block:last-of-type { margin-bottom: 4px; }
 .streak-label {

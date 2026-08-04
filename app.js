@@ -83,7 +83,8 @@
       routines: [],
       timers: [],
       onboardingShown: false,
-      lastExportedAt: null
+      lastExportedAt: null,
+      analyticsLayout: null
     };
   }
 
@@ -141,6 +142,7 @@
     if (!data.timers) data.timers = [];
     if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
     if (typeof data.lastExportedAt !== "number") data.lastExportedAt = null;
+    if (!Array.isArray(data.analyticsLayout)) data.analyticsLayout = null;
     return data;
   }
 
@@ -4020,6 +4022,74 @@
   /* ---------- Analytics ---------- */
 
   let analyticsPeriodDays = 7;
+  let analyticsEditMode = false;
+
+  // Order + visibility of the Analytics cards, customizable like home-screen
+  // widgets. Stored as an ordered array so drag-free up/down arrows are
+  // enough to reorder; new cards added later just append themselves via
+  // ensureAnalyticsLayout instead of needing a migration bump.
+  const ANALYTICS_CARD_IDS = ["streakCard", "recordsCard", "calorieCard", "weightCard", "macroCard", "contributorsCard", "workoutStatsCard", "progressionsCard"];
+
+  function ensureAnalyticsLayout() {
+    if (!Array.isArray(state.analyticsLayout)) state.analyticsLayout = [];
+    const known = new Set(state.analyticsLayout.map((l) => l.id));
+    ANALYTICS_CARD_IDS.forEach((id) => {
+      if (!known.has(id)) state.analyticsLayout.push({ id, hidden: false });
+    });
+    const validIds = new Set(ANALYTICS_CARD_IDS);
+    state.analyticsLayout = state.analyticsLayout.filter((l) => validIds.has(l.id));
+  }
+
+  // progressionsCard already hides itself when there's no progression-group
+  // data (see renderProgressionsCard) — that data-driven hide must not be
+  // clobbered by a user who left it visible, so it's only ever force-hidden
+  // here, never force-shown.
+  function applyAnalyticsLayout() {
+    ensureAnalyticsLayout();
+    const contentEl = document.querySelector("#analyticsView .content");
+    if (!contentEl) return;
+    state.analyticsLayout.forEach((entry, idx) => {
+      const el = document.getElementById(entry.id);
+      if (!el) return;
+      contentEl.appendChild(el);
+      el.classList.toggle("is-user-hidden", entry.hidden && analyticsEditMode);
+      if (entry.hidden) {
+        el.hidden = !analyticsEditMode;
+      } else if (entry.id !== "progressionsCard") {
+        el.hidden = false;
+      }
+      const hideBtn = el.querySelector('.analytics-edit-actions [data-action="hide"]');
+      if (hideBtn) hideBtn.textContent = entry.hidden ? "Mostrar" : "Ocultar";
+      const upBtn = el.querySelector('.analytics-edit-actions [data-action="up"]');
+      const downBtn = el.querySelector('.analytics-edit-actions [data-action="down"]');
+      if (upBtn) upBtn.disabled = idx === 0;
+      if (downBtn) downBtn.disabled = idx === state.analyticsLayout.length - 1;
+    });
+  }
+
+  document.getElementById("analyticsEditToggle").addEventListener("click", () => {
+    analyticsEditMode = !analyticsEditMode;
+    document.getElementById("analyticsEditToggle").textContent = analyticsEditMode ? "Listo" : "Editar";
+    document.querySelectorAll(".analytics-edit-actions").forEach((el) => { el.hidden = !analyticsEditMode; });
+    applyAnalyticsLayout();
+  });
+
+  document.getElementById("analyticsView").addEventListener("click", (e) => {
+    const btn = e.target.closest(".analytics-edit-actions button");
+    if (!btn) return;
+    ensureAnalyticsLayout();
+    const idx = state.analyticsLayout.findIndex((l) => l.id === btn.dataset.card);
+    if (idx === -1) return;
+    if (btn.dataset.action === "hide") {
+      state.analyticsLayout[idx].hidden = !state.analyticsLayout[idx].hidden;
+    } else if (btn.dataset.action === "up" && idx > 0) {
+      [state.analyticsLayout[idx - 1], state.analyticsLayout[idx]] = [state.analyticsLayout[idx], state.analyticsLayout[idx - 1]];
+    } else if (btn.dataset.action === "down" && idx < state.analyticsLayout.length - 1) {
+      [state.analyticsLayout[idx + 1], state.analyticsLayout[idx]] = [state.analyticsLayout[idx], state.analyticsLayout[idx + 1]];
+    }
+    saveData(state);
+    applyAnalyticsLayout();
+  });
   let recordsMode = "reps";
 
   function dayMacroTotals(entries) {
@@ -4686,6 +4756,7 @@
     }
 
     renderWorkoutAnalytics(days);
+    applyAnalyticsLayout();
   }
 
   document.querySelectorAll("#analyticsPeriodToggle .segmented-btn").forEach((btn) => {

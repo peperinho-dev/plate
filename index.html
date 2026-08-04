@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=36">
+<link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
 
@@ -251,18 +251,28 @@
   <div class="view" id="analyticsView" hidden>
     <header class="topbar">
       <span class="day-label">Análisis</span>
-      <div class="segmented segmented--compact" id="analyticsPeriodToggle">
-        <button type="button" class="segmented-btn active" data-days="7">7 d</button>
-        <button type="button" class="segmented-btn" data-days="30">30 d</button>
-        <button type="button" class="segmented-btn" data-days="all">Todo</button>
+      <div class="topbar-actions">
+        <div class="segmented segmented--compact" id="analyticsPeriodToggle">
+          <button type="button" class="segmented-btn active" data-days="7">7 d</button>
+          <button type="button" class="segmented-btn" data-days="30">30 d</button>
+          <button type="button" class="segmented-btn" data-days="all">Todo</button>
+        </div>
+        <button type="button" class="link-btn" id="analyticsEditToggle">Editar</button>
       </div>
     </header>
 
     <main class="content">
       <div class="insights-carousel" id="insightsCarousel"></div>
 
-      <div class="card">
-        <div class="card-date">Constancia</div>
+      <div class="card" id="streakCard">
+        <div class="card-date-row">
+          <div class="card-date">Constancia</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="streakCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="streakCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="streakCard">Ocultar</button>
+          </div>
+        </div>
         <div class="streak-block">
           <span class="streak-label">Nutrición</span>
           <div class="streak-grid" id="nutritionStreakGrid"></div>
@@ -274,8 +284,15 @@
         <p class="stat-note">Últimos 30 días</p>
       </div>
 
-      <div class="card">
-        <div class="card-date">Récords recientes</div>
+      <div class="card" id="recordsCard">
+        <div class="card-date-row">
+          <div class="card-date">Récords recientes</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="recordsCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="recordsCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="recordsCard">Ocultar</button>
+          </div>
+        </div>
         <div class="segmented segmented--compact" id="recordsModeToggle">
           <button type="button" class="segmented-btn active" data-mode="reps">Reps</button>
           <button type="button" class="segmented-btn" data-mode="hold">Tiempo</button>
@@ -284,8 +301,15 @@
         <p class="empty-state" id="recordsEmpty" hidden>Sin series de este tipo en este periodo.</p>
       </div>
 
-      <div class="card">
-        <div class="card-date">Calorías</div>
+      <div class="card" id="calorieCard">
+        <div class="card-date-row">
+          <div class="card-date">Calorías</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="calorieCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="calorieCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="calorieCard">Ocultar</button>
+          </div>
+        </div>
         <div class="chart-legend" id="calorieChartLegend" hidden>
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Ingesta</span>
           <span class="chart-legend-item"><span class="chart-legend-dash"></span>Gasto est.</span>
@@ -293,8 +317,15 @@
         <div id="calorieChart" class="chart-scroll"></div>
       </div>
 
-      <div class="card">
-        <div class="card-date">Peso</div>
+      <div class="card" id="weightCard">
+        <div class="card-date-row">
+          <div class="card-date">Peso</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="weightCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="weightCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="weightCard">Ocultar</button>
+          </div>
+        </div>
         <p class="stat-note" id="weightStatLine" hidden>—</p>
         <div class="chart-legend" id="weightChartLegend" hidden>
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--ink-faint)"></span>Real</span>
@@ -304,8 +335,15 @@
         <p class="empty-state" id="weightChartEmpty" hidden>Registra tu peso para ver la tendencia.</p>
       </div>
 
-      <div class="card">
-        <div class="card-date">Macros</div>
+      <div class="card" id="macroCard">
+        <div class="card-date-row">
+          <div class="card-date">Macros</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="macroCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="macroCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="macroCard">Ocultar</button>
+          </div>
+        </div>
         <div class="chart-legend">
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent)"></span>Prot.</span>
           <span class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--macro-fat)"></span>Grasa</span>
@@ -315,14 +353,28 @@
         <p class="empty-state" id="macroChartEmpty" hidden>Registra comidas con macros para ver la tendencia.</p>
       </div>
 
-      <div class="card">
-        <div class="card-date">Más consumido</div>
+      <div class="card" id="contributorsCard">
+        <div class="card-date-row">
+          <div class="card-date">Más consumido</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="contributorsCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="contributorsCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="contributorsCard">Ocultar</button>
+          </div>
+        </div>
         <div class="log-list" id="topContributorsList"></div>
         <p class="empty-state" id="topContributorsEmpty" hidden>Sin datos en este periodo.</p>
       </div>
 
-      <div class="card">
-        <div class="card-date">Entrenamientos</div>
+      <div class="card" id="workoutStatsCard">
+        <div class="card-date-row">
+          <div class="card-date">Entrenamientos</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="workoutStatsCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="workoutStatsCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="workoutStatsCard">Ocultar</button>
+          </div>
+        </div>
         <div class="totals-row">
           <span class="totals-label">Sesiones</span>
           <span class="totals-value" id="sessionsStatValue">0</span>
@@ -348,7 +400,14 @@
       </div>
 
       <div class="card" id="progressionsCard" hidden>
-        <div class="card-date">Progresiones</div>
+        <div class="card-date-row">
+          <div class="card-date">Progresiones</div>
+          <div class="card-date-actions analytics-edit-actions" hidden>
+            <button type="button" class="link-btn" data-action="up" data-card="progressionsCard" aria-label="Subir">↑</button>
+            <button type="button" class="link-btn" data-action="down" data-card="progressionsCard" aria-label="Bajar">↓</button>
+            <button type="button" class="link-btn link-btn--muted" data-action="hide" data-card="progressionsCard">Ocultar</button>
+          </div>
+        </div>
         <div class="log-list" id="progressionsList"></div>
       </div>
     </main>
@@ -994,6 +1053,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=47"></script>
+<script src="app.js?v=48"></script>
 </body>
 </html>
