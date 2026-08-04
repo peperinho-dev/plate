@@ -781,6 +781,31 @@ button.row-main:active { opacity: 0.55; }
 }
 .macro-fill.in-range { background: var(--accent); }
 
+.micro-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.micro-item { flex: 1; min-width: 0; }
+.micro-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  display: block;
+}
+.micro-value {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  display: block;
+}
+
 /* ---------- Buttons ---------- */
 .action-bar {
   display: flex;

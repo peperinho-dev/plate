@@ -325,6 +325,11 @@
   const carbsTargetEl = document.getElementById("carbsTarget");
   const carbsFillEl = document.getElementById("carbsFill");
 
+  const microSectionEl = document.getElementById("microSection");
+  const fiberTotalEl = document.getElementById("fiberTotal");
+  const sugarTotalEl = document.getElementById("sugarTotal");
+  const sodiumTotalEl = document.getElementById("sodiumTotal");
+
   const WEEKDAYS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
   const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
   const WEEKDAY_LETTERS_MON = ["L","M","X","J","V","S","D"]; // Monday-first, matches the week strip
@@ -637,7 +642,27 @@
     rangeMarkerEl.style.left = `${Math.min(100, (total / domainMax) * 100)}%`;
 
     renderMacros(entries);
+    renderMicronutrients(entries);
     renderAdaptiveBanner();
+  }
+
+  // No targets/goals for these (unlike protein/fat/carbs) — just a running
+  // daily total, shown only once something has actually recorded a value,
+  // so days logged before this existed don't show a misleading "0 g" row.
+  function renderMicronutrients(entries) {
+    const totals = entries.reduce((acc, e) => {
+      acc.fiber += e.fiber || 0;
+      acc.sugar += e.sugar || 0;
+      acc.sodium += e.sodium || 0;
+      acc.hasAny = acc.hasAny || !!(e.fiber || e.sugar || e.sodium);
+      return acc;
+    }, { fiber: 0, sugar: 0, sodium: 0, hasAny: false });
+
+    microSectionEl.hidden = !totals.hasAny;
+    if (!totals.hasAny) return;
+    fiberTotalEl.textContent = `${Math.round(totals.fiber)} g`;
+    sugarTotalEl.textContent = `${Math.round(totals.sugar)} g`;
+    sodiumTotalEl.textContent = `${Math.round(totals.sodium)} mg`;
   }
 
   function renderMacros(entries) {
@@ -977,9 +1002,17 @@
             existing.protein = e.protein;
             existing.fat = e.fat;
             existing.carbs = e.carbs;
+            existing.fiber = e.fiber;
+            existing.sugar = e.sugar;
+            existing.sodium = e.sodium;
           }
         } else {
-          tally.set(key, { name: e.name, calories: e.calories, qtyLabel: e.qtyLabel, protein: e.protein, fat: e.fat, carbs: e.carbs, count: 1, lastAddedAt: e.addedAt });
+          tally.set(key, {
+            name: e.name, calories: e.calories, qtyLabel: e.qtyLabel,
+            protein: e.protein, fat: e.fat, carbs: e.carbs,
+            fiber: e.fiber, sugar: e.sugar, sodium: e.sodium,
+            count: 1, lastAddedAt: e.addedAt
+          });
         }
       });
     });
@@ -1024,6 +1057,9 @@
       protein: item.protein || 0,
       fat: item.fat || 0,
       carbs: item.carbs || 0,
+      fiber: item.fiber || 0,
+      sugar: item.sugar || 0,
+      sodium: item.sodium || 0,
       addedAt: Date.now()
     });
   }
@@ -1885,6 +1921,9 @@
   const entryProteinPer100El = document.getElementById("entryProteinPer100");
   const entryFatPer100El = document.getElementById("entryFatPer100");
   const entryCarbsPer100El = document.getElementById("entryCarbsPer100");
+  const entryFiberPer100El = document.getElementById("entryFiberPer100");
+  const entrySugarPer100El = document.getElementById("entrySugarPer100");
+  const entrySodiumPer100El = document.getElementById("entrySodiumPer100");
   const entryModalTitleEl = document.getElementById("entryModalTitle");
   const foodSearchInputEl = document.getElementById("foodSearchInput");
   const foodSearchResultsEl = document.getElementById("foodSearchResults");
@@ -2068,7 +2107,10 @@
         qtyLabel: "100 g",
         protein: typeof n.proteins_100g === "number" ? Math.round(n.proteins_100g) : 0,
         fat: typeof n.fat_100g === "number" ? Math.round(n.fat_100g) : 0,
-        carbs: typeof n.carbohydrates_100g === "number" ? Math.round(n.carbohydrates_100g) : 0
+        carbs: typeof n.carbohydrates_100g === "number" ? Math.round(n.carbohydrates_100g) : 0,
+        fiber: typeof n.fiber_100g === "number" ? Math.round(n.fiber_100g * 10) / 10 : 0,
+        sugar: typeof n.sugars_100g === "number" ? Math.round(n.sugars_100g * 10) / 10 : 0,
+        sodium: typeof n.sodium_100g === "number" ? Math.round(n.sodium_100g * 1000) : 0
       });
     });
     saveData(state);
@@ -2114,6 +2156,12 @@
     if (typeof n.proteins_100g === "number") entryProteinPer100El.value = Math.round(n.proteins_100g);
     if (typeof n.fat_100g === "number") entryFatPer100El.value = Math.round(n.fat_100g);
     if (typeof n.carbohydrates_100g === "number") entryCarbsPer100El.value = Math.round(n.carbohydrates_100g);
+    if (typeof n.fiber_100g === "number") entryFiberPer100El.value = Math.round(n.fiber_100g * 10) / 10;
+    if (typeof n.sugars_100g === "number") entrySugarPer100El.value = Math.round(n.sugars_100g * 10) / 10;
+    // OFF reports sodium in grams per 100g, same unit as the other _100g
+    // fields — our field is labeled mg (the unit people actually think in
+    // for sodium), so convert.
+    if (typeof n.sodium_100g === "number") entrySodiumPer100El.value = Math.round(n.sodium_100g * 1000);
     resetFoodSearch();
     updateLivePreview();
   }
@@ -2149,6 +2197,9 @@
     if (entry.protein) entryProteinPer100El.value = Math.round((entry.protein / basisGrams) * 100);
     if (entry.fat) entryFatPer100El.value = Math.round((entry.fat / basisGrams) * 100);
     if (entry.carbs) entryCarbsPer100El.value = Math.round((entry.carbs / basisGrams) * 100);
+    if (entry.fiber) entryFiberPer100El.value = Math.round(((entry.fiber / basisGrams) * 100) * 10) / 10;
+    if (entry.sugar) entrySugarPer100El.value = Math.round(((entry.sugar / basisGrams) * 100) * 10) / 10;
+    if (entry.sodium) entrySodiumPer100El.value = Math.round((entry.sodium / basisGrams) * 100);
     updateLivePreview();
     openModal(entryModal);
   }
@@ -2208,6 +2259,9 @@
     const proteinPer100Raw = parseFloat(entryProteinPer100El.value);
     const fatPer100Raw = parseFloat(entryFatPer100El.value);
     const carbsPer100Raw = parseFloat(entryCarbsPer100El.value);
+    const fiberPer100Raw = parseFloat(entryFiberPer100El.value);
+    const sugarPer100Raw = parseFloat(entrySugarPer100El.value);
+    const sodiumPer100Raw = parseFloat(entrySodiumPer100El.value);
     const basis = (v) => (!isNaN(v) && v >= 0 ? v : 0);
     const scale = (v) => (basis(v) * grams) / 100;
 
@@ -2218,6 +2272,9 @@
       protein: scale(proteinPer100Raw),
       fat: scale(fatPer100Raw),
       carbs: scale(carbsPer100Raw),
+      fiber: scale(fiberPer100Raw),
+      sugar: scale(sugarPer100Raw),
+      sodium: scale(sodiumPer100Raw),
       // Per-100g basis, kept alongside the computed totals above so callers
       // that need a re-scalable item (recipe ingredients, merged meals) can
       // use it without re-deriving it from the already-scaled totals.
@@ -2506,6 +2563,9 @@
       if (typeof nutriments.proteins_100g === "number") entryProteinPer100El.value = Math.round(nutriments.proteins_100g);
       if (typeof nutriments.fat_100g === "number") entryFatPer100El.value = Math.round(nutriments.fat_100g);
       if (typeof nutriments.carbohydrates_100g === "number") entryCarbsPer100El.value = Math.round(nutriments.carbohydrates_100g);
+      if (typeof nutriments.fiber_100g === "number") entryFiberPer100El.value = Math.round(nutriments.fiber_100g * 10) / 10;
+      if (typeof nutriments.sugars_100g === "number") entrySugarPer100El.value = Math.round(nutriments.sugars_100g * 10) / 10;
+      if (typeof nutriments.sodium_100g === "number") entrySodiumPer100El.value = Math.round(nutriments.sodium_100g * 1000);
       updateLivePreview();
       openModal(entryModal);
       setTimeout(() => entryGramsEl.focus(), 50);

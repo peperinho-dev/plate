@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
 
@@ -105,6 +105,21 @@
             <div class="macro-label">Carbos</div>
             <div class="macro-value"><span id="carbsTotal">0</span>/<span id="carbsTarget">0</span> g</div>
             <div class="macro-track"><div class="macro-fill" id="carbsFill"></div></div>
+          </div>
+        </div>
+
+        <div class="micro-row" id="microSection" hidden>
+          <div class="micro-item">
+            <span class="micro-label">Fibra</span>
+            <span class="micro-value" id="fiberTotal">0 g</span>
+          </div>
+          <div class="micro-item">
+            <span class="micro-label">Azúcar</span>
+            <span class="micro-value" id="sugarTotal">0 g</span>
+          </div>
+          <div class="micro-item">
+            <span class="micro-label">Sodio</span>
+            <span class="micro-value" id="sodiumTotal">0 mg</span>
           </div>
         </div>
       </div>
@@ -449,6 +464,22 @@
         <label class="field">
           <span>Carbos</span>
           <input type="number" id="entryCarbsPer100" min="0" step="1" inputmode="decimal">
+        </label>
+      </div>
+
+      <span class="field-group-label">Otros (por 100 g, opcional)</span>
+      <div class="field-row">
+        <label class="field">
+          <span>Fibra (g)</span>
+          <input type="number" id="entryFiberPer100" min="0" step="0.1" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Azúcar (g)</span>
+          <input type="number" id="entrySugarPer100" min="0" step="0.1" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Sodio (mg)</span>
+          <input type="number" id="entrySodiumPer100" min="0" step="1" inputmode="decimal">
         </label>
       </div>
 
@@ -907,6 +938,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=42"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>
