@@ -1611,16 +1611,39 @@
 
   /* ---------- Data export / import ---------- */
 
-  function exportData() {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  function downloadBackupBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `plate-backup-${todayKey(0)}.json`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  // A silent download is easy to lose track of — it lands in a Downloads
+  // folder the user rarely opens, so the "backup" often never makes it
+  // anywhere durable. Routing through the native share sheet (when
+  // available) puts AirDrop / Save to Files / iCloud Drive / Mail one tap
+  // away instead, without needing any backend or account of our own.
+  async function exportData() {
+    const filename = `plate-backup-${todayKey(0)}.json`;
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/json" }) : null;
+    const canShareFile = !!(file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+
+    if (canShareFile) {
+      try {
+        await navigator.share({ files: [file], title: "Copia de seguridad de Plate" });
+      } catch (err) {
+        if (err && err.name === "AbortError") return; // user cancelled — don't mark as backed up
+        downloadBackupBlob(blob, filename);
+      }
+    } else {
+      downloadBackupBlob(blob, filename);
+    }
+
     state.lastExportedAt = Date.now();
     saveData(state);
     renderBackupBanner();
