@@ -1870,9 +1870,6 @@
   const searchSelectBarEl = document.getElementById("searchSelectBar");
   const searchSelectToggleBtnEl = document.getElementById("searchSelectToggleBtn");
   const searchLogSelectedBtnEl = document.getElementById("searchLogSelectedBtn");
-  const entryPer100RowEl = document.getElementById("entryPer100Row");
-  const entryKcalTotalLabelEl = document.getElementById("entryKcalTotalLabel");
-  const entryMacrosLabelEl = document.getElementById("entryMacrosLabel");
   const entrySubmitBtnEl = document.getElementById("entrySubmitBtn");
   const entryLivePreviewEl = document.getElementById("entryLivePreview");
   const entryFavoriteBtnEl = document.getElementById("entryFavoriteBtn");
@@ -2101,10 +2098,7 @@
   function setEntryFormMode(isEditing) {
     foodSearchSectionEl.hidden = isEditing;
     foodBrowseSectionEl.hidden = isEditing;
-    entryPer100RowEl.hidden = isEditing;
     entryTimeRowEl.hidden = !isEditing;
-    entryKcalTotalLabelEl.textContent = isEditing ? "kcal totales" : "o directamente, kcal totales";
-    entryMacrosLabelEl.textContent = isEditing ? "Macros (totales, opcional)" : "Macros por 100 g (opcional)";
     entrySubmitBtnEl.textContent = isEditing ? "Guardar cambios" : "Añadir";
   }
 
@@ -2120,11 +2114,18 @@
     entryNameEl.value = entry.name;
     const entryDate = new Date(entry.addedAt);
     entryTimeEl.value = `${String(entryDate.getHours()).padStart(2, "0")}:${String(entryDate.getMinutes()).padStart(2, "0")}`;
-    entryGramsEl.value = 100;
-    entryKcalTotalEl.value = Math.round(entry.calories);
-    if (entry.protein) entryProteinPer100El.value = Math.round(entry.protein);
-    if (entry.fat) entryFatPer100El.value = Math.round(entry.fat);
-    if (entry.carbs) entryCarbsPer100El.value = Math.round(entry.carbs);
+
+    // Logged entries only store absolute totals + a "N g" label, not a
+    // per-100g basis — reconstruct one from the label so grams can be
+    // edited with kcal/macros rescaling proportionally, same fallback
+    // convention used for recipe items and favorites saved without a basis.
+    const parsedGrams = parseFloat(entry.qtyLabel);
+    const basisGrams = parsedGrams > 0 ? parsedGrams : 100;
+    entryGramsEl.value = basisGrams;
+    entryKcalPer100El.value = Math.round((entry.calories / basisGrams) * 100);
+    if (entry.protein) entryProteinPer100El.value = Math.round((entry.protein / basisGrams) * 100);
+    if (entry.fat) entryFatPer100El.value = Math.round((entry.fat / basisGrams) * 100);
+    if (entry.carbs) entryCarbsPer100El.value = Math.round((entry.carbs / basisGrams) * 100);
     updateLivePreview();
     openModal(entryModal);
   }
