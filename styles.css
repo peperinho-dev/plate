@@ -1080,6 +1080,77 @@ button.row-main:active { opacity: 0.55; }
 }
 .calendar-dot--goal { background: var(--macro-carbs); }
 
+.streak-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.streak-row:last-of-type { margin-bottom: 4px; }
+.streak-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  width: 62px;
+  flex-shrink: 0;
+}
+.streak-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+.streak-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--line);
+}
+.streak-cell.is-nutrition { background: var(--ink-pressed); }
+.streak-cell.is-workout { background: var(--accent); }
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.record-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  width: 92px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-alt);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.record-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.record-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  width: 52px;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes hintPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=32">
+<link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 
@@ -260,6 +260,29 @@
 
     <main class="content">
       <div class="insights-carousel" id="insightsCarousel"></div>
+
+      <div class="card">
+        <div class="card-date">Constancia</div>
+        <div class="streak-row">
+          <span class="streak-label">Nutrición</span>
+          <div class="streak-grid" id="nutritionStreakGrid"></div>
+        </div>
+        <div class="streak-row">
+          <span class="streak-label">Entreno</span>
+          <div class="streak-grid" id="workoutStreakGrid"></div>
+        </div>
+        <p class="stat-note">Últimos 30 días</p>
+      </div>
+
+      <div class="card">
+        <div class="card-date">Récords recientes</div>
+        <div class="segmented segmented--compact" id="recordsModeToggle">
+          <button type="button" class="segmented-btn active" data-mode="reps">Reps</button>
+          <button type="button" class="segmented-btn" data-mode="hold">Tiempo</button>
+        </div>
+        <div class="record-list" id="recordsList"></div>
+        <p class="empty-state" id="recordsEmpty" hidden>Sin series de este tipo en este periodo.</p>
+      </div>
 
       <div class="card">
         <div class="card-date">Calorías</div>
@@ -971,6 +994,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="app.js?v=46"></script>
+<script src="app.js?v=47"></script>
 </body>
 </html>

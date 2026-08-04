@@ -4020,6 +4020,7 @@
   /* ---------- Analytics ---------- */
 
   let analyticsPeriodDays = 7;
+  let recordsMode = "reps";
 
   function dayMacroTotals(entries) {
     return entries.reduce((acc, e) => {
@@ -4542,11 +4543,77 @@
     carouselEl.hidden = cards.length === 0;
   }
 
+  // Fixed 30-day window regardless of the period toggle, matching the
+  // "last 30 days" consistency view other trackers use — the point is to
+  // see the pattern at a glance, not to slice it by the analytics period.
+  function renderStreakGrids() {
+    const keys = [];
+    for (let i = 29; i >= 0; i--) keys.push(todayKey(-i));
+    document.getElementById("nutritionStreakGrid").innerHTML = keys
+      .map((key) => `<span class="streak-cell${dayCalorieTotal(key) > 0 ? " is-nutrition" : ""}"></span>`)
+      .join("");
+    document.getElementById("workoutStreakGrid").innerHTML = keys
+      .map((key) => `<span class="streak-cell${hasWorkoutSession(key) ? " is-workout" : ""}"></span>`)
+      .join("");
+  }
+
+  function computeExerciseRecords(days, mode) {
+    const dateKeys = new Set(days.map((d) => d.date));
+    const best = new Map();
+    Object.entries(state.workouts).forEach(([dayKey, day]) => {
+      if (!dateKeys.has(dayKey)) return;
+      day.exercises.forEach((ex) => {
+        ex.sets.forEach((s) => {
+          const isHold = s.holdSeconds !== null && s.holdSeconds !== undefined;
+          if (mode === "hold" ? !isHold : isHold) return;
+          const value = isHold ? s.holdSeconds : s.reps;
+          if (!value) return;
+          const existing = best.get(ex.name);
+          if (!existing || value > existing.value) best.set(ex.name, { name: ex.name, value });
+        });
+      });
+    });
+    return Array.from(best.values()).sort((a, b) => b.value - a.value).slice(0, 6);
+  }
+
+  function renderRecordsList(days) {
+    const records = computeExerciseRecords(days, recordsMode);
+    const listEl = document.getElementById("recordsList");
+    const emptyEl = document.getElementById("recordsEmpty");
+    listEl.innerHTML = "";
+    emptyEl.hidden = records.length > 0;
+    if (records.length === 0) return;
+    const maxValue = records[0].value;
+    records.forEach((r) => {
+      const pct = Math.max(6, Math.round((r.value / maxValue) * 100));
+      const valueLabel = recordsMode === "hold" ? formatDuration(r.value) : `${r.value} reps`;
+      const row = document.createElement("div");
+      row.className = "record-row";
+      row.innerHTML = `
+        <span class="record-name">${escapeHtml(r.name)}</span>
+        <div class="record-bar-track"><div class="record-bar-fill" style="width:${pct}%"></div></div>
+        <span class="record-value">${valueLabel}</span>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  document.querySelectorAll("#recordsModeToggle .segmented-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      recordsMode = btn.dataset.mode;
+      document.querySelectorAll("#recordsModeToggle .segmented-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
+      renderRecordsList(days);
+    });
+  });
+
   function renderAnalytics() {
     sessionGoalSliderEl.value = state.workoutGoal.weeklySessions;
     sessionGoalValueLabelEl.textContent = state.workoutGoal.weeklySessions;
 
     const days = analyticsPeriodDays === "all" ? getAllDays() : getRecentDays(analyticsPeriodDays);
+    renderStreakGrids();
+    renderRecordsList(days);
 
     // Computed once and shared by the insights card, the stat line, and the
     // chart itself, so all three agree on the same sorted/smoothed data
