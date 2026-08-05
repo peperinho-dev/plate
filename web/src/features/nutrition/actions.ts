@@ -3,7 +3,7 @@
 // stays pure serializable data, so what persist() writes is byte-for-byte
 // the same schema shape the vanilla app reads.
 import { useAppStore } from "../../shared/store";
-import type { AppState, Entry, FoodItemBasis } from "../../shared/store/types";
+import type { AppState, Entry, Favorite, FoodItemBasis } from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
 import { rebaseTimeToDay } from "../../shared/lib/date";
 import { sumFoodItems } from "../../shared/lib/foodItems";
@@ -80,6 +80,19 @@ export function rememberScannedProduct(barcode: string, form: EntryFormState) {
       }
     }
   }));
+}
+
+export function addFavorite(fav: Omit<Favorite, "id" | "addedAt">) {
+  useAppStore.setState((s) => {
+    // Same name twice would just clutter the row — treat it as a no-op.
+    const exists = s.favorites.some((f) => f.name.trim().toLowerCase() === fav.name.trim().toLowerCase());
+    if (exists) return {};
+    return { favorites: [...s.favorites, { ...fav, id: newId(), addedAt: Date.now() }] };
+  });
+}
+
+export function removeFavorite(id: string) {
+  useAppStore.setState((s) => ({ favorites: s.favorites.filter((f) => f.id !== id) }));
 }
 
 export type PasteTimeMode = "keep" | "now";

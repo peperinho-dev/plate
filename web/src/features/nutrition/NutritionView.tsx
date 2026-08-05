@@ -14,7 +14,16 @@ import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
 import { ProfileModal } from "../profile/ProfileModal";
-import { addEntry, pasteEntriesToDay, rememberScannedProduct, updateEntry } from "./actions";
+import { QuickAddRows } from "./components/QuickAddRows";
+import { computeHourlyGoTos, computeRecentItems, favoriteToQuickItem, type QuickItem } from "./quickAdd";
+import {
+  addEntry,
+  addFavorite,
+  pasteEntriesToDay,
+  rememberScannedProduct,
+  removeFavorite,
+  updateEntry
+} from "./actions";
 import { showToast } from "../../shared/components/Toast";
 import { lookupBarcode } from "../../shared/lib/foodLookup";
 import type { Entry } from "../../shared/store/types";
@@ -70,6 +79,31 @@ export function NutritionView() {
   // creating one; also reveals the Hora field.
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [favoritesEditing, setFavoritesEditing] = useState(false);
+
+  const favorites = useAppStore((s) => s.favorites);
+  const favoriteItems = favorites.map(favoriteToQuickItem);
+  const recentItems = computeRecentItems(days);
+  const goToItems = computeHourlyGoTos(days, new Date().getHours());
+
+  // One tap logs the item straight onto the visible day — the whole point
+  // of these chips is skipping the form entirely.
+  const handleQuickAdd = (item: QuickItem) => {
+    addEntry(dayKey, {
+      name: item.name,
+      calories: item.calories,
+      qtyLabel: item.qtyLabel,
+      protein: item.protein,
+      fat: item.fat,
+      carbs: item.carbs,
+      fiber: item.fiber,
+      sugar: item.sugar,
+      sodium: item.sodium,
+      addedAt: Date.now()
+    });
+    setEntryOpen(false);
+    showToast("Añadido");
+  };
 
   const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -271,6 +305,33 @@ export function NutritionView() {
         onScanClick={() => {
           setEntryOpen(false);
           setScanOpen(true);
+        }}
+        quickAdd={
+          <QuickAddRows
+            favorites={favoriteItems}
+            goTos={goToItems}
+            recents={recentItems}
+            onPick={handleQuickAdd}
+            onRemoveFavorite={removeFavorite}
+            favoritesEditing={favoritesEditing}
+            onToggleFavoritesEditing={() => setFavoritesEditing((v) => !v)}
+          />
+        }
+        onSaveFavorite={() => {
+          const d = deriveEntry(form);
+          if (!d) return;
+          addFavorite({
+            name: d.name,
+            calories: d.calories,
+            qtyLabel: d.qtyLabel,
+            protein: d.protein,
+            fat: d.fat,
+            carbs: d.carbs,
+            fiber: d.fiber,
+            sugar: d.sugar,
+            sodium: d.sodium
+          });
+          showToast("Guardado en favoritos");
         }}
         onPickSearchResult={(hit) => {
           // Searched items have no barcode context, so picking one must not

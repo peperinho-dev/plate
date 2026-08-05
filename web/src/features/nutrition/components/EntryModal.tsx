@@ -2,7 +2,7 @@
 // barcode prefills this form, and confirming it teaches the local cache.
 import { useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
-import { ScanIcon } from "../../../shared/components/Icons";
+import { ScanIcon, StarIcon } from "../../../shared/components/Icons";
 import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
 import { deriveEntry, type EntryFormState } from "../entryForm";
 
@@ -18,6 +18,10 @@ interface EntryModalProps {
   onScanClick: () => void;
   /** Fills the form from a search result. */
   onPickSearchResult: (hit: SearchHit) => void;
+  /** Saves the current form as a favourite. */
+  onSaveFavorite: () => void;
+  /** Quick-add chips, rendered above the search field. */
+  quickAdd?: React.ReactNode;
 }
 
 export function EntryModal({
@@ -29,7 +33,9 @@ export function EntryModal({
   onClose,
   onSubmit,
   onScanClick,
-  onPickSearchResult
+  onPickSearchResult,
+  onSaveFavorite,
+  quickAdd
 }: EntryModalProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[]>([]);
@@ -77,6 +83,7 @@ export function EntryModal({
       */}
       {!isEditing && (
         <>
+          {quickAdd}
           <div className="field-row">
             <label className="field" style={{ flex: 1 }}>
               <span>Buscar alimento</span>
@@ -226,9 +233,20 @@ export function EntryModal({
           </label>
         </div>
 
-        <button type="submit" className="btn btn--primary btn--block" disabled={!derived}>
-          {isEditing ? "Guardar" : "Añadir"}
-        </button>
+        <div className="field-row">
+          <button type="submit" className="btn btn--primary btn--block" disabled={!derived}>
+            {isEditing ? "Guardar" : "Añadir"}
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--icon-only"
+            aria-label="Guardar como favorito"
+            disabled={!derived}
+            onClick={onSaveFavorite}
+          >
+            <StarIcon />
+          </button>
+        </div>
       </form>
     </Modal>
   );
