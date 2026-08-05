@@ -7,6 +7,7 @@ import type { AppState, Entry, FoodItemBasis } from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
 import { rebaseTimeToDay } from "../../shared/lib/date";
 import { sumFoodItems } from "../../shared/lib/foodItems";
+import type { EntryFormState } from "./entryForm";
 
 function updateDay(state: AppState, dayKey: string, entries: Entry[]): Partial<AppState> {
   return {
@@ -42,6 +43,32 @@ export function updateEntry(dayKey: string, entryId: string, patch: Partial<Entr
       day.entries.map((e) => (e.id === entryId ? { ...e, ...patch } : e))
     );
   });
+}
+
+// Teaches this device a barcode -> product mapping from whatever the user
+// confirmed in the entry form. Runs on every scanned add, so a correction
+// to bad Open Food Facts data sticks too, not just brand-new products.
+export function rememberScannedProduct(barcode: string, form: EntryFormState) {
+  const numOrNull = (v: string) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  useAppStore.setState((s) => ({
+    barcodeCache: {
+      ...s.barcodeCache,
+      [barcode]: {
+        name: form.name.trim(),
+        kcalPer100: numOrNull(form.kcalPer100),
+        proteinPer100: numOrNull(form.proteinPer100),
+        fatPer100: numOrNull(form.fatPer100),
+        carbsPer100: numOrNull(form.carbsPer100),
+        fiberPer100: numOrNull(form.fiberPer100),
+        sugarPer100: numOrNull(form.sugarPer100),
+        sodiumPer100: numOrNull(form.sodiumPer100),
+        savedAt: Date.now()
+      }
+    }
+  }));
 }
 
 export type PasteTimeMode = "keep" | "now";

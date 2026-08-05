@@ -1,5 +1,6 @@
 // The Nutrición tab. Structure mirrors the #nutritionView markup in the
 // vanilla index.html so the ported stylesheet applies unchanged.
+import { useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
@@ -10,8 +11,12 @@ import { ChevronLeft, ChevronRight, GearIcon, ScanIcon, TargetIcon } from "../..
 import { EntryList } from "./components/EntryList";
 import { DayTotals } from "./components/DayTotals";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
-import { pasteEntriesToDay } from "./actions";
+import { EntryModal } from "./components/EntryModal";
+import { ScanModal } from "./components/ScanModal";
+import { addEntry, pasteEntriesToDay, rememberScannedProduct } from "./actions";
 import { showToast } from "../../shared/components/Toast";
+import { lookupBarcode } from "../../shared/lib/foodLookup";
+import { deriveEntry, emptyEntryForm, formFromLookup, type EntryFormState } from "./entryForm";
 
 export function NutritionView() {
   const dayOffset = useUiStore((s) => s.dayOffset);
@@ -49,6 +54,60 @@ export function NutritionView() {
   const handleCopyYesterday = () => {
     pasteEntriesToDay(prevEntries, dayKey, "keep");
     showToast("Copiado de ayer");
+  };
+
+  // --- Add / scan flow -------------------------------------------------
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [form, setForm] = useState<EntryFormState>(emptyEntryForm);
+  // Barcode the current form came from, so confirming it can teach the
+  // local cache. Null for a purely manual entry.
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+
+  const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
+
+  const openManualAdd = () => {
+    setForm(emptyEntryForm());
+    setPendingBarcode(null);
+    setEntryOpen(true);
+  };
+
+  const handleDetected = async (barcode: string) => {
+    setScanOpen(false);
+    setPendingBarcode(barcode);
+    showToast(`Buscando ${barcode}…`);
+    const result = await lookupBarcode(useAppStore.getState(), barcode);
+    if (result) {
+      setForm(formFromLookup(result));
+      showToast(result.source === "cache" ? "Producto guardado en este dispositivo" : "Producto encontrado");
+    } else {
+      // Nothing known anywhere — the user fills it in once, and the cache
+      // makes every future scan of this barcode instant.
+      setForm({ ...emptyEntryForm(), name: "" });
+      showToast("No encontrado. Añádelo y lo recordaré.");
+    }
+    setEntryOpen(true);
+  };
+
+  const handleEntrySubmit = () => {
+    const derived = deriveEntry(form);
+    if (!derived) return;
+    addEntry(dayKey, {
+      name: derived.name,
+      calories: derived.calories,
+      qtyLabel: derived.qtyLabel,
+      protein: derived.protein,
+      fat: derived.fat,
+      carbs: derived.carbs,
+      fiber: derived.fiber,
+      sugar: derived.sugar,
+      sodium: derived.sodium,
+      addedAt: Date.now()
+    });
+    if (pendingBarcode) rememberScannedProduct(pendingBarcode, form);
+    setEntryOpen(false);
+    setPendingBarcode(null);
+    showToast("Añadido");
   };
 
   return (
@@ -122,19 +181,33 @@ export function NutritionView() {
       </main>
 
       <div className="action-bar">
-        <button className="btn btn--primary btn--block">
+        <button className="btn btn--primary btn--block" onClick={() => setScanOpen(true)}>
           <span className="btn-icon">
             <ScanIcon />
           </span>{" "}
           Escanear
         </button>
-        <button className="btn btn--secondary btn--block">
+        <button className="btn btn--secondary btn--block" onClick={openManualAdd}>
           <span className="btn-icon">+</span> Añadir a mano
         </button>
       </div>
 
       <PasteTargetSheet />
       <CalendarModal />
+      <EntryModal
+        open={entryOpen}
+        title={pendingBarcode ? "Confirmar producto" : "Añadir alimento"}
+        form={form}
+        isEditing={false}
+        onChange={patchForm}
+        onClose={() => setEntryOpen(false)}
+        onSubmit={handleEntrySubmit}
+        onScanClick={() => {
+          setEntryOpen(false);
+          setScanOpen(true);
+        }}
+      />
+      <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
     </div>
   );
 }
