@@ -5,6 +5,7 @@
 import { useAppStore } from "../../shared/store";
 import type { AppState, Entry, FoodItemBasis } from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
+import { rebaseTimeToDay } from "../../shared/lib/date";
 import { sumFoodItems } from "../../shared/lib/foodItems";
 
 function updateDay(state: AppState, dayKey: string, entries: Entry[]): Partial<AppState> {
@@ -40,6 +41,41 @@ export function updateEntry(dayKey: string, entryId: string, patch: Partial<Entr
       dayKey,
       day.entries.map((e) => (e.id === entryId ? { ...e, ...patch } : e))
     );
+  });
+}
+
+export type PasteTimeMode = "keep" | "now";
+
+// Ported from pasteEntriesToDay() in app.js. "keep" rebases each entry's
+// original time-of-day onto the target date (Hoy/Mañana/Elegir día…);
+// "now" stamps every entry with the current moment (Ahora).
+//
+// Fields are copied explicitly rather than spread so a stray runtime key
+// can never leak into stored data — the same discipline the vanilla
+// version settled on after it silently dropped fiber/sugar/sodium.
+export function pasteEntriesToDay(entries: Entry[], targetDayKey: string, timeMode: PasteTimeMode) {
+  useAppStore.setState((s) => {
+    const existing = s.days[targetDayKey]?.entries ?? [];
+    const copies: Entry[] = entries.map((entry) => {
+      const copy: Entry = {
+        id: newId(),
+        name: entry.name,
+        calories: entry.calories,
+        qtyLabel: entry.qtyLabel || "",
+        protein: entry.protein || 0,
+        fat: entry.fat || 0,
+        carbs: entry.carbs || 0,
+        fiber: entry.fiber || 0,
+        sugar: entry.sugar || 0,
+        sodium: entry.sodium || 0,
+        addedAt: timeMode === "now" ? Date.now() : rebaseTimeToDay(entry.addedAt, targetDayKey)
+      };
+      if (entry.recipeIngredients) copy.recipeIngredients = entry.recipeIngredients.slice();
+      if (entry.items) copy.items = entry.items.map((it) => ({ ...it }));
+      if (entry.sourceRecipeId) copy.sourceRecipeId = entry.sourceRecipeId;
+      return copy;
+    });
+    return updateDay(s, targetDayKey, [...existing, ...copies]);
   });
 }
 

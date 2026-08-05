@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useUiStore, type TabId } from "../shared/store/ui";
 import { NutritionView } from "../features/nutrition/NutritionView";
 import { TargetIcon, DumbbellIcon, BarChartIcon } from "../shared/components/Icons";
+import { Toast } from "../shared/components/Toast";
 
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "nutrition", label: "Nutrición", icon: <TargetIcon /> },
@@ -53,6 +54,8 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <Toast />
     </>
   );
 }

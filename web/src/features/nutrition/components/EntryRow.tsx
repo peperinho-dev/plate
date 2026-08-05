@@ -25,13 +25,27 @@ function MacroLine({ entry }: { entry: Entry }) {
 export function EntryRow({ entry, dayKey }: EntryRowProps) {
   const expandedGroups = useUiStore((s) => s.expandedGroups);
   const toggleGroup = useUiStore((s) => s.toggleGroup);
+  const selectionMode = useUiStore((s) => s.selectionMode);
+  const selectedEntryIds = useUiStore((s) => s.selectedEntryIds);
+  const toggleEntrySelection = useUiStore((s) => s.toggleEntrySelection);
 
   const qtyPrefix = entry.qtyLabel ? `${entry.qtyLabel} · ` : "";
+  const isChecked = selectedEntryIds.has(entry.id);
+
+  const selectMark = selectionMode ? (
+    <span className={"row-select-check" + (isChecked ? " is-checked" : "")} />
+  ) : null;
 
   if (!entry.items) {
     return (
       <div className="row" data-id={entry.id}>
-        <button type="button" className="row-main row-edit" data-id={entry.id}>
+        {selectMark}
+        <button
+          type="button"
+          className={"row-main " + (selectionMode ? "row-select" : "row-edit")}
+          data-id={entry.id}
+          onClick={selectionMode ? () => toggleEntrySelection(entry.id) : undefined}
+        >
           <span className="row-name">{entry.name}</span>
           <span className="row-qty">
             {qtyPrefix}
@@ -40,19 +54,28 @@ export function EntryRow({ entry, dayKey }: EntryRowProps) {
           <MacroLine entry={entry} />
         </button>
         <span className="row-amount">{Math.round(entry.calories)} kcal</span>
-        <button className="row-del" aria-label="Quitar" onClick={() => deleteEntry(dayKey, entry.id)}>
-          <XIcon />
-        </button>
+        {!selectionMode && (
+          <button className="row-del" aria-label="Quitar" onClick={() => deleteEntry(dayKey, entry.id)}>
+            <XIcon />
+          </button>
+        )}
       </div>
     );
   }
 
-  const isExpanded = expandedGroups.has(entry.id);
+  // A group never shows its ingredients while selecting — the row is a
+  // selection target then, not an expander.
+  const isExpanded = !selectionMode && expandedGroups.has(entry.id);
 
   return (
     <div className="row row-group" data-id={entry.id}>
       <div className="row-main-line">
-        <button type="button" className="row-main row-group-toggle" onClick={() => toggleGroup(entry.id)}>
+        {selectMark}
+        <button
+          type="button"
+          className={"row-main " + (selectionMode ? "row-select" : "row-group-toggle")}
+          onClick={selectionMode ? () => toggleEntrySelection(entry.id) : () => toggleGroup(entry.id)}
+        >
           <span className="row-name">
             {entry.name}{" "}
             <span className={"row-chevron-inline" + (isExpanded ? " is-expanded" : "")}>
@@ -66,9 +89,11 @@ export function EntryRow({ entry, dayKey }: EntryRowProps) {
           <MacroLine entry={entry} />
         </button>
         <span className="row-amount">{Math.round(entry.calories)} kcal</span>
-        <button className="row-del" aria-label="Quitar" onClick={() => deleteEntry(dayKey, entry.id)}>
-          <XIcon />
-        </button>
+        {!selectionMode && (
+          <button className="row-del" aria-label="Quitar" onClick={() => deleteEntry(dayKey, entry.id)}>
+            <XIcon />
+          </button>
+        )}
       </div>
 
       {isExpanded && (

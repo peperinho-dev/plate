@@ -14,6 +14,13 @@ export interface NutritionClipboard {
   entries: Entry[];
 }
 
+export type ModalId = "paste" | "calendar" | "entry";
+
+// The calendar serves two jobs: navigating the current view to a day, and
+// picking a paste destination. Tracked explicitly so a tap on a date knows
+// which one it's doing.
+export type CalendarMode = "navigate" | "paste";
+
 interface UiState {
   activeTab: TabId;
   // Shared by the nutrition and workout tabs so switching tabs keeps the
@@ -26,12 +33,24 @@ interface UiState {
   expandedGroups: Set<string>;
   clipboard: NutritionClipboard | null;
 
+  activeModal: ModalId | null;
+  calendarMode: CalendarMode;
+
+  // "Seleccionar" mode: pick several logged entries to copy or merge.
+  selectionMode: boolean;
+  selectedEntryIds: Set<string>;
+
   setActiveTab: (tab: TabId) => void;
   setDayOffset: (offset: number) => void;
   shiftDay: (delta: number) => void;
   toggleHourGroup: (key: string) => void;
   toggleGroup: (id: string) => void;
   setClipboard: (clipboard: NutritionClipboard | null) => void;
+  openModal: (id: ModalId) => void;
+  closeModal: () => void;
+  openCalendar: (mode: CalendarMode) => void;
+  setSelectionMode: (on: boolean) => void;
+  toggleEntrySelection: (id: string) => void;
 }
 
 // Sets are always replaced rather than mutated — an in-place `.add()`
@@ -49,11 +68,22 @@ export const useUiStore = create<UiState>()((set) => ({
   expandedHourGroups: new Set(),
   expandedGroups: new Set(),
   clipboard: null,
+  activeModal: null,
+  calendarMode: "navigate",
+  selectionMode: false,
+  selectedEntryIds: new Set(),
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setDayOffset: (offset) => set({ dayOffset: offset }),
   shiftDay: (delta) => set((s) => ({ dayOffset: s.dayOffset + delta })),
   toggleHourGroup: (key) => set((s) => ({ expandedHourGroups: toggleInSet(s.expandedHourGroups, key) })),
   toggleGroup: (id) => set((s) => ({ expandedGroups: toggleInSet(s.expandedGroups, id) })),
-  setClipboard: (clipboard) => set({ clipboard })
+  setClipboard: (clipboard) => set({ clipboard }),
+  openModal: (id) => set({ activeModal: id }),
+  closeModal: () => set({ activeModal: null }),
+  openCalendar: (mode) => set({ activeModal: "calendar", calendarMode: mode }),
+  // Leaving selection mode always clears the selection, so re-entering
+  // never starts with stale checkmarks.
+  setSelectionMode: (on) => set({ selectionMode: on, selectedEntryIds: new Set() }),
+  toggleEntrySelection: (id) => set((s) => ({ selectedEntryIds: toggleInSet(s.selectedEntryIds, id) }))
 }));

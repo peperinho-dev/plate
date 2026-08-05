@@ -22,3 +22,22 @@ export function todayKey(offsetDays = 0): string {
   d.setDate(d.getDate() + offsetDays);
   return formatDateKey(d);
 }
+
+// Rebases a timestamp's time-of-day onto a different calendar day, so a
+// pasted entry lands at the same hour it was originally logged at instead
+// of bunching everything at the moment of pasting.
+export function rebaseTimeToDay(sourceTs: number, targetDayKey: string): number {
+  const src = new Date(sourceTs);
+  const [y, m, d] = targetDayKey.split("-").map(Number);
+  return new Date(y, m - 1, d, src.getHours(), src.getMinutes(), src.getSeconds()).getTime();
+}
+
+// Days between today and an arbitrary date, as an offset usable with
+// todayKey()/dayOffset.
+export function dateOffsetFromToday(d: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / DAY_MS);
+}
