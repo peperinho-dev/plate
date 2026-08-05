@@ -63,6 +63,53 @@ export async function lookupFromOpenFoodFacts(barcode: string): Promise<LookupRe
   return null;
 }
 
+export interface SearchHit extends Omit<LookupResult, "source"> {
+  id: string;
+}
+
+// Free-text product search, ported from the search in app.js. Uses the
+// Spanish host so product_name_es is populated where it exists.
+export async function searchFoods(query: string, limit = 12): Promise<SearchHit[]> {
+  const term = query.trim();
+  if (!term) return [];
+  const url =
+    `https://es.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}` +
+    `&search_simple=1&action=process&json=1&page_size=${limit}` +
+    `&fields=code,product_name,product_name_es,generic_name,nutriments`;
+
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const products: unknown[] = Array.isArray(data.products) ? data.products : [];
+
+  return products
+    .map((raw, i) => {
+      const p = raw as Record<string, never> & { nutriments?: Record<string, unknown>; code?: string };
+      const n = p.nutriments ?? {};
+      const name =
+        (p as Record<string, string>).product_name_es ||
+        (p as Record<string, string>).product_name ||
+        (p as Record<string, string>).generic_name ||
+        "";
+      const kcal = num(n["energy-kcal_100g"]) ?? num(n["energy-kcal"]);
+      const sodiumG = num(n.sodium_100g);
+      return {
+        id: p.code || `${i}`,
+        name,
+        kcalPer100: kcal,
+        proteinPer100: num(n.proteins_100g),
+        fatPer100: num(n.fat_100g),
+        carbsPer100: num(n.carbohydrates_100g),
+        fiberPer100: num(n.fiber_100g),
+        sugarPer100: num(n.sugars_100g),
+        sodiumPer100: sodiumG === null ? null : sodiumG * 1000
+      };
+    })
+    // A result with no name or no calories can't be logged usefully, and
+    // OFF returns plenty of half-filled entries.
+    .filter((r) => r.name && r.kcalPer100 !== null);
+}
+
 export function lookupFromCache(state: AppState, barcode: string): LookupResult | null {
   const hit = state.barcodeCache?.[barcode];
   if (!hit) return null;

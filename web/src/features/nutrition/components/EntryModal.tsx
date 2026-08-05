@@ -1,7 +1,9 @@
 // Add / edit a food entry. Also the landing point for a scan: a detected
 // barcode prefills this form, and confirming it teaches the local cache.
+import { useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { ScanIcon } from "../../../shared/components/Icons";
+import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
 import { deriveEntry, type EntryFormState } from "../entryForm";
 
 interface EntryModalProps {
@@ -14,6 +16,8 @@ interface EntryModalProps {
   onClose: () => void;
   onSubmit: () => void;
   onScanClick: () => void;
+  /** Fills the form from a search result. */
+  onPickSearchResult: (hit: SearchHit) => void;
 }
 
 export function EntryModal({
@@ -24,8 +28,35 @@ export function EntryModal({
   onChange,
   onClose,
   onSubmit,
-  onScanClick
+  onScanClick,
+  onPickSearchResult
 }: EntryModalProps) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  // Guards against a slow earlier request landing after a newer one and
+  // overwriting fresher results.
+  const requestSeq = useRef(0);
+
+  const runSearch = async () => {
+    const term = query.trim();
+    if (!term) return;
+    const seq = ++requestSeq.current;
+    setSearching(true);
+    try {
+      const hits = await searchFoods(term);
+      if (seq === requestSeq.current) setResults(hits);
+    } catch {
+      if (seq === requestSeq.current) setResults([]);
+    } finally {
+      if (seq === requestSeq.current) {
+        setSearching(false);
+        setSearched(true);
+      }
+    }
+  };
+
   const derived = deriveEntry(form);
   // Live preview only means something when the amount is driving the
   // calories — a direct kcal total already shows its own number.
@@ -45,17 +76,65 @@ export function EntryModal({
         existing one would replace the very values being corrected.
       */}
       {!isEditing && (
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          style={{ marginBottom: 16 }}
-          onClick={onScanClick}
-        >
-          <span className="btn-icon">
-            <ScanIcon />
-          </span>{" "}
-          Escanear producto
-        </button>
+        <>
+          <div className="field-row">
+            <label className="field" style={{ flex: 1 }}>
+              <span>Buscar alimento</span>
+              <input
+                type="text"
+                placeholder="p. ej. yogur natural"
+                autoComplete="off"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter searches instead of submitting the entry form —
+                  // the search input lives outside the form, but this is
+                  // the key people reach for.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void runSearch();
+                  }
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn btn--secondary btn--icon-only"
+              aria-label="Escanear código de barras"
+              onClick={onScanClick}
+            >
+              <ScanIcon size={19} />
+            </button>
+          </div>
+
+          {searching && <p className="modal-hint modal-hint--loading">Buscando…</p>}
+          {!searching && searched && results.length === 0 && (
+            <p className="modal-hint">Sin resultados. Escanéalo o añádelo a mano.</p>
+          )}
+          {results.length > 0 && (
+            <div className="log-list">
+              {results.map((hit) => (
+                <div className="row" key={hit.id}>
+                  <button
+                    type="button"
+                    className="row-main"
+                    onClick={() => {
+                      onPickSearchResult(hit);
+                      setResults([]);
+                      setSearched(false);
+                      setQuery("");
+                    }}
+                  >
+                    <span className="row-name">{hit.name}</span>
+                    <span className="row-qty">{Math.round(hit.kcalPer100 ?? 0)} kcal / 100 g</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <span className="field-group-label">o a mano</span>
+        </>
       )}
 
       <form

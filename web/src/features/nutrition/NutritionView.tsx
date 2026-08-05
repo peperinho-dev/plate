@@ -272,6 +272,12 @@ export function NutritionView() {
           setEntryOpen(false);
           setScanOpen(true);
         }}
+        onPickSearchResult={(hit) => {
+          // Searched items have no barcode context, so picking one must not
+          // teach the cache — that's keyed by the scanned code.
+          setPendingBarcode(null);
+          setForm(formFromLookup({ ...hit, source: "openfoodfacts" }));
+        }}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
