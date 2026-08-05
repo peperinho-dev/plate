@@ -846,6 +846,10 @@
     const n = selectedEntryIds.size;
     groupSelectedBtnEl.textContent = `Agrupar (${n})`;
     groupSelectedBtnEl.disabled = n < 2;
+    // Copiar scopes to the current selection once anything is checked —
+    // otherwise it silently copied the whole day regardless of what looked
+    // selected, which read as a bug ("I picked one item and it copied everything").
+    copyDayBtnEl.textContent = n > 0 ? `Copiar (${n})` : "Copiar";
   }
 
   function toggleEntrySelection(id) {
@@ -1326,15 +1330,24 @@
   copyDayBtnEl.addEventListener("click", () => {
     const entries = currentDayEntries();
     if (entries.length === 0) return;
+    const useSelection = selectionMode && selectedEntryIds.size > 0;
+    const sourceEntries = useSelection ? entries.filter((e) => selectedEntryIds.has(e.id)) : entries;
+    if (sourceEntries.length === 0) return;
     dayClipboard = {
       type: "nutrition",
-      entries: entries.map((e) => ({
+      entries: sourceEntries.map((e) => ({
         ...e,
         ...(e.items ? { items: e.items.map((it) => ({ ...it })) } : {})
       }))
     };
-    showToast("Día copiado. Ve a otro día y pulsa Pegar.");
-    render();
+    if (useSelection) {
+      const n = sourceEntries.length;
+      showToast(`${n} elemento${n === 1 ? "" : "s"} copiado${n === 1 ? "" : "s"}. Ve a otro día y pulsa Pegar.`);
+      setSelectionMode(false);
+    } else {
+      showToast("Día copiado. Ve a otro día y pulsa Pegar.");
+      render();
+    }
   });
 
   function pasteNutritionDay() {
