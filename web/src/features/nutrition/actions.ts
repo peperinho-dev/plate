@@ -26,6 +26,17 @@ export function deleteEntry(dayKey: string, entryId: string) {
   });
 }
 
+// Puts a deleted entry back where it was, so undo restores list order
+// rather than appending it to the end.
+export function restoreEntry(dayKey: string, entry: Entry, index: number) {
+  useAppStore.setState((s) => {
+    const existing = s.days[dayKey]?.entries ?? [];
+    const next = existing.slice();
+    next.splice(Math.min(index, next.length), 0, entry);
+    return updateDay(s, dayKey, next);
+  });
+}
+
 export function addEntry(dayKey: string, entry: Omit<Entry, "id">) {
   useAppStore.setState((s) => {
     const existing = s.days[dayKey]?.entries ?? [];
