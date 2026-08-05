@@ -15,6 +15,7 @@ import { deleteEntry, deleteGroupItem, restoreEntry } from "../actions";
 interface EntryRowProps {
   entry: Entry;
   dayKey: string;
+  onEdit: (entry: Entry) => void;
 }
 
 function MacroLine({ entry }: { entry: Entry }) {
@@ -26,7 +27,7 @@ function MacroLine({ entry }: { entry: Entry }) {
   );
 }
 
-export function EntryRow({ entry, dayKey }: EntryRowProps) {
+export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
   const expandedGroups = useUiStore((s) => s.expandedGroups);
   const toggleGroup = useUiStore((s) => s.toggleGroup);
   const selectionMode = useUiStore((s) => s.selectionMode);
@@ -77,6 +78,7 @@ export function EntryRow({ entry, dayKey }: EntryRowProps) {
               // toggle the selection back off.
               if (longPress.didFire()) return;
               if (selectionMode) toggleEntrySelection(entry.id);
+              else onEdit(entry);
             }}
           >
             <span className="row-name">{entry.name}</span>

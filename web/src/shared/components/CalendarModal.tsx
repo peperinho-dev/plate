@@ -19,7 +19,10 @@ export function CalendarModal() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const setDayOffset = useUiStore((s) => s.setDayOffset);
   const clipboard = useUiStore((s) => s.clipboard);
-  const state = useAppStore();
+  // Per-slice selectors, not the whole store — see lib/nutrition.ts.
+  const loggedDays = useAppStore((s) => s.days);
+  const workouts = useAppStore((s) => s.workouts);
+  const calorieTarget = useAppStore((s) => s.calorieTarget);
 
   const open = activeModal === "calendar";
 
@@ -114,8 +117,10 @@ export function CalendarModal() {
             <button key={key} type="button" className={className} onClick={() => handlePick(key)}>
               <span className="calendar-day-num">{d.getDate()}</span>
               <span className="calendar-day-dots">
-                {hasWorkoutSession(state, key) && <span className="calendar-dot calendar-dot--workout" />}
-                {dayHitCalorieGoal(state, key) && <span className="calendar-dot calendar-dot--goal" />}
+                {hasWorkoutSession(workouts, key) && <span className="calendar-dot calendar-dot--workout" />}
+                {dayHitCalorieGoal(loggedDays, calorieTarget, key) && (
+                  <span className="calendar-dot calendar-dot--goal" />
+                )}
               </span>
             </button>
           );

@@ -39,15 +39,18 @@ function getWeekStripDays(offset: number): StripDay[] {
 export function WeekStrip() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const setDayOffset = useUiStore((s) => s.setDayOffset);
-  const state = useAppStore();
+  // Per-slice selectors, not the whole store — see lib/nutrition.ts.
+  const loggedDays = useAppStore((s) => s.days);
+  const workouts = useAppStore((s) => s.workouts);
+  const calorieTarget = useAppStore((s) => s.calorieTarget);
   const days = getWeekStripDays(dayOffset);
 
   return (
     <div className="week-strip">
       {days.map((d) => {
         const key = formatDateKey(d.date);
-        const exercised = hasWorkoutSession(state, key);
-        const goalHit = dayHitCalorieGoal(state, key);
+        const exercised = hasWorkoutSession(workouts, key);
+        const goalHit = dayHitCalorieGoal(loggedDays, calorieTarget, key);
         const className =
           "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
         return (

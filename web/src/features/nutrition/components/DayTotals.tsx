@@ -3,10 +3,13 @@
 // from the original: over-range is stated neutrally, never as a failure.
 import type { Entry } from "../../../shared/store/types";
 import { useAppStore } from "../../../shared/store";
+import { AnimatedNumber } from "../../../shared/components/AnimatedNumber";
 import { sumCalories, sumMacros, sumMicros } from "../../../shared/lib/nutrition";
 
 interface DayTotalsProps {
   entries: Entry[];
+  /** The visible day — changing it snaps the total instead of counting. */
+  dayKey: string;
 }
 
 function MacroCol({ label, total, min, max }: { label: string; total: number; min: number; max: number }) {
@@ -25,7 +28,7 @@ function MacroCol({ label, total, min, max }: { label: string; total: number; mi
   );
 }
 
-export function DayTotals({ entries }: DayTotalsProps) {
+export function DayTotals({ entries, dayKey }: DayTotalsProps) {
   const calorieTarget = useAppStore((s) => s.calorieTarget);
   const macroTargets = useAppStore((s) => s.macroTargets);
 
@@ -51,7 +54,9 @@ export function DayTotals({ entries }: DayTotalsProps) {
     <div className="totals">
       <div className="totals-row">
         <span className="totals-label">Total</span>
-        <span className="totals-value">{Math.round(total)} kcal</span>
+        <span className="totals-value">
+          <AnimatedNumber value={total} resetKey={dayKey} /> kcal
+        </span>
       </div>
       <div className={"range-status" + (inRange ? " in-range" : "")}>{statusText}</div>
       <div className="range" aria-hidden="true">

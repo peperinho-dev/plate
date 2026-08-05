@@ -13,10 +13,11 @@ import { DayTotals } from "./components/DayTotals";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
-import { addEntry, pasteEntriesToDay, rememberScannedProduct } from "./actions";
+import { addEntry, pasteEntriesToDay, rememberScannedProduct, updateEntry } from "./actions";
 import { showToast } from "../../shared/components/Toast";
 import { lookupBarcode } from "../../shared/lib/foodLookup";
-import { deriveEntry, emptyEntryForm, formFromLookup, type EntryFormState } from "./entryForm";
+import type { Entry } from "../../shared/store/types";
+import { deriveEntry, emptyEntryForm, formFromEntry, formFromLookup, type EntryFormState } from "./entryForm";
 
 export function NutritionView() {
   const dayOffset = useUiStore((s) => s.dayOffset);
@@ -63,12 +64,23 @@ export function NutritionView() {
   // Barcode the current form came from, so confirming it can teach the
   // local cache. Null for a purely manual entry.
   const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+  // Set when the form is editing an already-logged entry rather than
+  // creating one; also reveals the Hora field.
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
 
   const openManualAdd = () => {
     setForm(emptyEntryForm());
     setPendingBarcode(null);
+    setEditingEntryId(null);
+    setEntryOpen(true);
+  };
+
+  const openEntryForEdit = (entry: Entry) => {
+    setForm(formFromEntry(entry));
+    setPendingBarcode(null);
+    setEditingEntryId(entry.id);
     setEntryOpen(true);
   };
 
@@ -92,7 +104,8 @@ export function NutritionView() {
   const handleEntrySubmit = () => {
     const derived = deriveEntry(form);
     if (!derived) return;
-    addEntry(dayKey, {
+
+    const nutrition = {
       name: derived.name,
       calories: derived.calories,
       qtyLabel: derived.qtyLabel,
@@ -101,13 +114,31 @@ export function NutritionView() {
       carbs: derived.carbs,
       fiber: derived.fiber,
       sugar: derived.sugar,
-      sodium: derived.sodium,
-      addedAt: Date.now()
-    });
-    if (pendingBarcode) rememberScannedProduct(pendingBarcode, form);
+      sodium: derived.sodium
+    };
+
+    if (editingEntryId) {
+      // Keep the entry on its original day, only moving its time-of-day to
+      // whatever the Hora field says.
+      const existing = entries.find((e) => e.id === editingEntryId);
+      let addedAt = existing?.addedAt ?? Date.now();
+      const [h, m] = form.time.split(":").map(Number);
+      if (Number.isFinite(h) && Number.isFinite(m)) {
+        const d = new Date(addedAt);
+        d.setHours(h, m, 0, 0);
+        addedAt = d.getTime();
+      }
+      updateEntry(dayKey, editingEntryId, { ...nutrition, addedAt });
+      showToast("Guardado");
+    } else {
+      addEntry(dayKey, { ...nutrition, addedAt: Date.now() });
+      if (pendingBarcode) rememberScannedProduct(pendingBarcode, form);
+      showToast("Añadido");
+    }
+
     setEntryOpen(false);
     setPendingBarcode(null);
-    showToast("Añadido");
+    setEditingEntryId(null);
   };
 
   return (
@@ -142,22 +173,39 @@ export function NutritionView() {
             <div className="card-date">
               {capitalizeFirst(`${label.weekday}, ${label.day} de ${label.month}`)}
             </div>
+            {/*
+              Long-press on a row is now the way into multi-select, so the
+              always-present "Seleccionar" button is gone — only the way
+              *out* needs to be visible, and only while selecting.
+            */}
             <div className="card-date-actions">
               {entries.length > 0 && (
                 <button type="button" className="link-btn link-btn--muted" onClick={handleCopy}>
                   {selectedCount > 0 ? `Copiar (${selectedCount})` : "Copiar"}
                 </button>
               )}
-              {entries.length > 0 && (
-                <button type="button" className="link-btn" onClick={() => setSelectionMode(!selectionMode)}>
-                  {selectionMode ? "Cancelar" : "Seleccionar"}
+              {selectionMode && (
+                <button type="button" className="link-btn" onClick={() => setSelectionMode(false)}>
+                  Cancelar
                 </button>
               )}
             </div>
           </div>
 
           {entries.length > 0 ? (
-            <EntryList entries={entries} dayKey={dayKey} />
+            <>
+              <EntryList entries={entries} dayKey={dayKey} onEdit={openEntryForEdit} />
+              {/*
+                Multi-select has no visible control any more, so the gesture
+                needs teaching. Shown only when there's actually more than
+                one thing to select, and never while already selecting.
+              */}
+              {entries.length > 1 && !selectionMode && (
+                <p className="stat-note" style={{ textAlign: "center" }}>
+                  Mantén pulsado para seleccionar varios · desliza para quitar
+                </p>
+              )}
+            </>
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">
@@ -176,7 +224,7 @@ export function NutritionView() {
             </div>
           )}
 
-          <DayTotals entries={entries} />
+          <DayTotals entries={entries} dayKey={dayKey} />
         </div>
       </main>
 
@@ -196,9 +244,9 @@ export function NutritionView() {
       <CalendarModal />
       <EntryModal
         open={entryOpen}
-        title={pendingBarcode ? "Confirmar producto" : "Añadir alimento"}
+        title={editingEntryId ? "Editar alimento" : pendingBarcode ? "Confirmar producto" : "Añadir alimento"}
         form={form}
-        isEditing={false}
+        isEditing={!!editingEntryId}
         onChange={patchForm}
         onClose={() => setEntryOpen(false)}
         onSubmit={handleEntrySubmit}

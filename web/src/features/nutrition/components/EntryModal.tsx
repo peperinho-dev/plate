@@ -1,6 +1,7 @@
 // Add / edit a food entry. Also the landing point for a scan: a detected
 // barcode prefills this form, and confirming it teaches the local cache.
 import { Modal } from "../../../shared/components/Modal";
+import { ScanIcon } from "../../../shared/components/Icons";
 import { deriveEntry, type EntryFormState } from "../entryForm";
 
 interface EntryModalProps {
@@ -39,14 +40,23 @@ export function EntryModal({
 
   return (
     <Modal open={open} title={title} onClose={onClose}>
-      <div className="field-row">
-        <label className="field" style={{ flex: 1 }}>
-          <span>Código de barras</span>
-          <button type="button" className="btn btn--secondary btn--block" onClick={onScanClick}>
-            Escanear producto
-          </button>
-        </label>
-      </div>
+      {/*
+        Offered only when creating an entry — re-scanning while editing an
+        existing one would replace the very values being corrected.
+      */}
+      {!isEditing && (
+        <button
+          type="button"
+          className="btn btn--secondary btn--block"
+          style={{ marginBottom: 16 }}
+          onClick={onScanClick}
+        >
+          <span className="btn-icon">
+            <ScanIcon />
+          </span>{" "}
+          Escanear producto
+        </button>
+      )}
 
       <form
         className="form"

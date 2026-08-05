@@ -67,23 +67,31 @@ export function sumMicros(entries: Entry[]): MicroTotals {
   );
 }
 
-export function entriesForDay(state: AppState, dayKey: string): Entry[] {
-  return state.days[dayKey]?.entries ?? [];
+// These take the narrowest slice they need rather than the whole AppState,
+// so components can subscribe per-slice instead of to the entire store —
+// subscribing to everything re-renders the week strip and calendar on any
+// unrelated change (a workout set, a profile edit).
+export function entriesForDay(days: AppState["days"], dayKey: string): Entry[] {
+  return days[dayKey]?.entries ?? [];
 }
 
-export function dayCalorieTotal(state: AppState, dayKey: string): number {
-  return sumCalories(entriesForDay(state, dayKey));
+export function dayCalorieTotal(days: AppState["days"], dayKey: string): number {
+  return sumCalories(entriesForDay(days, dayKey));
 }
 
 // A day "hit the goal" only if something was actually logged — an empty
 // day is not a success, it's just unlogged.
-export function dayHitCalorieGoal(state: AppState, dayKey: string): boolean {
-  const total = dayCalorieTotal(state, dayKey);
+export function dayHitCalorieGoal(
+  days: AppState["days"],
+  calorieTarget: AppState["calorieTarget"],
+  dayKey: string
+): boolean {
+  const total = dayCalorieTotal(days, dayKey);
   if (total <= 0) return false;
-  const { min, max } = state.calorieTarget;
+  const { min, max } = calorieTarget;
   return !!(min && max && total >= min && total <= max);
 }
 
-export function hasWorkoutSession(state: AppState, dayKey: string): boolean {
-  return !!(state.workouts[dayKey] && state.workouts[dayKey].exercises.length > 0);
+export function hasWorkoutSession(workouts: AppState["workouts"], dayKey: string): boolean {
+  return !!(workouts[dayKey] && workouts[dayKey].exercises.length > 0);
 }
