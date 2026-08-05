@@ -1088,22 +1088,31 @@
     });
   }
 
-  function copyEntryToDay(entry, targetDayKey) {
+  // timeMode "keep" rebases each entry's original time-of-day onto the
+  // target date (used by "Hoy"/"Mañana"/"Elegir día…" and the plain Pegar
+  // button); "now" stamps every entry with the literal current moment
+  // (used by "Ahora").
+  function pasteEntriesToDay(entries, targetDayKey, timeMode) {
     if (!state.days[targetDayKey]) state.days[targetDayKey] = { entries: [] };
-    const copy = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: entry.name,
-      calories: entry.calories,
-      qtyLabel: entry.qtyLabel || "",
-      protein: entry.protein || 0,
-      fat: entry.fat || 0,
-      carbs: entry.carbs || 0,
-      addedAt: rebaseTimeToDay(entry.addedAt, targetDayKey)
-    };
-    if (entry.recipeIngredients) copy.recipeIngredients = entry.recipeIngredients.slice();
-    if (entry.items) copy.items = entry.items.map((it) => ({ ...it }));
-    if (entry.sourceRecipeId) copy.sourceRecipeId = entry.sourceRecipeId;
-    state.days[targetDayKey].entries.push(copy);
+    entries.forEach((entry) => {
+      const copy = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: entry.name,
+        calories: entry.calories,
+        qtyLabel: entry.qtyLabel || "",
+        protein: entry.protein || 0,
+        fat: entry.fat || 0,
+        carbs: entry.carbs || 0,
+        fiber: entry.fiber || 0,
+        sugar: entry.sugar || 0,
+        sodium: entry.sodium || 0,
+        addedAt: timeMode === "now" ? Date.now() : rebaseTimeToDay(entry.addedAt, targetDayKey)
+      };
+      if (entry.recipeIngredients) copy.recipeIngredients = entry.recipeIngredients.slice();
+      if (entry.items) copy.items = entry.items.map((it) => ({ ...it }));
+      if (entry.sourceRecipeId) copy.sourceRecipeId = entry.sourceRecipeId;
+      state.days[targetDayKey].entries.push(copy);
+    });
   }
 
   // Where a food selected/logged from the add-food modal should go: either
@@ -1320,8 +1329,7 @@
   copyYesterdayBtnEl.addEventListener("click", () => {
     const source = previousDayEntries();
     if (source.length === 0) return;
-    const targetKey = currentDayKey();
-    source.forEach((e) => copyEntryToDay(e, targetKey));
+    pasteEntriesToDay(source, currentDayKey(), "keep");
     saveData(state);
     render();
     showToast("Copiado de ayer");
@@ -1340,20 +1348,51 @@
         ...(e.items ? { items: e.items.map((it) => ({ ...it })) } : {})
       }))
     };
-    if (useSelection) {
-      const n = sourceEntries.length;
-      showToast(`${n} elemento${n === 1 ? "" : "s"} copiado${n === 1 ? "" : "s"}. Ve a otro día y pulsa Pegar.`);
-      setSelectionMode(false);
-    } else {
-      showToast("Día copiado. Ve a otro día y pulsa Pegar.");
-      render();
-    }
+    if (useSelection) setSelectionMode(false);
+    else render();
+    openPasteTargetSheet();
+  });
+
+  /* ---------- Paste target sheet (Ahora / Hoy / Mañana / Elegir día…) ---------- */
+
+  const pasteTargetModal = document.getElementById("pasteTargetModal");
+
+  function openPasteTargetSheet() {
+    if (!dayClipboard || dayClipboard.type !== "nutrition") return;
+    openModal(pasteTargetModal);
+  }
+
+  document.getElementById("closePasteTargetModal").addEventListener("click", () => closeModal(pasteTargetModal));
+
+  function pasteClipboardToDay(targetKey, timeMode) {
+    pasteEntriesToDay(dayClipboard.entries, targetKey, timeMode);
+    saveData(state);
+    if (targetKey === currentDayKey()) render();
+    else renderWeekStrip();
+    closeModal(pasteTargetModal);
+  }
+
+  document.getElementById("pasteTargetNowBtn").addEventListener("click", () => {
+    pasteClipboardToDay(todayKey(0), "now");
+    showToast("Pegado ahora");
+  });
+  document.getElementById("pasteTargetTodayBtn").addEventListener("click", () => {
+    pasteClipboardToDay(todayKey(0), "keep");
+    showToast("Pegado en hoy");
+  });
+  document.getElementById("pasteTargetTomorrowBtn").addEventListener("click", () => {
+    pasteClipboardToDay(todayKey(1), "keep");
+    showToast("Pegado en mañana");
+  });
+  document.getElementById("pasteTargetChooseBtn").addEventListener("click", () => {
+    closeModal(pasteTargetModal);
+    openCalendarForPaste();
   });
 
   function pasteNutritionDay() {
     if (!dayClipboard || dayClipboard.type !== "nutrition") return;
     const targetKey = currentDayKey();
-    dayClipboard.entries.forEach((e) => copyEntryToDay(e, targetKey));
+    pasteEntriesToDay(dayClipboard.entries, targetKey, "keep");
     saveData(state);
     render();
     showToast("Pegado");
@@ -3007,6 +3046,17 @@
     openModal(calendarModal);
   }
 
+  // "Elegir día…" in the paste-target sheet reuses this same calendar for
+  // picking the destination instead of navigating the current view.
+  function openCalendarForPaste() {
+    calendarContext = "paste";
+    const base = new Date();
+    base.setDate(base.getDate() + dayOffset);
+    calendarMonthCursor = new Date(base.getFullYear(), base.getMonth(), 1);
+    renderCalendarModal();
+    openModal(calendarModal);
+  }
+
   function renderCalendarModal() {
     const year = calendarMonthCursor.getFullYear();
     const month = calendarMonthCursor.getMonth();
@@ -3053,6 +3103,13 @@
   calendarGridEl.addEventListener("click", (e) => {
     const cell = e.target.closest(".calendar-day");
     if (!cell) return;
+    if (calendarContext === "paste") {
+      pasteClipboardToDay(cell.dataset.key, "keep");
+      showToast("Pegado");
+      calendarContext = "nutrition";
+      closeModal(calendarModal);
+      return;
+    }
     dayOffset = dateOffsetFromToday(parseDateKey(cell.dataset.key));
     if (calendarContext === "workout") {
       renderWorkoutDay();

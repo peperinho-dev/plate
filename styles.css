@@ -1080,6 +1080,12 @@ button.row-main:active { opacity: 0.55; }
 }
 .calendar-dot--goal { background: var(--macro-carbs); }
 
+.paste-target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .card > .card-date { margin-bottom: 12px; }
 
 .card.is-user-hidden { opacity: 0.4; }
