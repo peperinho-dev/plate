@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { useUiStore, type TabId } from "../shared/store/ui";
 import { NutritionView } from "../features/nutrition/NutritionView";
+import { WorkoutView } from "../features/workouts/WorkoutView";
 import { TargetIcon, DumbbellIcon, BarChartIcon } from "../shared/components/Icons";
 import { Toast } from "../shared/components/Toast";
 
@@ -39,7 +40,7 @@ export default function App() {
     <>
       <div className="app">
         {activeTab === "nutrition" && <NutritionView />}
-        {activeTab === "workout" && <ComingSoon title="Entreno" />}
+        {activeTab === "workout" && <WorkoutView />}
         {activeTab === "analytics" && <ComingSoon title="Análisis" />}
       </div>
 
