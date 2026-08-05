@@ -303,8 +303,6 @@
   const emptyStateEl = document.getElementById("emptyState");
   const copyYesterdayBtnEl = document.getElementById("copyYesterdayBtn");
   const copyDayBtnEl = document.getElementById("copyDayBtn");
-  const pasteDayBtnEl = document.getElementById("pasteDayBtn");
-  const pasteDayEmptyBtnEl = document.getElementById("pasteDayEmptyBtn");
   const foodBrowseSectionEl = document.getElementById("foodBrowseSection");
   const browseFavoritesRowEl = document.getElementById("browseFavoritesRow");
   const modalFavoritesRowEl = document.getElementById("modalFavoritesRow");
@@ -620,21 +618,16 @@
     renderWeekStrip();
     renderBackupBanner();
 
-    const hasNutritionClipboard = !!(dayClipboard && dayClipboard.type === "nutrition");
     if (entries.length === 0) {
       entryListEl.innerHTML = "";
       emptyStateEl.style.display = "block";
-      pasteDayEmptyBtnEl.hidden = !hasNutritionClipboard;
-      copyYesterdayBtnEl.hidden = hasNutritionClipboard || previousDayEntries().length === 0;
+      copyYesterdayBtnEl.hidden = previousDayEntries().length === 0;
       copyDayBtnEl.hidden = true;
-      pasteDayBtnEl.hidden = true;
       selectEntriesToggleBtnEl.hidden = true;
     } else {
       emptyStateEl.style.display = "none";
       renderEntryTimeline(entries);
       copyDayBtnEl.hidden = false;
-      pasteDayBtnEl.hidden = !hasNutritionClipboard;
-      pasteDayEmptyBtnEl.hidden = true;
       copyYesterdayBtnEl.hidden = true;
       selectEntriesToggleBtnEl.hidden = false;
     }
@@ -1388,17 +1381,6 @@
     closeModal(pasteTargetModal);
     openCalendarForPaste();
   });
-
-  function pasteNutritionDay() {
-    if (!dayClipboard || dayClipboard.type !== "nutrition") return;
-    const targetKey = currentDayKey();
-    pasteEntriesToDay(dayClipboard.entries, targetKey, "keep");
-    saveData(state);
-    render();
-    showToast("Pegado");
-  }
-  pasteDayBtnEl.addEventListener("click", pasteNutritionDay);
-  pasteDayEmptyBtnEl.addEventListener("click", pasteNutritionDay);
 
   /* ---------- Day navigation ---------- */
 
