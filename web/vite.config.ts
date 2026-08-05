@@ -2,8 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// GitHub Pages serves this project from /plate/, not the domain root, so
+// asset URLs need that prefix or every request 404s. Local dev and
+// `npm run preview` stay at the root, hence the env switch — set
+// PAGES_BASE in CI only.
+const base = process.env.PAGES_BASE ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
