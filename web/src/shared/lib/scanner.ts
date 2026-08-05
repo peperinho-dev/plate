@@ -11,13 +11,15 @@
 // reliable on exactly the hard cases (small/curved/low-contrast EAN-13 on
 // supermarket packaging). Using the ponyfill export means one code path on
 // every browser, rather than two that behave differently.
-// TODO(offline): zxing-wasm fetches its .wasm binary from a CDN by
-// default, so a cold scan would fail with no connection — which matters
-// for an installed PWA. Fix by self-hosting the binary and pointing
-// setZXingModuleOverrides({ locateFile }) at it, then precaching it in the
-// service worker. Deferred until the PWA plugin is wired up, so both land
-// together.
-import { BarcodeDetector } from "barcode-detector/ponyfill";
+import { BarcodeDetector, setZXingModuleOverrides } from "barcode-detector/ponyfill";
+// ?url makes Vite emit the binary as a hashed asset in dist/ and hand back
+// its final URL — so it ships from our own origin instead of zxing-wasm's
+// default CDN. That's what lets the service worker precache it and keeps
+// scanning working offline in the installed PWA.
+import zxingWasmUrl from "zxing-wasm/reader/zxing_reader.wasm?url";
+
+// Must be set before the first detector is constructed.
+setZXingModuleOverrides({ locateFile: () => zxingWasmUrl });
 
 // Formats used on European grocery packaging. EAN-13 covers most Spanish
 // products; EAN-8 shows up on small items.
