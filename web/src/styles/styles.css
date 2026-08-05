@@ -1738,3 +1738,22 @@ button:focus-visible, input:focus-visible {
   .timer-run-ring-wrap, .timer-run-ring-progress { animation: none !important; transition: none !important; }
   .scanner-frame::after { opacity: 0.6; top: 50%; }
 }
+
+/* Compact calorie bar chart for the Analytics card. Replaces the vanilla
+   SVG builder with plain flex bars — same information, far less code, and
+   it reflows with the card instead of needing a fixed viewBox. */
+.calorie-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 90px;
+  margin-top: 12px;
+}
+.calorie-bar {
+  flex: 1;
+  min-width: 2px;
+  background: var(--ink-faint);
+  border-radius: 3px 3px 0 0;
+}
+.calorie-bar.is-in-range { background: var(--accent); }
+.calorie-bar.is-empty { background: var(--line); }

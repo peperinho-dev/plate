@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useUiStore, type TabId } from "../shared/store/ui";
 import { NutritionView } from "../features/nutrition/NutritionView";
 import { WorkoutView } from "../features/workouts/WorkoutView";
+import { AnalyticsView } from "../features/analytics/AnalyticsView";
 import { TargetIcon, DumbbellIcon, BarChartIcon } from "../shared/components/Icons";
 import { Toast } from "../shared/components/Toast";
 
@@ -13,24 +14,6 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "workout", label: "Entreno", icon: <DumbbellIcon /> },
   { id: "analytics", label: "Análisis", icon: <BarChartIcon /> }
 ];
-
-// Placeholder until the Entreno/Análisis ports land in later phases.
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <div className="view">
-      <header className="topbar">
-        <span className="day-label">{title}</span>
-      </header>
-      <main className="content">
-        <div className="card">
-          <div className="empty-state">
-            <p>Aún no migrado a la nueva versión.</p>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
 
 export default function App() {
   const activeTab = useUiStore((s) => s.activeTab);
@@ -41,7 +24,7 @@ export default function App() {
       <div className="app">
         {activeTab === "nutrition" && <NutritionView />}
         {activeTab === "workout" && <WorkoutView />}
-        {activeTab === "analytics" && <ComingSoon title="Análisis" />}
+        {activeTab === "analytics" && <AnalyticsView />}
       </div>
 
       <nav className="tabbar">
