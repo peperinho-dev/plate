@@ -51,6 +51,7 @@ interface UiState {
   openCalendar: (mode: CalendarMode) => void;
   setSelectionMode: (on: boolean) => void;
   toggleEntrySelection: (id: string) => void;
+  selectEntries: (ids: string[]) => void;
 }
 
 // Sets are always replaced rather than mutated — an in-place `.add()`
@@ -85,5 +86,8 @@ export const useUiStore = create<UiState>()((set) => ({
   // Leaving selection mode always clears the selection, so re-entering
   // never starts with stale checkmarks.
   setSelectionMode: (on) => set({ selectionMode: on, selectedEntryIds: new Set() }),
-  toggleEntrySelection: (id) => set((s) => ({ selectedEntryIds: toggleInSet(s.selectedEntryIds, id) }))
+  toggleEntrySelection: (id) => set((s) => ({ selectedEntryIds: toggleInSet(s.selectedEntryIds, id) })),
+  // Select-all is what keeps whole-day copy reachable now that the header
+  // has no default Copiar button.
+  selectEntries: (ids) => set({ selectedEntryIds: new Set(ids) })
 }));

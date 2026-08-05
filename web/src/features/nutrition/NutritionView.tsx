@@ -13,6 +13,7 @@ import { DayTotals } from "./components/DayTotals";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
+import { ProfileModal } from "../profile/ProfileModal";
 import { addEntry, pasteEntriesToDay, rememberScannedProduct, updateEntry } from "./actions";
 import { showToast } from "../../shared/components/Toast";
 import { lookupBarcode } from "../../shared/lib/foodLookup";
@@ -28,6 +29,7 @@ export function NutritionView() {
   const selectionMode = useUiStore((s) => s.selectionMode);
   const selectedEntryIds = useUiStore((s) => s.selectedEntryIds);
   const setSelectionMode = useUiStore((s) => s.setSelectionMode);
+  const selectEntries = useUiStore((s) => s.selectEntries);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
   const days = useAppStore((s) => s.days);
 
@@ -67,6 +69,7 @@ export function NutritionView() {
   // Set when the form is editing an already-logged entry rather than
   // creating one; also reveals the Hora field.
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -156,10 +159,12 @@ export function NutritionView() {
           </button>
         </div>
         <div className="topbar-actions">
-          <button className="icon-btn" aria-label="Perfil">
+          <button className="icon-btn" aria-label="Perfil" onClick={() => setProfileOpen(true)}>
             <GearIcon />
           </button>
-          <button className="chip">
+          {/* The chip is also a shortcut into the same sheet — it's the
+              thing you tap when the range itself looks wrong. */}
+          <button className="chip" onClick={() => setProfileOpen(true)}>
             {calorieTarget.min}–{calorieTarget.max} kcal
           </button>
         </div>
@@ -174,20 +179,33 @@ export function NutritionView() {
               {capitalizeFirst(`${label.weekday}, ${label.day} de ${label.month}`)}
             </div>
             {/*
-              Long-press on a row is now the way into multi-select, so the
-              always-present "Seleccionar" button is gone — only the way
-              *out* needs to be visible, and only while selecting.
+              Long-press is the only way into multi-select, so the header
+              carries no controls by default — they appear only once a
+              selection is under way. "Todo" is what keeps whole-day copy
+              reachable without a permanently visible Copiar button.
             */}
             <div className="card-date-actions">
-              {entries.length > 0 && (
-                <button type="button" className="link-btn link-btn--muted" onClick={handleCopy}>
-                  {selectedCount > 0 ? `Copiar (${selectedCount})` : "Copiar"}
-                </button>
-              )}
               {selectionMode && (
-                <button type="button" className="link-btn" onClick={() => setSelectionMode(false)}>
-                  Cancelar
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="link-btn link-btn--muted"
+                    onClick={() => selectEntries(entries.map((e) => e.id))}
+                  >
+                    Todo
+                  </button>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={handleCopy}
+                    disabled={selectedCount === 0}
+                  >
+                    Copiar{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </button>
+                  <button type="button" className="link-btn link-btn--muted" onClick={() => setSelectionMode(false)}>
+                    Cancelar
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -256,6 +274,7 @@ export function NutritionView() {
         }}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }
