@@ -53,7 +53,8 @@ export function defaultState(): AppState {
     timers: [],
     onboardingShown: false,
     lastExportedAt: null,
-    analyticsLayout: null
+    analyticsLayout: null,
+    barcodeCache: {}
   };
 }
 
@@ -114,6 +115,9 @@ export function migrateData(parsed: unknown): AppState {
   if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
   if (typeof data.lastExportedAt !== "number") data.lastExportedAt = null;
   if (!Array.isArray(data.analyticsLayout)) data.analyticsLayout = null;
+  // Additive field — no SCHEMA_VERSION bump needed, matching how the
+  // vanilla app introduced optional fields like lastExportedAt.
+  if (!data.barcodeCache || typeof data.barcodeCache !== "object") data.barcodeCache = {};
   return data as AppState;
 }
 

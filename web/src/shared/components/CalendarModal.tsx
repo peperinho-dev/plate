@@ -12,10 +12,8 @@ import { dayHitCalorieGoal, hasWorkoutSession } from "../lib/nutrition";
 import { ChevronLeft, ChevronRight } from "./Icons";
 import { pasteEntriesToDay } from "../../features/nutrition/actions";
 
-// Mounted only while open (see NutritionView) so the month cursor below
-// reseeds from the selected day on every open, matching openCalendar()
-// in the vanilla app.
 export function CalendarModal() {
+  const activeModal = useUiStore((s) => s.activeModal);
   const calendarMode = useUiStore((s) => s.calendarMode);
   const closeModal = useUiStore((s) => s.closeModal);
   const dayOffset = useUiStore((s) => s.dayOffset);
@@ -23,13 +21,24 @@ export function CalendarModal() {
   const clipboard = useUiStore((s) => s.clipboard);
   const state = useAppStore();
 
-  // Which month the grid is showing; seeded from the selected day each
-  // time the modal opens.
-  const [cursor, setCursor] = useState(() => {
+  const open = activeModal === "calendar";
+
+  const seedCursor = () => {
     const base = new Date();
     base.setDate(base.getDate() + dayOffset);
     return new Date(base.getFullYear(), base.getMonth(), 1);
-  });
+  };
+
+  // Which month the grid is showing. The component stays mounted while
+  // closed so AnimatePresence can play its exit, so the cursor is reseeded
+  // on the closed->open transition instead of on mount — React's
+  // adjust-state-during-render pattern, no effect needed.
+  const [cursor, setCursor] = useState(seedCursor);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setCursor(seedCursor());
+  }
 
   const handlePick = (key: string) => {
     if (calendarMode === "paste") {
@@ -60,7 +69,7 @@ export function CalendarModal() {
   });
 
   return (
-    <Modal open title="Calendario" onClose={closeModal}>
+    <Modal open={open} title="Calendario" onClose={closeModal}>
       <div className="calendar-nav">
         <button
           type="button"

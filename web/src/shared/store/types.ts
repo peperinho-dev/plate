@@ -156,6 +156,22 @@ export interface AnalyticsLayoutEntry {
   hidden: boolean;
 }
 
+// A product this device has learned, keyed by barcode. Populated whenever
+// a scan finds nothing in Open Food Facts and the user fills it in by
+// hand — so the same product is never typed twice. Also acts as a local
+// override when OFF's data is wrong.
+export interface CachedProduct {
+  name: string;
+  kcalPer100: number | null;
+  proteinPer100: number | null;
+  fatPer100: number | null;
+  carbsPer100: number | null;
+  fiberPer100: number | null;
+  sugarPer100: number | null;
+  sodiumPer100: number | null;
+  savedAt: number;
+}
+
 export interface AppState {
   schemaVersion: number;
   days: Record<string, DayData>;
@@ -173,4 +189,5 @@ export interface AppState {
   onboardingShown: boolean;
   lastExportedAt: number | null;
   analyticsLayout: AnalyticsLayoutEntry[] | null;
+  barcodeCache: Record<string, CachedProduct>;
 }

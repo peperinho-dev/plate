@@ -16,7 +16,6 @@ import { showToast } from "../../shared/components/Toast";
 export function NutritionView() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const shiftDay = useUiStore((s) => s.shiftDay);
-  const activeModal = useUiStore((s) => s.activeModal);
   const openModal = useUiStore((s) => s.openModal);
   const openCalendar = useUiStore((s) => s.openCalendar);
   const setClipboard = useUiStore((s) => s.setClipboard);
@@ -135,7 +134,7 @@ export function NutritionView() {
       </div>
 
       <PasteTargetSheet />
-      {activeModal === "calendar" && <CalendarModal />}
+      <CalendarModal />
     </div>
   );
 }
