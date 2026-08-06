@@ -39,7 +39,9 @@ export function setManualCalorieTarget(min: number, max: number) {
 }
 
 // Hands control back to the calculated range, re-adopting it immediately.
-export function useCalculatedCalorieTarget() {
+// Not a React hook despite operating on store state — named "adopt" rather
+// than "use" so neither readers nor the rules-of-hooks lint mistake it for one.
+export function adoptCalculatedCalorieTarget() {
   useAppStore.setState((s) => ({
     calorieTarget: {
       ...s.calorieTarget,

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Modal } from "../../shared/components/Modal";
 import { showToast } from "../../shared/components/Toast";
 import { useAppStore } from "../../shared/store";
-import { setManualCalorieTarget, useCalculatedCalorieTarget } from "./actions";
+import { setManualCalorieTarget, adoptCalculatedCalorieTarget } from "./actions";
 
 interface TargetModalProps {
   open: boolean;
@@ -86,7 +86,7 @@ export function TargetModal({ open, onClose }: TargetModalProps) {
             type="button"
             className="btn btn--secondary btn--block"
             onClick={() => {
-              useCalculatedCalorieTarget();
+              adoptCalculatedCalorieTarget();
               showToast("Vuelto al calculado");
             }}
           >
