@@ -26,6 +26,12 @@ export function logWeight(weightKg: number, date = todayKey(0)) {
   });
 }
 
+export function removeWeightEntry(date: string) {
+  withRecalculatedTargets({
+    weightLog: useAppStore.getState().weightLog.filter((w) => w.date !== date)
+  });
+}
+
 export function setManualCalorieTarget(min: number, max: number) {
   useAppStore.setState((s) => ({
     calorieTarget: { ...s.calorieTarget, mode: "manual", min: Math.round(min), max: Math.round(max) }

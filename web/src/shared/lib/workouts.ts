@@ -121,6 +121,17 @@ export function countWorkoutSessions(workouts: AppState["workouts"]): number {
 }
 
 // Distinct exercise names, most-used first — the quick-add row.
+// Every distinct exercise name ever logged, for the name-field's
+// autocomplete — unlike computeFrequentExercises this isn't ranked or
+// capped, it's the full vocabulary.
+export function collectAllExerciseNames(workouts: AppState["workouts"]): string[] {
+  const names = new Set<string>();
+  Object.values(workouts).forEach((day) => {
+    day.exercises.forEach((ex) => names.add(ex.name));
+  });
+  return Array.from(names).sort();
+}
+
 export function computeFrequentExercises(workouts: AppState["workouts"], limit = 8) {
   const tally = new Map<string, { name: string; count: number; lastAddedAt: number }>();
   Object.values(workouts).forEach((day) => {

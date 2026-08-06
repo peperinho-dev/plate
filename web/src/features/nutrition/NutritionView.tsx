@@ -14,6 +14,8 @@ import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
 import { ProfileModal } from "../profile/ProfileModal";
+import { WeightModal } from "../profile/WeightModal";
+import { TargetModal } from "../profile/TargetModal";
 import { BackupBanner } from "../profile/BackupBanner";
 import { AdaptiveBanner } from "../profile/AdaptiveBanner";
 import { RecipeModal } from "./components/RecipeModal";
@@ -84,6 +86,8 @@ export function NutritionView() {
   // creating one; also reveals the Hora field.
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [weightOpen, setWeightOpen] = useState(false);
+  const [targetOpen, setTargetOpen] = useState(false);
   const [favoritesEditing, setFavoritesEditing] = useState(false);
   const [recipesEditing, setRecipesEditing] = useState(false);
   const [recipeModalOpen, setRecipeModalOpen] = useState(false);
@@ -205,9 +209,9 @@ export function NutritionView() {
           <button className="icon-btn" aria-label="Perfil" onClick={() => setProfileOpen(true)}>
             <GearIcon />
           </button>
-          {/* The chip is also a shortcut into the same sheet — it's the
-              thing you tap when the range itself looks wrong. */}
-          <button className="chip" onClick={() => setProfileOpen(true)}>
+          {/* Matches vanilla: the chip opens the calorie-range editor
+              directly, a separate sheet from the profile modal. */}
+          <button className="chip" onClick={() => setTargetOpen(true)}>
             {calorieTarget.min}–{calorieTarget.max} kcal
           </button>
         </div>
@@ -376,7 +380,23 @@ export function NutritionView() {
         }}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
-      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ProfileModal
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onOpenWeight={() => {
+          setProfileOpen(false);
+          setWeightOpen(true);
+        }}
+      />
+      <WeightModal
+        open={weightOpen}
+        onClose={() => setWeightOpen(false)}
+        onBack={() => {
+          setWeightOpen(false);
+          setProfileOpen(true);
+        }}
+      />
+      <TargetModal open={targetOpen} onClose={() => setTargetOpen(false)} />
       <RecipeModal
         open={recipeModalOpen}
         recipe={editingRecipeId ? (recipes.find((r) => r.id === editingRecipeId) ?? null) : null}

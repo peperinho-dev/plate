@@ -6,7 +6,7 @@ import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
 import { capitalizeFirst, formatDateLabel } from "../../shared/lib/format";
 import {
-  computeFrequentExercises,
+  collectAllExerciseNames,
   computeWorkoutDayTotals,
   countWorkoutSessions,
   formatDuration,
@@ -19,6 +19,7 @@ import { showToast } from "../../shared/components/Toast";
 import { ChevronLeft, ChevronRight, DumbbellIcon, XIcon } from "../../shared/components/Icons";
 import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
+import { AddExerciseModal } from "./components/AddExerciseModal";
 import { TimerSection } from "./components/TimerSection";
 import { addExercise, removeExercise, removeRoutine, saveRoutine, startRoutine } from "./actions";
 
@@ -33,14 +34,11 @@ export function WorkoutView() {
   const label = formatDateLabel(dayOffset);
   const totals = computeWorkoutDayTotals(exercises);
   const sessions = countWorkoutSessions(workouts);
-  const frequent = computeFrequentExercises(workouts);
+  const allNames = collectAllExerciseNames(workouts);
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  // The picker rows are noise once you're mid-session, so they stay behind
-  // one toggle rather than always being on screen.
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
   const [routinesEditing, setRoutinesEditing] = useState(false);
   const routines = useAppStore((s) => s.routines);
 
@@ -50,7 +48,6 @@ export function WorkoutView() {
     const trimmed = name.trim();
     if (!trimmed) return;
     const id = addExercise(dayKey, trimmed);
-    setNewName("");
     setAddOpen(false);
     setDetailId(id);
   };
@@ -140,121 +137,84 @@ export function WorkoutView() {
           )}
         </div>
 
+        {/* Calentamiento/rutinas/estiramientos are their own card, separate
+            from adding an exercise — bolting them onto that flow made a
+            simple "add one thing" action into a wall of unrelated
+            controls. */}
         <div className="card">
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => setAddOpen((v) => !v)}
-            style={{ fontWeight: 700 }}
-          >
-            {addOpen ? "Listo" : "+ Añadir"}
-          </button>
+          <TimerSection category="warmup" label="Calentamiento" dayKey={dayKey} />
 
-          {addOpen && (
-            <>
-              <form
-                className="form"
-                style={{ marginTop: 12 }}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  createExercise(newName);
-                }}
-              >
-                <label className="field">
-                  <span>Ejercicio</span>
-                  <input
-                    type="text"
-                    placeholder="p. ej. Dominadas"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                  />
-                </label>
-                <button type="submit" className="btn btn--primary btn--block" disabled={!newName.trim()}>
-                  Añadir
-                </button>
-              </form>
-
-              {/* Order follows how a session actually runs: warm up,
-                  then the routine, then stretch. */}
-              <TimerSection category="warmup" label="Calentamiento" dayKey={dayKey} />
-
-              <div className="quick-section">
-                <div className="quick-label-row">
-                  <div className="quick-label">Rutinas</div>
-                  <div className="quick-label-actions">
-                    {exercises.length > 0 && (
-                      <button
-                        type="button"
-                        className="link-btn"
-                        onClick={() => {
-                          const name = window.prompt("Nombre de la rutina");
-                          if (!name?.trim()) return;
-                          saveRoutine(name.trim(), exercises.map((e) => e.name));
-                          showToast("Rutina guardada");
-                        }}
-                      >
-                        + Guardar día
-                      </button>
-                    )}
-                    {routines.length > 0 && (
-                      <button
-                        type="button"
-                        className="link-btn link-btn--muted"
-                        onClick={() => setRoutinesEditing((v) => !v)}
-                      >
-                        {routinesEditing ? "Listo" : "Editar"}
-                      </button>
-                    )}
-                  </div>
-                </div>
+          <div className="quick-section">
+            <div className="quick-label-row">
+              <div className="quick-label">Rutinas</div>
+              <div className="quick-label-actions">
+                {exercises.length > 0 && (
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => {
+                      const name = window.prompt("Nombre de la rutina");
+                      if (!name?.trim()) return;
+                      saveRoutine(name.trim(), exercises.map((e) => e.name));
+                      showToast("Rutina guardada");
+                    }}
+                  >
+                    + Guardar día
+                  </button>
+                )}
                 {routines.length > 0 && (
-                  <div className="quick-row">
-                    {routines.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        className="quick-chip"
-                        onClick={() => {
-                          if (routinesEditing) {
-                            removeRoutine(r.id);
-                            return;
-                          }
-                          startRoutine(dayKey, r.exerciseNames);
-                          setAddOpen(false);
-                          showToast(`${r.name} añadida`);
-                        }}
-                      >
-                        <span className="quick-chip-name">{r.name}</span>
-                        <span className="quick-chip-kcal">{r.exerciseNames.length} ej.</span>
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    className="link-btn link-btn--muted"
+                    onClick={() => setRoutinesEditing((v) => !v)}
+                  >
+                    {routinesEditing ? "Listo" : "Editar"}
+                  </button>
                 )}
               </div>
+            </div>
+            {routines.length > 0 ? (
+              <div className="quick-row">
+                {routines.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="quick-chip"
+                    onClick={() => {
+                      if (routinesEditing) {
+                        removeRoutine(r.id);
+                        return;
+                      }
+                      startRoutine(dayKey, r.exerciseNames);
+                      showToast(`${r.name} añadida`);
+                    }}
+                  >
+                    <span className="quick-chip-name">{r.name}</span>
+                    <span className="quick-chip-kcal">{r.exerciseNames.length} ej.</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="stat-note">Guarda el día de hoy para reutilizarlo más tarde.</p>
+            )}
+          </div>
 
-              <TimerSection category="stretch" label="Estiramientos" dayKey={dayKey} />
-
-              {frequent.length > 0 && (
-                <div className="quick-section">
-                  <div className="quick-label">Ejercicios recientes</div>
-                  <div className="quick-row">
-                    {frequent.map((f) => (
-                      <button
-                        key={f.name}
-                        type="button"
-                        className="quick-chip"
-                        onClick={() => createExercise(f.name)}
-                      >
-                        <span className="quick-chip-name">{f.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          <TimerSection category="stretch" label="Estiramientos" dayKey={dayKey} />
         </div>
       </main>
+
+      <div className="action-bar">
+        <button type="button" className="btn btn--primary btn--block" onClick={() => setAddOpen(true)}>
+          <span className="btn-icon">+</span> Añadir ejercicio
+        </button>
+      </div>
+
+      <AddExerciseModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={createExercise}
+        nameOptions={allNames}
+      />
 
       <ExerciseDetailModal
         open={!!detailExercise}
