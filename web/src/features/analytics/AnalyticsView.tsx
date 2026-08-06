@@ -217,6 +217,8 @@ export function AnalyticsView() {
                 { label: "Real", color: "var(--ink-faint)", values: ema.map((e) => e.raw) },
                 { label: "Tendencia", color: "var(--accent)", values: ema.map((e) => e.ema), dashed: true }
               ]}
+              dates={ema.map((e) => e.date)}
+              formatTick={(v) => v.toFixed(1)}
             />
           </>
         );
@@ -236,6 +238,7 @@ export function AnalyticsView() {
               { label: "Grasa", color: "var(--macro-fat)", values: val((d) => d.fat) },
               { label: "Carbos", color: "var(--macro-carbs)", values: val((d) => d.carbs) }
             ]}
+            dates={periodDays.map((d) => d.date)}
           />
         );
       }

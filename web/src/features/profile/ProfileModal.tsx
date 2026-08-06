@@ -110,40 +110,40 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
           </label>
         </div>
 
-        <div className="field">
-          <span>Sexo</span>
-          <div className="segmented segmented--compact">
-            <button
-              type="button"
-              className={"segmented-btn" + (draft.sex === "male" ? " active" : "")}
-              onClick={() => patch({ sex: "male" })}
+        <div className="field-row">
+          <label className="field">
+            <span>Sexo</span>
+            <select
+              value={draft.sex ?? ""}
+              onChange={(e) => patch({ sex: e.target.value as Profile["sex"] })}
             >
-              Hombre
-            </button>
-            <button
-              type="button"
-              className={"segmented-btn" + (draft.sex === "female" ? " active" : "")}
-              onClick={() => patch({ sex: "female" })}
+              <option value="" disabled>
+                Selecciona
+              </option>
+              <option value="male">Hombre</option>
+              <option value="female">Mujer</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Actividad</span>
+            {/* A segmented control with 5 options doesn't fit a phone
+                width — it overflows off-screen instead of wrapping.
+                A select, like the vanilla app used here, has no such
+                limit. */}
+            <select
+              value={draft.activityLevel ?? ""}
+              onChange={(e) => patch({ activityLevel: e.target.value as Profile["activityLevel"] })}
             >
-              Mujer
-            </button>
-          </div>
-        </div>
-
-        <div className="field">
-          <span>Actividad</span>
-          <div className="segmented segmented--compact">
-            {ACTIVITY_LABELS.map((a) => (
-              <button
-                key={a.value}
-                type="button"
-                className={"segmented-btn" + (draft.activityLevel === a.value ? " active" : "")}
-                onClick={() => patch({ activityLevel: a.value })}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
+              <option value="" disabled>
+                Selecciona
+              </option>
+              {ACTIVITY_LABELS.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="field">
@@ -164,14 +164,15 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
 
         {draft.goalType && draft.goalType !== "maintain" && (
           <label className="field">
-            <span>Ritmo (kg por semana)</span>
+            <span>
+              Ritmo: {(draft.rateKgPerWeek ?? 0.5).toFixed(2)} kg/semana
+            </span>
             <input
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              placeholder="p. ej. 0.25"
-              value={draft.rateKgPerWeek ?? ""}
+              type="range"
+              min="0.1"
+              max="1.5"
+              step="0.05"
+              value={draft.rateKgPerWeek ?? 0.5}
               onChange={(e) => patch({ rateKgPerWeek: num(e.target.value) })}
             />
           </label>
