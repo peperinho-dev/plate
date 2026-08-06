@@ -128,7 +128,15 @@ export function migrateData(parsed: unknown): AppState {
 export function loadInitialState(): AppState {
   try {
     const ownRaw = localStorage.getItem(STORAGE_KEY);
-    if (ownRaw) return migrateData(JSON.parse(ownRaw));
+    if (ownRaw) {
+      // Our own key is written by persist, which wraps the data in a
+      // { state, version } envelope — migrateData expects the bare state,
+      // so the envelope has to come off first. (Persist would hydrate over
+      // a wrong result here anyway, but relying on that is a trap.)
+      const parsed = JSON.parse(ownRaw);
+      const bare = parsed && typeof parsed === "object" && "state" in parsed ? parsed.state : parsed;
+      return migrateData(bare);
+    }
 
     const legacyRaw = localStorage.getItem(LEGACY_VANILLA_STORAGE_KEY);
     if (legacyRaw) return migrateData(JSON.parse(legacyRaw));

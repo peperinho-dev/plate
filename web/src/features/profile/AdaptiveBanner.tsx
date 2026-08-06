@@ -16,15 +16,19 @@ export function AdaptiveBanner() {
 
   if (!suggestion || suggestion.dismissed) return null;
 
+  // Wording kept identical to app.js's renderAdaptiveBanner().
   const up = suggestion.deltaKcal > 0;
+  const pace = up ? "más lento" : "más rápido";
+  const action = up ? "Aumentar" : "Reducir";
+  const sign = suggestion.actualRate >= 0 ? "+" : "";
   const amount = Math.abs(suggestion.deltaKcal);
 
   return (
     <div className="adaptive-banner">
       <p>
-        Tu peso va a {suggestion.actualRate > 0 ? "+" : ""}
-        {suggestion.actualRate} kg/semana. Para acercarte a tu objetivo, prueba a{" "}
-        {up ? "subir" : "bajar"} el rango {amount} kcal.
+        Tu ritmo real es de {sign}
+        {suggestion.actualRate} kg/semana, {pace} de lo esperado. {action} tu rango en ~{amount} kcal
+        para ajustarlo.
       </p>
       <div className="adaptive-banner-actions">
         <button

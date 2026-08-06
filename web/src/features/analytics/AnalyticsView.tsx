@@ -17,6 +17,7 @@ import { formatDuration, formatSet } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { collectProgressionGroups } from "./progressions";
 import { LineChart } from "./LineChart";
+import { InsightsCarousel } from "./InsightsCarousel";
 import {
   computeExerciseRecords,
   computeTopContributors,
@@ -68,6 +69,13 @@ export function AnalyticsView() {
 
   const periodDays = period === "all" ? getAllDays(days, weightLog) : getRecentDays(days, period);
   const dateKeys = new Set(periodDays.map((d) => d.date));
+
+  // Computed once and shared by the insights card, the stat line and the
+  // chart itself, so all three agree on the same sorted/smoothed data
+  // instead of each re-deriving it slightly differently.
+  const periodEma = computeEma(
+    weightLog.filter((w) => dateKeys.has(w.date)).sort((a, b) => (a.date < b.date ? -1 : 1))
+  );
 
   // Cards not present in the stored layout are appended, so a card added
   // in a later version shows up instead of silently disappearing.
@@ -198,27 +206,35 @@ export function AnalyticsView() {
       }
 
       case "weight": {
-        // Only weigh-ins inside the period, smoothed — daily weight is too
-        // noisy to read raw, so the trend line is the point.
-        const inPeriod = weightLog
-          .filter((w) => dateKeys.has(w.date))
-          .sort((a, b) => (a.date < b.date ? -1 : 1));
-        if (inPeriod.length < 2) return <p className="empty-state">Registra tu peso para ver la tendencia.</p>;
-        const ema = computeEma(inPeriod);
+        // Shares periodEma with the insights card above — daily weight is
+        // too noisy to read raw, so the trend line is the point.
+        const ema = periodEma;
+        if (ema.length < 2) return <p className="empty-state">Registra tu peso para ver la tendencia.</p>;
         const diff = ema[ema.length - 1].ema - ema[0].ema;
+        // The average of the raw weigh-ins, not the latest one — the
+        // insights card above already carries "latest", so repeating it
+        // here would waste the line. Matches app.js's weightStatLine.
+        const avg = ema.reduce((sum, e) => sum + e.raw, 0) / ema.length;
         return (
           <>
             <p className="stat-note">
-              {ema[ema.length - 1].raw.toFixed(1)} kg · {diff > 0 ? "+" : ""}
-              {diff.toFixed(1)} kg de tendencia
+              Media: {avg.toFixed(1)} kg · Diferencia: {diff > 0 ? "+" : ""}
+              {diff.toFixed(1)} kg
             </p>
             <LineChart
               series={[
-                { label: "Real", color: "var(--ink-faint)", values: ema.map((e) => e.raw) },
-                { label: "Tendencia", color: "var(--accent)", values: ema.map((e) => e.ema), dashed: true }
+                { label: "Real", color: "var(--ink-faint)", values: ema.map((e) => e.raw), dots: true },
+                {
+                  label: "Tendencia",
+                  color: "var(--accent)",
+                  values: ema.map((e) => e.ema),
+                  smooth: true,
+                  area: true
+                }
               ]}
               dates={ema.map((e) => e.date)}
               formatTick={(v) => v.toFixed(1)}
+              minRange={0.5}
             />
           </>
         );
@@ -234,11 +250,13 @@ export function AnalyticsView() {
         return (
           <LineChart
             series={[
-              { label: "Prot.", color: "var(--accent)", values: val((d) => d.protein) },
-              { label: "Grasa", color: "var(--macro-fat)", values: val((d) => d.fat) },
-              { label: "Carbos", color: "var(--macro-carbs)", values: val((d) => d.carbs) }
+              { label: "Prot.", color: "var(--accent)", values: val((d) => d.protein), smooth: true },
+              { label: "Grasa", color: "var(--macro-fat)", values: val((d) => d.fat), smooth: true },
+              { label: "Carbos", color: "var(--macro-carbs)", values: val((d) => d.carbs), smooth: true }
             ]}
             dates={periodDays.map((d) => d.date)}
+            baseline="zero"
+            maxScale={1.1}
           />
         );
       }
@@ -335,6 +353,8 @@ export function AnalyticsView() {
       </header>
 
       <main className="content">
+        <InsightsCarousel periodDays={periodDays} weightWithEma={periodEma} />
+
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visible.map((v) => v.id)} strategy={verticalListSortingStrategy}>
             {visible.map((card) => (

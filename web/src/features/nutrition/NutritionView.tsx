@@ -268,8 +268,11 @@ export function NutritionView() {
                 one thing to select, and never while already selecting.
               */}
               {entries.length > 1 && !selectionMode && (
-                <p className="stat-note" style={{ textAlign: "center" }}>
-                  Mantén pulsado para seleccionar varios · desliza para quitar
+                <p
+                  className="stat-note"
+                  style={{ textAlign: "center", fontSize: 11, opacity: 0.55 }}
+                >
+                  Mantén pulsado para seleccionar · desliza para quitar
                 </p>
               )}
             </>
