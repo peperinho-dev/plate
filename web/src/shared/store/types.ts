@@ -104,10 +104,14 @@ export interface Exercise {
   progressionGroup?: string | null;
 }
 
+// One completed run of a timer preset. Shape matches app.js exactly so
+// the two apps can read each other's data.
 export interface TimerLog {
-  category: "warmup" | "stretch";
-  seconds: number;
-  addedAt: number;
+  id: string;
+  name: string;
+  category: TimerCategory;
+  totalSeconds: number;
+  completedAt: number;
 }
 
 export interface WorkoutDay {
@@ -123,7 +127,7 @@ export interface Recipe {
   id: string;
   name: string;
   items: RecipeItem[];
-  addedAt: number;
+  createdAt: number;
 }
 
 export interface Favorite {
@@ -144,13 +148,25 @@ export interface Routine {
   id: string;
   name: string;
   exerciseNames: string[];
+  createdAt: number;
+}
+
+export type TimerCategory = "warmup" | "stretch";
+
+// A named step within a timer — "Cuello, 30s". Timers are sequences, not
+// single countdowns: a mobility routine is several holds in a row, and
+// the run screen walks through them.
+export interface TimerInterval {
+  name: string;
+  seconds: number;
 }
 
 export interface TimerPreset {
   id: string;
   name: string;
-  category: "warmup" | "stretch";
-  seconds: number;
+  category: TimerCategory;
+  intervals: TimerInterval[];
+  createdAt: number;
 }
 
 export interface AnalyticsLayoutEntry {

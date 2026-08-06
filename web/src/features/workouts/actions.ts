@@ -1,7 +1,15 @@
 // Workout mutations. Same discipline as the nutrition actions: standalone
 // functions over setState, keeping AppState pure serializable data.
 import { useAppStore } from "../../shared/store";
-import type { AppState, Exercise, ExerciseSet, SetType } from "../../shared/store/types";
+import type {
+  AppState,
+  Exercise,
+  ExerciseSet,
+  SetType,
+  TimerCategory,
+  TimerInterval,
+  TimerPreset
+} from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
 import { rebaseTimeToDay } from "../../shared/lib/date";
 
@@ -135,7 +143,7 @@ export function copyWorkoutToDay(exercises: Exercise[], targetDayKey: string) {
 // them all as empty exercises ready to log into.
 export function saveRoutine(name: string, exerciseNames: string[]) {
   useAppStore.setState((s) => ({
-    routines: [...s.routines, { id: newId(), name, exerciseNames }]
+    routines: [...s.routines, { id: newId(), name, exerciseNames, createdAt: Date.now() }]
   }));
 }
 
@@ -158,10 +166,18 @@ export function startRoutine(dayKey: string, exerciseNames: string[]) {
 
 // --- Warmup / stretch timers ------------------------------------------
 
-export function saveTimerPreset(name: string, category: "warmup" | "stretch", seconds: number) {
+export function saveTimerPreset(
+  name: string,
+  category: TimerCategory,
+  intervals: TimerInterval[]
+) {
   useAppStore.setState((s) => ({
-    timers: [...s.timers, { id: newId(), name, category, seconds }]
+    timers: [...s.timers, { id: newId(), name, category, intervals, createdAt: Date.now() }]
   }));
+}
+
+export function timerTotalSeconds(timer: TimerPreset): number {
+  return timer.intervals.reduce((sum, iv) => sum + iv.seconds, 0);
 }
 
 export function removeTimerPreset(id: string) {
@@ -169,12 +185,35 @@ export function removeTimerPreset(id: string) {
 }
 
 // Logged separately from exercises: a warmup isn't a set, but it should
-// still count as having shown up that day.
-export function logTimerSession(dayKey: string, category: "warmup" | "stretch", seconds: number) {
+// still count as having shown up that day. Only called on natural
+// completion — a skipped timer never happened.
+export function logTimerRun(dayKey: string, timer: TimerPreset) {
   useAppStore.setState((s) => {
     const day = s.workouts[dayKey] ?? { exercises: [] };
-    const timerLogs = [...(day.timerLogs ?? []), { category, seconds, addedAt: Date.now() }];
+    const timerLogs = [
+      ...(day.timerLogs ?? []),
+      {
+        id: newId(),
+        name: timer.name,
+        category: timer.category,
+        totalSeconds: timerTotalSeconds(timer),
+        completedAt: Date.now()
+      }
+    ];
     return { workouts: { ...s.workouts, [dayKey]: { ...day, timerLogs } } };
+  });
+}
+
+export function removeTimerLog(dayKey: string, logId: string) {
+  useAppStore.setState((s) => {
+    const day = s.workouts[dayKey];
+    if (!day?.timerLogs) return {};
+    return {
+      workouts: {
+        ...s.workouts,
+        [dayKey]: { ...day, timerLogs: day.timerLogs.filter((l) => l.id !== logId) }
+      }
+    };
   });
 }
 

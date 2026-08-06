@@ -118,6 +118,45 @@ export function migrateData(parsed: unknown): AppState {
   // Additive field — no SCHEMA_VERSION bump needed, matching how the
   // vanilla app introduced optional fields like lastExportedAt.
   if (!data.barcodeCache || typeof data.barcodeCache !== "object") data.barcodeCache = {};
+
+  // An earlier build of the React port stored timers as a single flat
+  // { seconds } instead of app.js's { intervals: [...] }, and logged runs
+  // as { seconds, addedAt } instead of { totalSeconds, completedAt }.
+  // Normalise both so data written by either app opens in the other.
+  data.timers = (Array.isArray(data.timers) ? data.timers : []).map((t: Record<string, unknown>) => {
+    const intervals = Array.isArray(t.intervals)
+      ? t.intervals
+      : [{ name: String(t.name ?? "Intervalo"), seconds: Number(t.seconds) || 60 }];
+    return {
+      id: t.id,
+      name: t.name,
+      category: t.category === "stretch" ? "stretch" : "warmup",
+      intervals,
+      createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now()
+    };
+  });
+
+  Object.values(data.workouts as Record<string, Record<string, unknown>>).forEach((day) => {
+    if (!Array.isArray(day.timerLogs)) return;
+    day.timerLogs = day.timerLogs.map((l: Record<string, unknown>) => ({
+      id: l.id ?? `${l.completedAt ?? l.addedAt ?? Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: l.name ?? (l.category === "stretch" ? "Estiramientos" : "Calentamiento"),
+      category: l.category === "stretch" ? "stretch" : "warmup",
+      totalSeconds: typeof l.totalSeconds === "number" ? l.totalSeconds : Number(l.seconds) || 0,
+      completedAt: typeof l.completedAt === "number" ? l.completedAt : Number(l.addedAt) || Date.now()
+    }));
+  });
+
+  // app.js writes recipes with createdAt; an earlier React build used
+  // addedAt. Keep createdAt as the single name.
+  data.recipes = (Array.isArray(data.recipes) ? data.recipes : []).map((r: Record<string, unknown>) => ({
+    ...r,
+    createdAt: typeof r.createdAt === "number" ? r.createdAt : Number(r.addedAt) || Date.now()
+  }));
+  data.routines = (Array.isArray(data.routines) ? data.routines : []).map((r: Record<string, unknown>) => ({
+    ...r,
+    createdAt: typeof r.createdAt === "number" ? r.createdAt : Date.now()
+  }));
   return data as AppState;
 }
 

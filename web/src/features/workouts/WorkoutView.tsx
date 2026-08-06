@@ -21,11 +21,15 @@ import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
 import { AddExerciseModal } from "./components/AddExerciseModal";
 import { TimerSection } from "./components/TimerSection";
+import { TimerRunModal } from "./components/TimerRunModal";
+import { useTimerRun } from "./useTimerRun";
 import {
   addExercise,
   copyWorkoutToDay,
   removeExercise,
+  logTimerRun,
   removeRoutine,
+  removeTimerLog,
   saveRoutine,
   startRoutine
 } from "./actions";
@@ -52,6 +56,10 @@ export function WorkoutView() {
   const routines = useAppStore((s) => s.routines);
 
   const detailExercise = exercises.find((e) => e.id === detailId) ?? null;
+  const timerLogs = workouts[dayKey]?.timerLogs ?? [];
+
+  // Logged only on natural completion — stopping early never happened.
+  const run = useTimerRun((timer) => logTimerRun(dayKey, timer));
 
   const createExercise = (name: string) => {
     const trimmed = name.trim();
@@ -128,6 +136,29 @@ export function WorkoutView() {
             </div>
           </div>
 
+          {timerLogs.length > 0 && (
+            <div className="log-list">
+              {timerLogs.map((log) => (
+                <div className="row" key={log.id}>
+                  <div className="row-main">
+                    <span className="row-name">{log.name}</span>
+                    <span className="row-qty">
+                      {log.category === "warmup" ? "Calentamiento" : "Estiramiento"} ·{" "}
+                      {formatDuration(log.totalSeconds)}
+                    </span>
+                  </div>
+                  <button
+                    className="row-del"
+                    aria-label="Quitar"
+                    onClick={() => removeTimerLog(dayKey, log.id)}
+                  >
+                    <XIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {exercises.length > 0 ? (
             <div className="log-list">
               {exercises.map((ex) => (
@@ -181,7 +212,7 @@ export function WorkoutView() {
             simple "add one thing" action into a wall of unrelated
             controls. */}
         <div className="card">
-          <TimerSection category="warmup" label="Calentamiento" dayKey={dayKey} />
+          <TimerSection category="warmup" label="Calentamiento" onRun={run.start} />
 
           <div className="quick-section">
             <div className="quick-label-row">
@@ -238,7 +269,7 @@ export function WorkoutView() {
             )}
           </div>
 
-          <TimerSection category="stretch" label="Estiramientos" dayKey={dayKey} />
+          <TimerSection category="stretch" label="Estiramientos" onRun={run.start} />
         </div>
       </main>
 
@@ -268,6 +299,7 @@ export function WorkoutView() {
         dayKey={dayKey}
         onClose={() => setEditOpen(false)}
       />
+      <TimerRunModal run={run} />
       <CalendarModal />
     </div>
   );

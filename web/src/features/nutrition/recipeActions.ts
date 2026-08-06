@@ -14,7 +14,7 @@ export function saveRecipe(name: string, items: FoodItemBasis[], existingId?: st
       };
     }
     return {
-      recipes: [...s.recipes, { id: newId(), name, items: items.map((i) => ({ ...i })), addedAt: Date.now() }]
+      recipes: [...s.recipes, { id: newId(), name, items: items.map((i) => ({ ...i })), createdAt: Date.now() }]
     };
   });
 }
