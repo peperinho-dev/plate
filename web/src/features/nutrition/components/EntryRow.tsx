@@ -11,6 +11,7 @@ import { showToast } from "../../../shared/components/Toast";
 import { useLongPress } from "../../../shared/hooks/useLongPress";
 import { useUiStore } from "../../../shared/store/ui";
 import { deleteEntry, deleteGroupItem, restoreEntry } from "../actions";
+import { commitGroupToRecipe, recipeItemsDiffer } from "../recipeActions";
 
 interface EntryRowProps {
   entry: Entry;
@@ -34,6 +35,7 @@ export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
   const selectedEntryIds = useUiStore((s) => s.selectedEntryIds);
   const toggleEntrySelection = useUiStore((s) => s.toggleEntrySelection);
   const setSelectionMode = useUiStore((s) => s.setSelectionMode);
+  const recipes = useAppStore((s) => s.recipes);
 
   const qtyPrefix = entry.qtyLabel ? `${entry.qtyLabel} · ` : "";
   const isChecked = selectedEntryIds.has(entry.id);
@@ -103,6 +105,14 @@ export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
   // selection target then, not an expander.
   const isExpanded = !selectionMode && expandedGroups.has(entry.id);
 
+  const sourceRecipe = entry.sourceRecipeId
+    ? recipes.find((r) => r.id === entry.sourceRecipeId)
+    : undefined;
+  const driftedRecipe =
+    sourceRecipe && entry.items && recipeItemsDiffer(sourceRecipe.items, entry.items)
+      ? sourceRecipe
+      : null;
+
   return (
     <SwipeToDelete onDelete={handleSwipeDelete} disabled={selectionMode || isExpanded}>
       <div className="row row-group" data-id={entry.id}>
@@ -159,6 +169,24 @@ export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
               </div>
             );
           })}
+          </div>
+        )}
+
+        {/* Offered only when the logged meal has drifted from its recipe —
+            editing an ingredient "just for today" is a snapshot, so pushing
+            it back to the recipe has to be an explicit choice. */}
+        {isExpanded && driftedRecipe && (
+          <div className="group-actions">
+            <button
+              type="button"
+              className="link-btn group-update-banner"
+              onClick={() => {
+                commitGroupToRecipe(entry);
+                showToast(`Receta "${driftedRecipe.name}" actualizada`);
+              }}
+            >
+              Actualizar receta con estos cambios →
+            </button>
           </div>
         )}
       </div>

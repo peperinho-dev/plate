@@ -14,6 +14,9 @@ import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
 import { ProfileModal } from "../profile/ProfileModal";
+import { RecipeModal } from "./components/RecipeModal";
+import { entryFromRecipe } from "./recipeActions";
+import { sumFoodItems } from "../../shared/lib/foodItems";
 import { QuickAddRows } from "./components/QuickAddRows";
 import { computeHourlyGoTos, computeRecentItems, favoriteToQuickItem, type QuickItem } from "./quickAdd";
 import {
@@ -80,8 +83,12 @@ export function NutritionView() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [favoritesEditing, setFavoritesEditing] = useState(false);
+  const [recipesEditing, setRecipesEditing] = useState(false);
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
 
   const favorites = useAppStore((s) => s.favorites);
+  const recipes = useAppStore((s) => s.recipes);
   const favoriteItems = favorites.map(favoriteToQuickItem);
   const recentItems = computeRecentItems(days);
   const goToItems = computeHourlyGoTos(days, new Date().getHours());
@@ -315,6 +322,30 @@ export function NutritionView() {
             onRemoveFavorite={removeFavorite}
             favoritesEditing={favoritesEditing}
             onToggleFavoritesEditing={() => setFavoritesEditing((v) => !v)}
+            recipes={recipes.map((r) => ({
+              id: r.id,
+              name: r.name,
+              calories: sumFoodItems(r.items).calories
+            }))}
+            onPickRecipe={(id) => {
+              const recipe = recipes.find((r) => r.id === id);
+              if (!recipe) return;
+              addEntry(dayKey, entryFromRecipe(recipe));
+              setEntryOpen(false);
+              showToast("Añadido");
+            }}
+            onNewRecipe={() => {
+              setEditingRecipeId(null);
+              setEntryOpen(false);
+              setRecipeModalOpen(true);
+            }}
+            onEditRecipe={(id) => {
+              setEditingRecipeId(id);
+              setEntryOpen(false);
+              setRecipeModalOpen(true);
+            }}
+            recipesEditing={recipesEditing}
+            onToggleRecipesEditing={() => setRecipesEditing((v) => !v)}
           />
         }
         onSaveFavorite={() => {
@@ -342,6 +373,14 @@ export function NutritionView() {
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <RecipeModal
+        open={recipeModalOpen}
+        recipe={editingRecipeId ? (recipes.find((r) => r.id === editingRecipeId) ?? null) : null}
+        onClose={() => {
+          setRecipeModalOpen(false);
+          setEditingRecipeId(null);
+        }}
+      />
     </div>
   );
 }

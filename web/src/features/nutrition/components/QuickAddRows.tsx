@@ -11,6 +11,13 @@ interface QuickAddRowsProps {
   onRemoveFavorite: (key: string) => void;
   favoritesEditing: boolean;
   onToggleFavoritesEditing: () => void;
+  /** Recipes render as their own row with a "+ Nueva" action. */
+  recipes: { id: string; name: string; calories: number }[];
+  onPickRecipe: (id: string) => void;
+  onNewRecipe: () => void;
+  onEditRecipe: (id: string) => void;
+  recipesEditing: boolean;
+  onToggleRecipesEditing: () => void;
 }
 
 function Row({
@@ -57,10 +64,47 @@ export function QuickAddRows({
   onPick,
   onRemoveFavorite,
   favoritesEditing,
-  onToggleFavoritesEditing
+  onToggleFavoritesEditing,
+  recipes,
+  onPickRecipe,
+  onNewRecipe,
+  onEditRecipe,
+  recipesEditing,
+  onToggleRecipesEditing
 }: QuickAddRowsProps) {
   return (
     <>
+      <div className="quick-section">
+        <div className="quick-label-row">
+          <div className="quick-label">Recetas</div>
+          <div className="quick-label-actions">
+            <button type="button" className="link-btn" onClick={onNewRecipe}>
+              + Nueva
+            </button>
+            {recipes.length > 0 && (
+              <button type="button" className="link-btn link-btn--muted" onClick={onToggleRecipesEditing}>
+                {recipesEditing ? "Listo" : "Editar"}
+              </button>
+            )}
+          </div>
+        </div>
+        {recipes.length > 0 && (
+          <div className="quick-row">
+            {recipes.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className="quick-chip"
+                onClick={() => (recipesEditing ? onEditRecipe(r.id) : onPickRecipe(r.id))}
+              >
+                <span className="quick-chip-name">{r.name}</span>
+                <span className="quick-chip-kcal">{Math.round(r.calories)} kcal</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Row
         label="★ Favoritos"
         items={favorites}
