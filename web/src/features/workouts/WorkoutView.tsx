@@ -19,7 +19,8 @@ import { showToast } from "../../shared/components/Toast";
 import { ChevronLeft, ChevronRight, DumbbellIcon, XIcon } from "../../shared/components/Icons";
 import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
-import { addExercise, removeExercise } from "./actions";
+import { TimerSection } from "./components/TimerSection";
+import { addExercise, removeExercise, removeRoutine, saveRoutine, startRoutine } from "./actions";
 
 export function WorkoutView() {
   const dayOffset = useUiStore((s) => s.dayOffset);
@@ -40,6 +41,8 @@ export function WorkoutView() {
   // one toggle rather than always being on screen.
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [routinesEditing, setRoutinesEditing] = useState(false);
+  const routines = useAppStore((s) => s.routines);
 
   const detailExercise = exercises.find((e) => e.id === detailId) ?? null;
 
@@ -170,6 +173,66 @@ export function WorkoutView() {
                   Añadir
                 </button>
               </form>
+
+              {/* Order follows how a session actually runs: warm up,
+                  then the routine, then stretch. */}
+              <TimerSection category="warmup" label="Calentamiento" dayKey={dayKey} />
+
+              <div className="quick-section">
+                <div className="quick-label-row">
+                  <div className="quick-label">Rutinas</div>
+                  <div className="quick-label-actions">
+                    {exercises.length > 0 && (
+                      <button
+                        type="button"
+                        className="link-btn"
+                        onClick={() => {
+                          const name = window.prompt("Nombre de la rutina");
+                          if (!name?.trim()) return;
+                          saveRoutine(name.trim(), exercises.map((e) => e.name));
+                          showToast("Rutina guardada");
+                        }}
+                      >
+                        + Guardar día
+                      </button>
+                    )}
+                    {routines.length > 0 && (
+                      <button
+                        type="button"
+                        className="link-btn link-btn--muted"
+                        onClick={() => setRoutinesEditing((v) => !v)}
+                      >
+                        {routinesEditing ? "Listo" : "Editar"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {routines.length > 0 && (
+                  <div className="quick-row">
+                    {routines.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className="quick-chip"
+                        onClick={() => {
+                          if (routinesEditing) {
+                            removeRoutine(r.id);
+                            return;
+                          }
+                          startRoutine(dayKey, r.exerciseNames);
+                          setAddOpen(false);
+                          showToast(`${r.name} añadida`);
+                        }}
+                      >
+                        <span className="quick-chip-name">{r.name}</span>
+                        <span className="quick-chip-kcal">{r.exerciseNames.length} ej.</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <TimerSection category="stretch" label="Estiramientos" dayKey={dayKey} />
 
               {frequent.length > 0 && (
                 <div className="quick-section">

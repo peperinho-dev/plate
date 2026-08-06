@@ -1,8 +1,9 @@
 // Profile + weight + target settings. This is what makes the macro row in
 // DayTotals appear at all: without a profile and a logged weight there's
 // nothing to calculate targets from.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Modal } from "../../shared/components/Modal";
+import { exportData, importData } from "./dataTransfer";
 import { showToast } from "../../shared/components/Toast";
 import { useAppStore } from "../../shared/store";
 import type { Profile } from "../../shared/store/types";
@@ -32,6 +33,8 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const profile = useAppStore((s) => s.profile);
   const weightLog = useAppStore((s) => s.weightLog);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
+  const lastExportedAt = useAppStore((s) => s.lastExportedAt);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const latest = latestWeightEntry(weightLog);
   const [draft, setDraft] = useState<Profile>(profile);
@@ -225,6 +228,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
           >
             Fijar a mano
           </button>
+
           {!isCalculated && calorieTarget.calculatedMin !== null && (
             <button
               type="button"
@@ -238,6 +242,47 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
             </button>
           )}
         </div>
+
+        <span className="field-group-label">Copia de seguridad</span>
+        <p className="modal-hint">
+          Tus datos viven solo en este dispositivo. Si borras la app de la pantalla de inicio, se
+          borran con ella — exporta de vez en cuando.
+          {lastExportedAt
+            ? ` Última copia: ${new Date(lastExportedAt).toLocaleDateString("es-ES")}.`
+            : " Todavía no has hecho ninguna."}
+        </p>
+        <div className="field-row">
+          <button type="button" className="btn btn--secondary btn--block" onClick={() => void exportData()}>
+            Exportar
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--block"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Importar
+          </button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              // Destructive and irreversible, so it is always confirmed
+              // explicitly rather than on the strength of picking a file.
+              if (window.confirm("Esto reemplazará todos tus datos actuales con los del archivo. ¿Continuar?")) {
+                if (importData(String(reader.result))) onClose();
+              }
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            };
+            reader.readAsText(file);
+          }}
+        />
       </div>
     </Modal>
   );

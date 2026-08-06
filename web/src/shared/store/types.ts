@@ -64,7 +64,9 @@ export interface MacroTargets {
 
 export interface AdaptiveSuggestion {
   deltaKcal: number;
-  [key: string]: unknown;
+  /** Observed weekly rate from the smoothed weight trend, kg/week. */
+  actualRate: number;
+  createdAt: number;
 }
 
 export interface Adaptive {

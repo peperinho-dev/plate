@@ -39,28 +39,39 @@ export function useRestTimer(onFinished?: () => void) {
   const finishedRef = useRef(onFinished);
   finishedRef.current = onFinished;
 
+  // The countdown is tracked in a ref, not read back out of state.
+  //
+  // Doing the completion check inside a setState updater would put a side
+  // effect (the beep, and the caller's onFinished) somewhere React is free
+  // to invoke twice while checking that updaters are pure — which double-
+  // logged every finished timer.
+  const remainingRef = useRef<number | null>(null);
+
   const stop = useCallback(() => {
     clearInterval(intervalRef.current);
     intervalRef.current = undefined;
+    remainingRef.current = null;
     setRemaining(null);
   }, []);
 
   const start = useCallback((seconds: number) => {
     ensureAudioContext(); // must happen inside the triggering gesture
     clearInterval(intervalRef.current);
+    remainingRef.current = seconds;
     setRemaining(seconds);
     intervalRef.current = setInterval(() => {
-      setRemaining((r) => {
-        if (r === null) return null;
-        if (r <= 1) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = undefined;
-          playBeep();
-          finishedRef.current?.();
-          return null;
-        }
-        return r - 1;
-      });
+      const next = (remainingRef.current ?? 0) - 1;
+      if (next <= 0) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = undefined;
+        remainingRef.current = null;
+        setRemaining(null);
+        playBeep();
+        finishedRef.current?.();
+        return;
+      }
+      remainingRef.current = next;
+      setRemaining(next);
     }, 1000);
   }, []);
 

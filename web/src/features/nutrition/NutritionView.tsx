@@ -14,6 +14,8 @@ import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
 import { ProfileModal } from "../profile/ProfileModal";
+import { BackupBanner } from "../profile/BackupBanner";
+import { AdaptiveBanner } from "../profile/AdaptiveBanner";
 import { RecipeModal } from "./components/RecipeModal";
 import { entryFromRecipe } from "./recipeActions";
 import { sumFoodItems } from "../../shared/lib/foodItems";
@@ -212,6 +214,8 @@ export function NutritionView() {
       </header>
 
       <WeekStrip />
+      <BackupBanner />
+      <AdaptiveBanner />
 
       <main className="content">
         <div className="card">

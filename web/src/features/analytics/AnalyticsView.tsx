@@ -13,7 +13,10 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAppStore } from "../../shared/store";
 import { todayKey } from "../../shared/lib/date";
-import { formatDuration } from "../../shared/lib/workouts";
+import { formatDuration, formatSet } from "../../shared/lib/workouts";
+import { computeEma } from "../profile/adaptive";
+import { collectProgressionGroups } from "./progressions";
+import { LineChart } from "./LineChart";
 import {
   computeExerciseRecords,
   computeTopContributors,
@@ -25,13 +28,25 @@ import { dayCalorieTotal, hasWorkoutSession } from "../../shared/lib/nutrition";
 import { SortableCard } from "./SortableCard";
 import { setAnalyticsLayout } from "./actions";
 
-const ALL_CARDS = ["streak", "records", "calories", "contributors", "workouts"] as const;
+const ALL_CARDS = [
+  "streak",
+  "records",
+  "calories",
+  "weight",
+  "macros",
+  "progressions",
+  "contributors",
+  "workouts"
+] as const;
 type CardId = (typeof ALL_CARDS)[number];
 
 const CARD_TITLES: Record<CardId, string> = {
   streak: "Constancia",
   records: "Récords recientes",
   calories: "Calorías",
+  weight: "Peso",
+  macros: "Macros",
+  progressions: "Progresiones",
   contributors: "Más consumido",
   workouts: "Entrenamientos"
 };
@@ -179,6 +194,82 @@ export function AnalyticsView() {
               })}
             </div>
           </>
+        );
+      }
+
+      case "weight": {
+        // Only weigh-ins inside the period, smoothed — daily weight is too
+        // noisy to read raw, so the trend line is the point.
+        const inPeriod = weightLog
+          .filter((w) => dateKeys.has(w.date))
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
+        if (inPeriod.length < 2) return <p className="empty-state">Registra tu peso para ver la tendencia.</p>;
+        const ema = computeEma(inPeriod);
+        const diff = ema[ema.length - 1].ema - ema[0].ema;
+        return (
+          <>
+            <p className="stat-note">
+              {ema[ema.length - 1].raw.toFixed(1)} kg · {diff > 0 ? "+" : ""}
+              {diff.toFixed(1)} kg de tendencia
+            </p>
+            <LineChart
+              series={[
+                { label: "Real", color: "var(--ink-faint)", values: ema.map((e) => e.raw) },
+                { label: "Tendencia", color: "var(--accent)", values: ema.map((e) => e.ema), dashed: true }
+              ]}
+            />
+          </>
+        );
+      }
+
+      case "macros": {
+        const hasData = periodDays.some((d) => d.protein || d.fat || d.carbs);
+        if (!hasData) return <p className="empty-state">Registra comidas con macros para ver la tendencia.</p>;
+        // Unlogged days are null rather than 0 so the line breaks instead
+        // of dropping to the floor on days you simply didn't log.
+        const val = (pick: (d: (typeof periodDays)[number]) => number) =>
+          periodDays.map((d) => (d.total > 0 ? pick(d) : null));
+        return (
+          <LineChart
+            series={[
+              { label: "Prot.", color: "var(--accent)", values: val((d) => d.protein) },
+              { label: "Grasa", color: "var(--macro-fat)", values: val((d) => d.fat) },
+              { label: "Carbos", color: "var(--macro-carbs)", values: val((d) => d.carbs) }
+            ]}
+          />
+        );
+      }
+
+      case "progressions": {
+        const groups = collectProgressionGroups(workouts);
+        if (groups.size === 0) {
+          return (
+            <p className="empty-state">
+              Etiqueta variantes de un mismo ejercicio con un grupo de progresión para verlas aquí.
+            </p>
+          );
+        }
+        return (
+          <div className="log-list">
+            {Array.from(groups.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([groupName, variants]) => (
+                <div className="row" key={groupName}>
+                  <div className="row-main">
+                    <span className="row-name">{groupName}</span>
+                    <span className="row-qty">
+                      {variants.length} variante{variants.length === 1 ? "" : "s"} · actual:{" "}
+                      {variants[variants.length - 1].name}
+                    </span>
+                  </div>
+                  <span className="row-amount">
+                    {variants[variants.length - 1].bestSet
+                      ? formatSet(variants[variants.length - 1].bestSet!)
+                      : "—"}
+                  </span>
+                </div>
+              ))}
+          </div>
         );
       }
 

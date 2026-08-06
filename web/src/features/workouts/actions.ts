@@ -129,6 +129,55 @@ export function copyWorkoutToDay(exercises: Exercise[], targetDayKey: string) {
   });
 }
 
+// --- Routines ---------------------------------------------------------
+
+// A routine is just an ordered list of exercise names; starting one adds
+// them all as empty exercises ready to log into.
+export function saveRoutine(name: string, exerciseNames: string[]) {
+  useAppStore.setState((s) => ({
+    routines: [...s.routines, { id: newId(), name, exerciseNames }]
+  }));
+}
+
+export function removeRoutine(id: string) {
+  useAppStore.setState((s) => ({ routines: s.routines.filter((r) => r.id !== id) }));
+}
+
+export function startRoutine(dayKey: string, exerciseNames: string[]) {
+  useAppStore.setState((s) => {
+    const existing = s.workouts[dayKey]?.exercises ?? [];
+    const added = exerciseNames.map((name, i) => ({
+      id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      sets: [],
+      addedAt: Date.now() + i // keeps the routine's order stable
+    }));
+    return updateWorkoutDay(s, dayKey, [...existing, ...added]);
+  });
+}
+
+// --- Warmup / stretch timers ------------------------------------------
+
+export function saveTimerPreset(name: string, category: "warmup" | "stretch", seconds: number) {
+  useAppStore.setState((s) => ({
+    timers: [...s.timers, { id: newId(), name, category, seconds }]
+  }));
+}
+
+export function removeTimerPreset(id: string) {
+  useAppStore.setState((s) => ({ timers: s.timers.filter((t) => t.id !== id) }));
+}
+
+// Logged separately from exercises: a warmup isn't a set, but it should
+// still count as having shown up that day.
+export function logTimerSession(dayKey: string, category: "warmup" | "stretch", seconds: number) {
+  useAppStore.setState((s) => {
+    const day = s.workouts[dayKey] ?? { exercises: [] };
+    const timerLogs = [...(day.timerLogs ?? []), { category, seconds, addedAt: Date.now() }];
+    return { workouts: { ...s.workouts, [dayKey]: { ...day, timerLogs } } };
+  });
+}
+
 export function setWeeklySessionGoal(weeklySessions: number) {
   useAppStore.setState((s) => ({ workoutGoal: { ...s.workoutGoal, weeklySessions } }));
 }
