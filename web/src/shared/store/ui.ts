@@ -2,7 +2,7 @@
 // module-level variables the vanilla app kept in memory. Split from the
 // data store so persist() never writes view state into localStorage.
 import { create } from "zustand";
-import type { Entry } from "./types";
+import type { Entry, Exercise } from "./types";
 
 export type TabId = "nutrition" | "workout" | "analytics";
 
@@ -13,6 +13,16 @@ export interface NutritionClipboard {
   type: "nutrition";
   entries: Entry[];
 }
+
+// The workout tab has its own whole-day copy, same clipboard slot: copying
+// a session then copying a meal replaces the first, which is what a single
+// system clipboard does and what the vanilla app did.
+export interface WorkoutClipboard {
+  type: "workout";
+  exercises: Exercise[];
+}
+
+export type DayClipboard = NutritionClipboard | WorkoutClipboard;
 
 export type ModalId = "paste" | "calendar" | "entry";
 
@@ -31,7 +41,7 @@ interface UiState {
   expandedHourGroups: Set<string>;
   // Grouped (meal) entries currently expanded to show their ingredients.
   expandedGroups: Set<string>;
-  clipboard: NutritionClipboard | null;
+  clipboard: DayClipboard | null;
 
   activeModal: ModalId | null;
   calendarMode: CalendarMode;
@@ -45,7 +55,7 @@ interface UiState {
   shiftDay: (delta: number) => void;
   toggleHourGroup: (key: string) => void;
   toggleGroup: (id: string) => void;
-  setClipboard: (clipboard: NutritionClipboard | null) => void;
+  setClipboard: (clipboard: DayClipboard | null) => void;
   openModal: (id: ModalId) => void;
   closeModal: () => void;
   openCalendar: (mode: CalendarMode) => void;

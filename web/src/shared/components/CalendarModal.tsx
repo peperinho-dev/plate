@@ -45,7 +45,7 @@ export function CalendarModal() {
 
   const handlePick = (key: string) => {
     if (calendarMode === "paste") {
-      if (clipboard) pasteEntriesToDay(clipboard.entries, key, "keep");
+      if (clipboard?.type === "nutrition") pasteEntriesToDay(clipboard.entries, key, "keep");
       closeModal();
       showToast("Pegado");
       return;

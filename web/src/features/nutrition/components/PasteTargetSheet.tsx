@@ -14,7 +14,9 @@ export function PasteTargetSheet() {
   const clipboard = useUiStore((s) => s.clipboard);
 
   const paste = (dayKey: string, timeMode: PasteTimeMode, message: string) => {
-    if (!clipboard) return;
+    // This sheet is only ever reached from the food log, so a workout on
+    // the clipboard isn't something it can paste.
+    if (clipboard?.type !== "nutrition") return;
     pasteEntriesToDay(clipboard.entries, dayKey, timeMode);
     closeModal();
     showToast(message);

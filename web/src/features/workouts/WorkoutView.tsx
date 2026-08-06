@@ -21,12 +21,21 @@ import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
 import { AddExerciseModal } from "./components/AddExerciseModal";
 import { TimerSection } from "./components/TimerSection";
-import { addExercise, removeExercise, removeRoutine, saveRoutine, startRoutine } from "./actions";
+import {
+  addExercise,
+  copyWorkoutToDay,
+  removeExercise,
+  removeRoutine,
+  saveRoutine,
+  startRoutine
+} from "./actions";
 
 export function WorkoutView() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const shiftDay = useUiStore((s) => s.shiftDay);
   const openCalendar = useUiStore((s) => s.openCalendar);
+  const clipboard = useUiStore((s) => s.clipboard);
+  const setClipboard = useUiStore((s) => s.setClipboard);
   const workouts = useAppStore((s) => s.workouts);
 
   const dayKey = todayKey(dayOffset);
@@ -88,6 +97,35 @@ export function WorkoutView() {
             <div className="card-date">
               {capitalizeFirst(`${label.weekday}, ${label.day} de ${label.month}`)}
             </div>
+            <div className="card-date-actions">
+              {exercises.length > 0 && (
+                <button
+                  type="button"
+                  className="link-btn link-btn--muted"
+                  onClick={() => {
+                    setClipboard({
+                      type: "workout",
+                      exercises: exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s })) }))
+                    });
+                    showToast("Entreno copiado. Ve a otro día y pulsa Pegar.");
+                  }}
+                >
+                  Copiar
+                </button>
+              )}
+              {clipboard?.type === "workout" && (
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => {
+                    copyWorkoutToDay(clipboard.exercises, dayKey);
+                    showToast("Pegado");
+                  }}
+                >
+                  Pegar
+                </button>
+              )}
+            </div>
           </div>
 
           {exercises.length > 0 ? (
@@ -128,7 +166,8 @@ export function WorkoutView() {
           {totals.sets > 0 && (
             <div className="totals">
               <div className="totals-row">
-                <span className="totals-label">
+                <span className="totals-label">Total</span>
+                <span className="totals-value">
                   {totals.sets} {totals.sets === 1 ? "serie" : "series"}
                 </span>
               </div>

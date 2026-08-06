@@ -71,6 +71,9 @@ export function ExerciseDetailModal({
 
   const lastPerf = findLastExerciseSets(workouts, exercise.name, dayKey);
   const pr = findExercisePR(workouts, exercise.name);
+  // Whatever occupied this slot last session — index N of the previous
+  // session lines up with the set about to be added.
+  const suggestion = lastPerf?.ex.sets[exercise.sets.length] ?? null;
 
   const resetForm = () => {
     setEditingSetId(null);
@@ -135,7 +138,18 @@ export function ExerciseDetailModal({
                   </span>
                 )}
               </span>
-              <span className="row-qty">{formatSet(s)}</span>
+              <span className="row-qty">
+                {formatSet(s)}
+                {/* The matching set from last session, so progressive
+                    overload is visible per set rather than only in the
+                    summary line at the top. */}
+                {lastPerf?.ex.sets[i] && (
+                  <>
+                    {" · "}
+                    <span className="row-prev">antes {formatSet(lastPerf.ex.sets[i])}</span>
+                  </>
+                )}
+              </span>
             </button>
             <button className="row-del" aria-label="Quitar" onClick={() => removeSet(dayKey, exercise.id, s.id)}>
               <XIcon />
@@ -144,6 +158,32 @@ export function ExerciseDetailModal({
         ))}
       </div>
       {exercise.sets.length === 0 && <p className="empty-state">Sin series todavía.</p>}
+
+      {/* What you did in this slot last time — the obvious thing to match
+          or beat, one tap away instead of retyped. */}
+      {suggestion && (
+        <p className="modal-hint modal-hint--suggested">
+          <span>
+            Sugerido: <strong>{formatSet(suggestion)}</strong>
+          </span>
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              const hold = isHoldSet(suggestion);
+              setMode(hold ? "hold" : "reps");
+              setWeight(
+                suggestion.weightKg !== null && suggestion.weightKg !== undefined
+                  ? String(suggestion.weightKg)
+                  : ""
+              );
+              setAmount(String(hold ? suggestion.holdSeconds : suggestion.reps));
+            }}
+          >
+            Usar
+          </button>
+        </p>
+      )}
 
       {rest.isRunning && (
         <div className="rest-timer">
