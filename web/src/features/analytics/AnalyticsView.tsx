@@ -13,14 +13,21 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAppStore } from "../../shared/store";
 import { todayKey } from "../../shared/lib/date";
-import { formatDuration, formatSet } from "../../shared/lib/workouts";
+import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { collectProgressionGroups } from "./progressions";
 import { LineChart } from "./LineChart";
+import { CalorieChart } from "./CalorieChart";
+import { SessionsChart } from "./SessionsChart";
 import { InsightsCarousel } from "./InsightsCarousel";
+import { ProgressionDetailModal } from "./ProgressionDetailModal";
+import { estimateCurrentTdee } from "../../shared/lib/targets";
 import {
+  computeCurrentMonthProgress,
+  computeCurrentWeekProgress,
   computeExerciseRecords,
   computeTopContributors,
+  computeWeeklySessions,
   countSessionsInPeriod,
   getAllDays,
   getRecentDays
@@ -28,16 +35,20 @@ import {
 import { dayCalorieTotal, hasWorkoutSession } from "../../shared/lib/nutrition";
 import { SortableCard } from "./SortableCard";
 import { setAnalyticsLayout } from "./actions";
+import { setWeeklySessionGoal } from "../workouts/actions";
 
+// Default order matches the card order in app.js's index.html — a stored
+// analyticsLayout overrides it, but the out-of-the-box screen should look
+// the same in both.
 const ALL_CARDS = [
   "streak",
   "records",
   "calories",
   "weight",
   "macros",
-  "progressions",
   "contributors",
-  "workouts"
+  "workouts",
+  "progressions"
 ] as const;
 type CardId = (typeof ALL_CARDS)[number];
 
@@ -58,10 +69,13 @@ export function AnalyticsView() {
   const weightLog = useAppStore((s) => s.weightLog);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
   const layout = useAppStore((s) => s.analyticsLayout);
+  const profile = useAppStore((s) => s.profile);
+  const workoutGoal = useAppStore((s) => s.workoutGoal);
 
   const [period, setPeriod] = useState<number | "all">(7);
   const [editing, setEditing] = useState(false);
   const [recordsMode, setRecordsMode] = useState<"reps" | "hold">("reps");
+  const [progressionGroup, setProgressionGroup] = useState<string | null>(null);
 
   // Touch needs a small activation distance, or a scroll gesture that
   // starts on the handle would be swallowed as a drag.
@@ -76,6 +90,10 @@ export function AnalyticsView() {
   const periodEma = computeEma(
     weightLog.filter((w) => dateKeys.has(w.date)).sort((a, b) => (a.date < b.date ? -1 : 1))
   );
+
+  // Maintenance estimate for the calorie chart's reference line; null when
+  // the profile is too incomplete to compute one.
+  const expenditure = estimateCurrentTdee(profile, weightLog);
 
   // Cards not present in the stored layout are appended, so a card added
   // in a later version shows up instead of silently disappearing.
@@ -176,34 +194,17 @@ export function AnalyticsView() {
         );
       }
 
-      case "calories": {
-        const logged = periodDays.filter((d) => d.total > 0);
-        const avg = logged.length ? logged.reduce((s, d) => s + d.total, 0) / logged.length : 0;
-        const peak = Math.max(calorieTarget.max, ...periodDays.map((d) => d.total), 1) * 1.08;
+      case "calories":
+        // The average and logged-day count live in the insights carousel
+        // above, so this card is just the chart — same as app.js.
         return (
-          <>
-            <div className="totals-row">
-              <span className="totals-label">Media</span>
-              <span className="totals-value">{Math.round(avg)} kcal</span>
-            </div>
-            <p className="stat-note">
-              {logged.length}/{periodDays.length} días registrados
-            </p>
-            <div className="calorie-bars" aria-hidden="true">
-              {periodDays.map((d) => {
-                const inRange = d.total >= calorieTarget.min && d.total <= calorieTarget.max;
-                return (
-                  <span
-                    key={d.date}
-                    className={"calorie-bar" + (d.total === 0 ? " is-empty" : inRange ? " is-in-range" : "")}
-                    style={{ height: `${Math.max(2, (d.total / peak) * 100)}%` }}
-                  />
-                );
-              })}
-            </div>
-          </>
+          <CalorieChart
+            days={periodDays}
+            min={calorieTarget.min}
+            max={calorieTarget.max}
+            expenditure={expenditure}
+          />
         );
-      }
 
       case "weight": {
         // Shares periodEma with the insights card above — daily weight is
@@ -276,18 +277,19 @@ export function AnalyticsView() {
               .sort(([a], [b]) => a.localeCompare(b))
               .map(([groupName, variants]) => (
                 <div className="row" key={groupName}>
-                  <div className="row-main">
+                  {/* Tapping opens the full variant timeline, same as
+                      vanilla — the summary alone hides the progression. */}
+                  <button
+                    type="button"
+                    className="row-main"
+                    onClick={() => setProgressionGroup(groupName)}
+                  >
                     <span className="row-name">{groupName}</span>
                     <span className="row-qty">
                       {variants.length} variante{variants.length === 1 ? "" : "s"} · actual:{" "}
                       {variants[variants.length - 1].name}
                     </span>
-                  </div>
-                  <span className="row-amount">
-                    {variants[variants.length - 1].bestSet
-                      ? formatSet(variants[variants.length - 1].bestSet!)
-                      : "—"}
-                  </span>
+                  </button>
                 </div>
               ))}
           </div>
@@ -313,16 +315,48 @@ export function AnalyticsView() {
 
       case "workouts": {
         const sessions = countSessionsInPeriod(workouts, dateKeys);
-        const weeks = periodDays.length / 7;
+        const weekBuckets = computeWeeklySessions(workouts, periodDays);
+        const avgPerWeek = weekBuckets.length ? sessions / weekBuckets.length : 0;
+        const week = computeCurrentWeekProgress(workouts, workoutGoal.weeklySessions);
+        const month = computeCurrentMonthProgress(workouts, workoutGoal.weeklySessions);
         return (
           <>
             <div className="totals-row">
               <span className="totals-label">Sesiones</span>
               <span className="totals-value">{sessions}</span>
             </div>
-            <p className="stat-note">
-              {weeks >= 1 ? `${(sessions / weeks).toFixed(1)} por semana de media` : "—"}
-            </p>
+            <p className="stat-note">{avgPerWeek.toFixed(1)} por semana de media</p>
+
+            <SessionsChart weeks={weekBuckets} />
+
+            <div className="goal-progress-row">
+              <div className="goal-progress-item">
+                <span className="goal-progress-label">Esta semana</span>
+                <span className={"goal-progress-value" + (week.done >= week.goal ? " goal-met" : "")}>
+                  {week.done}/{week.goal}
+                </span>
+              </div>
+              <div className="goal-progress-item">
+                <span className="goal-progress-label">Este mes</span>
+                <span className={"goal-progress-value" + (month.done >= month.goal ? " goal-met" : "")}>
+                  {month.done}/{month.goal}
+                </span>
+              </div>
+            </div>
+
+            {/* The only place the weekly goal can be set — without it the
+                two counters above have a target you can never change. */}
+            <label className="field">
+              <span>Objetivo semanal: {workoutGoal.weeklySessions} sesiones</span>
+              <input
+                type="range"
+                min="1"
+                max="7"
+                step="1"
+                value={workoutGoal.weeklySessions}
+                onChange={(e) => setWeeklySessionGoal(parseInt(e.target.value, 10))}
+              />
+            </label>
           </>
         );
       }
@@ -372,6 +406,15 @@ export function AnalyticsView() {
           </SortableContext>
         </DndContext>
       </main>
+
+      <ProgressionDetailModal
+        open={progressionGroup !== null}
+        groupName={progressionGroup}
+        variants={
+          progressionGroup ? (collectProgressionGroups(workouts).get(progressionGroup) ?? []) : []
+        }
+        onClose={() => setProgressionGroup(null)}
+      />
     </div>
   );
 }

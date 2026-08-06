@@ -1,6 +1,6 @@
 // Analytics derivations, ported from app.js.
 import type { AppState, ExerciseSet } from "../store/types";
-import { todayKey } from "./date";
+import { parseDateKey, todayKey } from "./date";
 import { sumMacros } from "./nutrition";
 import { isHoldSet } from "./workouts";
 
@@ -116,4 +116,82 @@ export function countSessionsInPeriod(workouts: AppState["workouts"], dateKeys: 
     if (workouts[k] && workouts[k].exercises.length > 0) count += 1;
   });
   return count;
+}
+
+// --- Weekly session goal ----------------------------------------------
+
+// Chunks the period into consecutive 7-day blocks, counting sessions in
+// each. Deliberately chunked from the start of the period rather than by
+// calendar week, so the bars stay the same width regardless of which
+// weekday the period happens to begin on.
+export interface WeekBucket {
+  label: string;
+  count: number;
+}
+
+export function computeWeeklySessions(
+  workouts: AppState["workouts"],
+  days: DayStat[]
+): WeekBucket[] {
+  const weeks: WeekBucket[] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    const chunk = days.slice(i, i + 7);
+    const count = chunk.filter((d) => hasSession(workouts, d.date)).length;
+    weeks.push({ label: chunk[0].date, count });
+  }
+  return weeks;
+}
+
+function hasSession(workouts: AppState["workouts"], dayKey: string): boolean {
+  return !!(workouts[dayKey] && workouts[dayKey].exercises.length > 0);
+}
+
+function mondayOf(date: Date): Date {
+  const d = new Date(date);
+  const dow = (d.getDay() + 6) % 7; // 0 = Monday
+  d.setDate(d.getDate() - dow);
+  return d;
+}
+
+function countSessionsBetween(workouts: AppState["workouts"], start: Date, end: Date): number {
+  let count = 0;
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const y = cursor.getFullYear();
+    const m = String(cursor.getMonth() + 1).padStart(2, "0");
+    const d = String(cursor.getDate()).padStart(2, "0");
+    if (hasSession(workouts, `${y}-${m}-${d}`)) count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
+
+export interface GoalProgress {
+  done: number;
+  goal: number;
+}
+
+export function computeCurrentWeekProgress(
+  workouts: AppState["workouts"],
+  weeklySessions: number
+): GoalProgress {
+  const today = parseDateKey(todayKey(0));
+  return { done: countSessionsBetween(workouts, mondayOf(today), today), goal: weeklySessions };
+}
+
+// The month's goal scales with how many weeks the month spans, so a
+// 5-week month asks for more than a 4-week one instead of quietly
+// making the same target easier.
+export function computeCurrentMonthProgress(
+  workouts: AppState["workouts"],
+  weeklySessions: number
+): GoalProgress {
+  const today = parseDateKey(todayKey(0));
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const weeksInMonth = Math.ceil(daysInMonth / 7);
+  return {
+    done: countSessionsBetween(workouts, start, today),
+    goal: weeklySessions * weeksInMonth
+  };
 }

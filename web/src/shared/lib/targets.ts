@@ -34,6 +34,22 @@ export function latestWeightEntry(weightLog: WeightEntry[]): WeightEntry | null 
   })[0];
 }
 
+// Maintenance calories at the most recent weigh-in — the "Gasto est."
+// reference line on the calorie chart. Unlike calculateCalorieRange this
+// ignores the goal entirely: it's what you burn, not what you're aiming
+// to eat.
+export function estimateCurrentTdee(profile: Profile, weightLog: WeightEntry[]): number | null {
+  const latest = latestWeightEntry(weightLog);
+  if (!profile || !latest) return null;
+  const { sex, age, heightCm, activityLevel } = profile;
+  if (!sex || !age || !heightCm || !activityLevel) return null;
+  const bmr =
+    sex === "female"
+      ? 10 * latest.weightKg + 6.25 * heightCm - 5 * age - 161
+      : 10 * latest.weightKg + 6.25 * heightCm - 5 * age + 5;
+  return bmr * (ACTIVITY_MULTIPLIERS[activityLevel] || ACTIVITY_MULTIPLIERS.sedentary);
+}
+
 export function calculateCalorieRange(profile: Profile, latestWeightKg: number | null): Range | null {
   if (!profile || !latestWeightKg) return null;
   const { sex, age, heightCm, activityLevel, goalType, rateKgPerWeek } = profile;
