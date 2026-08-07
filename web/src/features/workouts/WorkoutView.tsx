@@ -6,7 +6,6 @@ import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
 import { capitalizeFirst, formatDateLabel } from "../../shared/lib/format";
 import {
-  collectAllExerciseNames,
   computeWorkoutDayTotals,
   countWorkoutSessions,
   formatDuration,
@@ -62,7 +61,6 @@ export function WorkoutView() {
   const label = formatDateLabel(dayOffset);
   const totals = computeWorkoutDayTotals(exercises);
   const sessions = countWorkoutSessions(workouts);
-  const allNames = collectAllExerciseNames(workouts);
 
   const timerLogs = workouts[dayKey]?.timerLogs ?? [];
   const warmupLogs = timerLogs.filter((l) => l.category === "warmup");
@@ -77,12 +75,13 @@ export function WorkoutView() {
   // Logged only on natural completion — stopping early never happened.
   const run = useTimerRun((timer) => logTimerRun(dayKey, timer));
 
+  // The sheet stays open so several exercises can go in at once; the set
+  // logger opens when you tap the row back on the day card.
   const createExercise = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const id = addExercise(dayKey, trimmed);
-    setAddOpen(false);
-    setDetailId(id);
+    addExercise(dayKey, trimmed);
+    showToast(`${trimmed} añadido`);
   };
 
   const totalsNote =
@@ -238,7 +237,6 @@ export function WorkoutView() {
         onClose={() => setAddOpen(false)}
         dayKey={dayKey}
         exercises={exercises}
-        nameOptions={allNames}
         onAddExercise={createExercise}
         onRunTimer={(timer) => {
           setAddOpen(false);

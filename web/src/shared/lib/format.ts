@@ -1,6 +1,7 @@
 // Display formatting helpers, ported from app.js. Kept separate from
 // date.ts (pure date-key math) because these are locale/presentation
 // concerns rather than storage-key concerns.
+import { DAY_MS, parseDateKey } from "./date";
 
 export const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 export const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -42,4 +43,18 @@ export function formatTime(ts: number): string {
 // which reads better sentence-cased than the raw lowercase weekday array.
 export function capitalizeFirst(s: string): string {
   return s.replace(/^./, (c) => c.toUpperCase());
+}
+
+// "ayer", "hace 3 d", "hace 2 sem" — a rough sense of how stale a
+// previous performance is, which is all you need when picking what to do
+// next. Falls back to the date once "weeks ago" stops being useful.
+export function relativeDayLabel(dateStr: string, todayStr: string): string {
+  const diff = Math.round(
+    (parseDateKey(todayStr).getTime() - parseDateKey(dateStr).getTime()) / DAY_MS
+  );
+  if (diff <= 0) return "hoy";
+  if (diff === 1) return "ayer";
+  if (diff < 7) return `hace ${diff} d`;
+  if (diff < 28) return `hace ${Math.floor(diff / 7)} sem`;
+  return formatShortDate(dateStr);
 }

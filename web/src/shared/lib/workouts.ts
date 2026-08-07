@@ -120,10 +120,8 @@ export function countWorkoutSessions(workouts: AppState["workouts"]): number {
   return Object.values(workouts).filter((day) => day.exercises.length > 0).length;
 }
 
-// Distinct exercise names, most-used first — the quick-add row.
-// Every distinct exercise name ever logged, for the name-field's
-// autocomplete — unlike computeFrequentExercises this isn't ranked or
-// capped, it's the full vocabulary.
+// Every distinct exercise name ever logged — the full vocabulary,
+// unranked and uncapped.
 export function collectAllExerciseNames(workouts: AppState["workouts"]): string[] {
   const names = new Set<string>();
   Object.values(workouts).forEach((day) => {
@@ -153,4 +151,82 @@ export function computeFrequentExercises(workouts: AppState["workouts"], limit =
   return Array.from(tally.values())
     .sort((a, b) => b.count - a.count || b.lastAddedAt - a.lastAddedAt)
     .slice(0, limit);
+}
+
+// --- Exercise catalog (search) ----------------------------------------
+
+export interface CatalogEntry {
+  name: string;
+  /** Most recent day this was performed before today, if any. */
+  lastDayKey: string | null;
+  lastSummary: string | null;
+  lastAddedAt: number;
+}
+
+// Diacritic-insensitive so "platano" finds "Plátano" and "dominadas"
+// finds "Dominadas" regardless of how the keyboard behaved.
+export function foldText(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Every exercise ever logged, most-recently-used first, each with a short
+// "what you did last time" hint. This is the single list the Añadir sheet
+// searches — recents and the full history are the same thing ranked, not
+// two separate mechanisms.
+export function computeExerciseCatalog(
+  workouts: AppState["workouts"],
+  beforeDayKey: string
+): CatalogEntry[] {
+  const byName = new Map<string, CatalogEntry>();
+  Object.entries(workouts).forEach(([dayKey, day]) => {
+    day.exercises.forEach((ex) => {
+      const key = foldText(ex.name);
+      if (!key) return;
+      // Ranking ignores today on purpose: if adding an exercise bumped it
+      // to the top, the list would reshuffle under your thumb every time
+      // you tapped one. Today's additions are visible in the track above
+      // instead. Something first done today still appears, ranked last.
+      const rankAt = dayKey < beforeDayKey ? ex.addedAt : 0;
+      const existing = byName.get(key);
+      if (!existing) {
+        byName.set(key, { name: ex.name, lastDayKey: null, lastSummary: null, lastAddedAt: rankAt });
+      } else if (rankAt > existing.lastAddedAt) {
+        byName.set(key, { ...existing, name: ex.name, lastAddedAt: rankAt });
+      }
+    });
+  });
+
+  // The hint deliberately looks only at *earlier* days: "last time" during
+  // today's session means the previous session, not the set you just did.
+  byName.forEach((entry, key) => {
+    const last = findLastExerciseSets(workouts, entry.name, beforeDayKey);
+    if (last) {
+      byName.set(key, {
+        ...entry,
+        lastDayKey: last.dayKey,
+        lastSummary: last.ex.sets.map(formatSet).join(", ")
+      });
+    }
+  });
+
+  return Array.from(byName.values()).sort((a, b) => b.lastAddedAt - a.lastAddedAt);
+}
+
+// Ranks a query against the catalog: things that *start* with what you
+// typed come before things that merely contain it, so "pre" puts "Press
+// banca" above "Sentadilla con press".
+export function searchCatalog(catalog: CatalogEntry[], query: string): CatalogEntry[] {
+  const q = foldText(query);
+  if (!q) return catalog;
+  return catalog
+    .filter((e) => foldText(e.name).includes(q))
+    .sort((a, b) => {
+      const aStarts = foldText(a.name).startsWith(q) ? 0 : 1;
+      const bStarts = foldText(b.name).startsWith(q) ? 0 : 1;
+      return aStarts - bStarts || b.lastAddedAt - a.lastAddedAt;
+    });
 }

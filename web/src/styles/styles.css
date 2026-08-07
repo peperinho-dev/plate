@@ -1833,3 +1833,19 @@ button:focus-visible, input:focus-visible {
   padding: 6px 0 2px;
   font-size: 12px;
 }
+
+/* What you've already added, above the search — the sheet stays open
+   while you build a session, so this is both the receipt for "did that
+   land?" and the undo. */
+.added-track {
+  margin: 12px 0 4px;
+}
+.added-track-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
