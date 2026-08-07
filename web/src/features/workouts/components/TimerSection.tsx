@@ -28,7 +28,7 @@ export function TimerSection({ category, label, expanded, onToggle, onRun }: Tim
   const [builderOpen, setBuilderOpen] = useState(false);
 
   return (
-    <div className="quick-section">
+    <div className={"quick-section" + (expanded ? "" : " quick-section--collapsed")}>
       <div className="quick-label-row">
         <button type="button" className="quick-label-toggle" onClick={onToggle}>
           <span className="quick-label">{label}</span>

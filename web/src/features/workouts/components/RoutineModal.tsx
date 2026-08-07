@@ -73,7 +73,7 @@ export function RoutineModal({ open, onClose, initialExercises, nameOptions }: R
           ))}
         </div>
       ) : (
-        <p className="empty-state">Añade al menos un ejercicio.</p>
+        <p className="empty-state empty-state--inline">Añade al menos un ejercicio.</p>
       )}
 
       <div className="form">

@@ -90,7 +90,7 @@ export function TimerBuilderModal({ open, category, onClose }: TimerBuilderModal
           ))}
         </div>
       ) : (
-        <p className="empty-state">Añade al menos un intervalo.</p>
+        <p className="empty-state empty-state--inline">Añade al menos un intervalo.</p>
       )}
 
       <div className="form">

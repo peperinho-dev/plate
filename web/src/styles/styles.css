@@ -1806,3 +1806,30 @@ button:focus-visible, input:focus-visible {
   letter-spacing: 0.04em;
   margin-bottom: 4px;
 }
+
+/* The Añadir sheet stacks a form on top of the pickers. Without a rule
+   between them the primary button sits flush against the first picker
+   header and the two read as one block. Same values as .form--divided so
+   the rhythm matches the rest of the app. */
+.workout-pickers {
+  padding-top: 16px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+/* A collapsed picker is only its header, so the 8px that normally
+   separates that header from its chips is dead space, and the 16px below
+   makes the collapsed rows drift apart. Tighten both so expanded and
+   collapsed sections keep the same visual rhythm. */
+.quick-section--collapsed { margin-bottom: 10px; }
+.quick-section--collapsed .quick-label-row { margin-bottom: 0; }
+.quick-section--collapsed:last-child { margin-bottom: 0; }
+
+/* .empty-state is sized for an empty card. Used as a placeholder for a
+   short list inside a sheet — the intervals of a timer, the exercises of
+   a routine — its 22px padding leaves a hole between the heading and the
+   row that fills it. */
+.empty-state--inline {
+  padding: 6px 0 2px;
+  font-size: 12px;
+}

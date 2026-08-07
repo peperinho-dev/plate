@@ -187,7 +187,18 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
   const currentInterval = timer && phase === "active" ? timer.intervals[index] : null;
   const nextInterval = timer && phase === "active" ? timer.intervals[index + 1] : null;
   const total = phase === "countdown" ? TIMER_COUNTDOWN_SECONDS : (currentInterval?.seconds ?? 1);
-  const progress = total > 0 ? (total - remaining) / total : 0;
+
+  // Aims one second ahead of the current tick, because the ring is
+  // interpolated by a CSS transition rather than redrawn per frame: each
+  // target is where the ring should be a second from now, and the
+  // transition walks it there. Aiming *at* the current tick instead left
+  // the circle permanently one second short — it could only ever reach
+  // (total-1)/total, since `remaining` jumps from 1 straight to the next
+  // interval and never renders 0. Most visible on short steps: a 3s hold
+  // closed only two thirds of the ring.
+  // Resetting for the next interval doesn't animate backwards because the
+  // ring is remounted on `flash`.
+  const progress = total > 0 ? Math.min(1, (total - remaining + 1) / total) : 0;
 
   return {
     timer,

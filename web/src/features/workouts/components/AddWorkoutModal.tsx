@@ -85,6 +85,7 @@ export function AddWorkoutModal({
 
         {/* Order follows how a session actually runs: warm up, do the
             work, stretch. The day card lists them back in the same order. */}
+        <div className="workout-pickers">
         <TimerSection
           category="warmup"
           label="Calentamiento"
@@ -93,7 +94,9 @@ export function AddWorkoutModal({
           onRun={onRunTimer}
         />
 
-        <div className="quick-section">
+        <div
+          className={"quick-section" + (isExpanded("routines") ? "" : " quick-section--collapsed")}
+        >
           <div className="quick-label-row">
             <button type="button" className="quick-label-toggle" onClick={() => toggle("routines")}>
               <span className="quick-label">Rutinas</span>
@@ -152,7 +155,9 @@ export function AddWorkoutModal({
         />
 
         {frequent.length > 0 && (
-          <div className="quick-section">
+          <div
+            className={"quick-section" + (isExpanded("exercises") ? "" : " quick-section--collapsed")}
+          >
             <div className="quick-label-row">
               <button
                 type="button"
@@ -183,6 +188,7 @@ export function AddWorkoutModal({
             )}
           </div>
         )}
+        </div>
       </Modal>
 
       <RoutineModal
