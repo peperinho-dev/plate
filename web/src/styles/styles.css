@@ -1757,3 +1757,33 @@ button:focus-visible, input:focus-visible {
 }
 .calorie-bar.is-in-range { background: var(--accent); }
 .calorie-bar.is-empty { background: var(--line); }
+
+/* ---------------------------------------------------------------------
+   React-app additions — deliberate divergences from the ported vanilla
+   stylesheet. Everything above this line is byte-identical to app.js's
+   styles.css; keep new rules down here so that stays easy to verify.
+   --------------------------------------------------------------------- */
+
+/* The day's totals now lead the Nutrición tab rather than closing it, so
+   the number you opened the app to check is the first thing on screen.
+   As its own card it no longer needs the rule that separated it from the
+   entries above it. */
+.card--totals .totals {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Fibre/sugar/sodium are worth glancing at, not worth a third of the
+   card. One quiet line instead of a bordered three-column block. */
+.micro-row--compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.micro-row--compact .micro-sep { opacity: 0.5; }

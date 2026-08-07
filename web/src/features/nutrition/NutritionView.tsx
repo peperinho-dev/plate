@@ -235,6 +235,12 @@ export function NutritionView() {
       <AdaptiveBanner />
 
       <main className="content">
+        {/* Totals lead the tab: the number you opened the app to check
+            shouldn't be below a scrollable list of everything you ate. */}
+        <div className="card card--totals">
+          <DayTotals entries={entries} dayKey={dayKey} />
+        </div>
+
         <div className="card">
           <div className="card-date-row">
             <div className="card-date">
@@ -312,8 +318,6 @@ export function NutritionView() {
               )}
             </div>
           )}
-
-          <DayTotals entries={entries} dayKey={dayKey} />
         </div>
       </main>
 

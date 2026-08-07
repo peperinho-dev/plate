@@ -81,20 +81,15 @@ export function DayTotals({ entries, dayKey }: DayTotalsProps) {
         </div>
       )}
 
+      {/* Secondary to calories and macros, so it reads as a footnote
+          rather than a third block of the same weight. */}
       {micros.hasAny && (
-        <div className="micro-row">
-          <div className="micro-item">
-            <span className="micro-label">Fibra</span>
-            <span className="micro-value">{Math.round(micros.fiber)} g</span>
-          </div>
-          <div className="micro-item">
-            <span className="micro-label">Azúcar</span>
-            <span className="micro-value">{Math.round(micros.sugar)} g</span>
-          </div>
-          <div className="micro-item">
-            <span className="micro-label">Sodio</span>
-            <span className="micro-value">{Math.round(micros.sodium)} mg</span>
-          </div>
+        <div className="micro-row--compact">
+          <span>Fibra {Math.round(micros.fiber)} g</span>
+          <span className="micro-sep">·</span>
+          <span>Azúcar {Math.round(micros.sugar)} g</span>
+          <span className="micro-sep">·</span>
+          <span>Sodio {Math.round(micros.sodium)} mg</span>
         </div>
       )}
     </div>
