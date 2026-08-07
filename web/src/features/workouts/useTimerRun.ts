@@ -7,36 +7,10 @@
 // purity — which is exactly what double-logged the old rest timer.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TimerPreset } from "../../shared/store/types";
+import { playBeep, unlockBeep } from "./beep";
 
 export const TIMER_COUNTDOWN_SECONDS = 5;
 export const TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * 90;
-
-let audioCtx: AudioContext | null = null;
-
-function ensureAudioContext() {
-  if (!audioCtx) {
-    const Ctor =
-      window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (Ctor) audioCtx = new Ctor();
-  }
-  if (audioCtx?.state === "suspended") void audioCtx.resume();
-  return audioCtx;
-}
-
-function playBeep() {
-  const ctx = audioCtx;
-  if (!ctx) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.value = 880;
-  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.42);
-}
 
 export type RunPhase = "idle" | "countdown" | "active" | "done";
 
@@ -143,13 +117,10 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
   const start = useCallback(
     (preset: TimerPreset) => {
       if (preset.intervals.length === 0) return;
-      // Both of these must happen synchronously inside the triggering tap.
-      // Creating the context isn't enough on iOS — audio stays blocked
-      // until something has actually *played* from a gesture, so every
-      // later beep (fired from a timer callback, with no gesture in
-      // sight) was silently dropped. Beeping now also confirms the tap.
-      ensureAudioContext();
-      playBeep();
+      // Must happen synchronously inside the triggering tap: iOS only
+      // allows playback that traces back to a gesture, and every beep that
+      // matters fires later from a timer callback. Also confirms the tap.
+      unlockBeep();
       timerRef.current = preset;
       setTimer(preset);
       setPaused(false);
