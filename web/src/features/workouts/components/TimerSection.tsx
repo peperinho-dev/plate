@@ -1,9 +1,10 @@
-// Warmup / stretch timer presets: tap one to run it, "+ Nuevo" to build
-// one. The chips show total duration and step count so a three-step
-// mobility routine reads differently from a single 10-minute jog.
+// Warmup / stretch timer presets inside the "Añadir" sheet: tap one to
+// run it, "+ Nueva" to build one. Chips show total duration and step
+// count, so a three-step mobility routine reads differently from a single
+// ten-minute jog.
 import { useState } from "react";
 import { useAppStore } from "../../../shared/store";
-import { XIcon } from "../../../shared/components/Icons";
+import { ChevronDown, XIcon } from "../../../shared/components/Icons";
 import { formatDuration } from "../../../shared/lib/workouts";
 import type { TimerCategory, TimerPreset } from "../../../shared/store/types";
 import { removeTimerPreset, timerTotalSeconds } from "../actions";
@@ -12,10 +13,12 @@ import { TimerBuilderModal } from "./TimerBuilderModal";
 interface TimerSectionProps {
   category: TimerCategory;
   label: string;
+  expanded: boolean;
+  onToggle: () => void;
   onRun: (timer: TimerPreset) => void;
 }
 
-export function TimerSection({ category, label, onRun }: TimerSectionProps) {
+export function TimerSection({ category, label, expanded, onToggle, onRun }: TimerSectionProps) {
   // The selector must return a stable reference: filtering inside it
   // would build a new array on every call, so the store's snapshot would
   // never compare equal and React would re-render forever.
@@ -27,24 +30,31 @@ export function TimerSection({ category, label, onRun }: TimerSectionProps) {
   return (
     <div className="quick-section">
       <div className="quick-label-row">
-        <div className="quick-label">{label}</div>
-        <div className="quick-label-actions">
-          <button type="button" className="link-btn" onClick={() => setBuilderOpen(true)}>
-            + Nuevo
-          </button>
-          {timers.length > 0 && (
-            <button
-              type="button"
-              className="link-btn link-btn--muted"
-              onClick={() => setEditing((v) => !v)}
-            >
-              {editing ? "Listo" : "Editar"}
+        <button type="button" className="quick-label-toggle" onClick={onToggle}>
+          <span className="quick-label">{label}</span>
+          <span className={"quick-label-chevron" + (expanded ? "" : " is-collapsed")}>
+            <ChevronDown />
+          </span>
+        </button>
+        {expanded && (
+          <div className="quick-label-actions">
+            <button type="button" className="link-btn" onClick={() => setBuilderOpen(true)}>
+              + Nueva
             </button>
-          )}
-        </div>
+            {timers.length > 0 && (
+              <button
+                type="button"
+                className="link-btn link-btn--muted"
+                onClick={() => setEditing((v) => !v)}
+              >
+                {editing ? "Listo" : "Editar"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {timers.length > 0 && (
+      {expanded && timers.length > 0 && (
         <div className="quick-row">
           {timers.map((t) => (
             <button

@@ -279,28 +279,13 @@ export function NutritionView() {
           </div>
 
           {entries.length > 0 ? (
-            <>
-              <EntryList
-                entries={entries}
-                dayKey={dayKey}
-                onEdit={openEntryForEdit}
-                onEditGroup={setRenameEntry}
-                onEditItem={(e, index) => setGramsTarget({ entryId: e.id, index })}
-              />
-              {/*
-                Multi-select has no visible control any more, so the gesture
-                needs teaching. Shown only when there's actually more than
-                one thing to select, and never while already selecting.
-              */}
-              {entries.length > 1 && !selectionMode && (
-                <p
-                  className="stat-note"
-                  style={{ textAlign: "center", fontSize: 11, opacity: 0.55 }}
-                >
-                  Mantén pulsado para seleccionar · desliza para quitar
-                </p>
-              )}
-            </>
+            <EntryList
+              entries={entries}
+              dayKey={dayKey}
+              onEdit={openEntryForEdit}
+              onEditGroup={setRenameEntry}
+              onEditItem={(e, index) => setGramsTarget({ entryId: e.id, index })}
+            />
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">

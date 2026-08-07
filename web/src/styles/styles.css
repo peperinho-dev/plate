@@ -1787,3 +1787,22 @@ button:focus-visible, input:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .micro-row--compact .micro-sep { opacity: 0.5; }
+
+/* The day's log, grouped into calentamiento / series / estiramientos so
+   the session reads in the order it happened rather than as one flat
+   list. The rule between blocks is the same hairline the rows already
+   use, so the grouping reads as structure, not decoration. */
+.workout-block + .workout-block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.workout-block-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
