@@ -22,6 +22,7 @@ import { ExerciseEditModal } from "./components/ExerciseEditModal";
 import { AddExerciseModal } from "./components/AddExerciseModal";
 import { TimerSection } from "./components/TimerSection";
 import { TimerRunModal } from "./components/TimerRunModal";
+import { RoutineModal } from "./components/RoutineModal";
 import { useTimerRun } from "./useTimerRun";
 import {
   addExercise,
@@ -30,7 +31,6 @@ import {
   logTimerRun,
   removeRoutine,
   removeTimerLog,
-  saveRoutine,
   startRoutine
 } from "./actions";
 
@@ -53,6 +53,10 @@ export function WorkoutView() {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [routinesEditing, setRoutinesEditing] = useState(false);
+  const [routineOpen, setRoutineOpen] = useState(false);
+  // Seeds the builder with today's session for "Guardar día"; empty for
+  // a routine written from scratch.
+  const [routineSeed, setRoutineSeed] = useState<string[]>([]);
   const routines = useAppStore((s) => s.routines);
 
   const detailExercise = exercises.find((e) => e.id === detailId) ?? null;
@@ -218,20 +222,16 @@ export function WorkoutView() {
             <div className="quick-label-row">
               <div className="quick-label">Rutinas</div>
               <div className="quick-label-actions">
-                {exercises.length > 0 && (
-                  <button
-                    type="button"
-                    className="link-btn"
-                    onClick={() => {
-                      const name = window.prompt("Nombre de la rutina");
-                      if (!name?.trim()) return;
-                      saveRoutine(name.trim(), exercises.map((e) => e.name));
-                      showToast("Rutina guardada");
-                    }}
-                  >
-                    + Guardar día
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => {
+                    setRoutineSeed(exercises.map((e) => e.name));
+                    setRoutineOpen(true);
+                  }}
+                >
+                  {exercises.length > 0 ? "+ Guardar día" : "+ Nueva"}
+                </button>
                 {routines.length > 0 && (
                   <button
                     type="button"
@@ -298,6 +298,12 @@ export function WorkoutView() {
         exercise={detailExercise}
         dayKey={dayKey}
         onClose={() => setEditOpen(false)}
+      />
+      <RoutineModal
+        open={routineOpen}
+        onClose={() => setRoutineOpen(false)}
+        initialExercises={routineSeed}
+        nameOptions={allNames}
       />
       <TimerRunModal run={run} />
       <CalendarModal />
