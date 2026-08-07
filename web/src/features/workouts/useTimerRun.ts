@@ -143,7 +143,13 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
   const start = useCallback(
     (preset: TimerPreset) => {
       if (preset.intervals.length === 0) return;
-      ensureAudioContext(); // must happen inside the triggering gesture
+      // Both of these must happen synchronously inside the triggering tap.
+      // Creating the context isn't enough on iOS — audio stays blocked
+      // until something has actually *played* from a gesture, so every
+      // later beep (fired from a timer callback, with no gesture in
+      // sight) was silently dropped. Beeping now also confirms the tap.
+      ensureAudioContext();
+      playBeep();
       timerRef.current = preset;
       setTimer(preset);
       setPaused(false);
@@ -186,19 +192,12 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
 
   const currentInterval = timer && phase === "active" ? timer.intervals[index] : null;
   const nextInterval = timer && phase === "active" ? timer.intervals[index + 1] : null;
-  const total = phase === "countdown" ? TIMER_COUNTDOWN_SECONDS : (currentInterval?.seconds ?? 1);
-
-  // Aims one second ahead of the current tick, because the ring is
-  // interpolated by a CSS transition rather than redrawn per frame: each
-  // target is where the ring should be a second from now, and the
-  // transition walks it there. Aiming *at* the current tick instead left
-  // the circle permanently one second short — it could only ever reach
-  // (total-1)/total, since `remaining` jumps from 1 straight to the next
-  // interval and never renders 0. Most visible on short steps: a 3s hold
-  // closed only two thirds of the ring.
-  // Resetting for the next interval doesn't animate backwards because the
-  // ring is remounted on `flash`.
-  const progress = total > 0 ? Math.min(1, (total - remaining + 1) / total) : 0;
+  // How long the ring has to fill. The ring is driven by a single CSS
+  // animation spanning the whole step rather than by per-tick updates:
+  // stepping a transition once a second meant it animated for 0.9s then
+  // sat still for 0.1s, which read as a stutter every second, and any
+  // jitter in the interval timing showed up directly in the motion.
+  const ringSeconds = phase === "countdown" ? TIMER_COUNTDOWN_SECONDS : (currentInterval?.seconds ?? 0);
 
   return {
     timer,
@@ -209,7 +208,7 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
     flash,
     currentInterval,
     nextInterval,
-    progress,
+    ringSeconds,
     start,
     stop,
     togglePause,

@@ -4,14 +4,20 @@
 // remaining time at a glance without focusing on digits. The 5s lead-in
 // exists so you can put the phone down and get into position before the
 // first interval starts counting.
+import type { CSSProperties } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { formatDuration } from "../../../shared/lib/workouts";
 import { TIMER_RING_CIRCUMFERENCE, type useTimerRun } from "../useTimerRun";
 
 type Run = ReturnType<typeof useTimerRun>;
 
+// The keyframes read the circumference off the element so the value stays
+// defined once, in JS, next to the radius it derives from.
+type RingStyle = CSSProperties & Record<"--ring-circumference", string>;
+
 export function TimerRunModal({ run }: { run: Run }) {
-  const { timer, phase, index, remaining, paused, flash, currentInterval, nextInterval, progress } = run;
+  const { timer, phase, index, remaining, paused, flash, currentInterval, nextInterval, ringSeconds } =
+    run;
 
   // Closing clears the timer, so there is nothing to animate out — same as
   // the vanilla sheet, which also just hid itself.
@@ -26,6 +32,17 @@ export function TimerRunModal({ run }: { run: Run }) {
 
   const centreName = done ? "¡Hecho!" : phase === "countdown" ? timer.intervals[0].name : (currentInterval?.name ?? "—");
 
+  const ringStyle: RingStyle = {
+    "--ring-circumference": `${TIMER_RING_CIRCUMFERENCE}px`,
+    strokeDasharray: TIMER_RING_CIRCUMFERENCE,
+    ...(done
+      ? { strokeDashoffset: 0 }
+      : {
+          animationDuration: `${ringSeconds}s`,
+          animationPlayState: paused ? "paused" : "running"
+        })
+  };
+
   const nextLine = done
     ? `Total: ${formatDuration(timer.intervals.reduce((sum, iv) => sum + iv.seconds, 0))}`
     : phase === "countdown"
@@ -33,8 +50,6 @@ export function TimerRunModal({ run }: { run: Run }) {
       : nextInterval
         ? `Después: ${nextInterval.name} · ${formatDuration(nextInterval.seconds)}`
         : "Último paso";
-
-  const dashoffset = done ? 0 : TIMER_RING_CIRCUMFERENCE * (1 - progress);
 
   return (
     <Modal open title={timer.name} onClose={run.stop}>
@@ -46,17 +61,18 @@ export function TimerRunModal({ run }: { run: Run }) {
           <svg className="timer-run-ring" viewBox="0 0 200 200">
             <circle className="timer-run-ring-track" cx="100" cy="100" r="90" />
             <circle
+              // Keyed per step so the fill animation restarts from empty
+              // on each interval rather than resuming mid-way.
+              key={`${phase}-${index}`}
               className={
                 "timer-run-ring-progress" +
+                (done ? "" : " timer-run-ring-progress--animated") +
                 (timer.category === "stretch" ? " timer-run-ring-progress--stretch" : "")
               }
               cx="100"
               cy="100"
               r="90"
-              style={{
-                strokeDasharray: TIMER_RING_CIRCUMFERENCE,
-                strokeDashoffset: dashoffset
-              }}
+              style={ringStyle}
             />
           </svg>
           <div className="timer-run-center">
