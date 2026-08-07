@@ -19,6 +19,9 @@ import { TargetModal } from "../profile/TargetModal";
 import { BackupBanner } from "../profile/BackupBanner";
 import { AdaptiveBanner } from "../profile/AdaptiveBanner";
 import { RecipeModal } from "./components/RecipeModal";
+import { GroupMealModal } from "./components/GroupMealModal";
+import { RenameGroupModal } from "./components/RenameGroupModal";
+import { IngredientGramsModal } from "./components/IngredientGramsModal";
 import { entryFromRecipe } from "./recipeActions";
 import { sumFoodItems } from "../../shared/lib/foodItems";
 import { QuickAddRows } from "./components/QuickAddRows";
@@ -26,6 +29,9 @@ import { computeHourlyGoTos, computeRecentItems, favoriteToQuickItem, type Quick
 import {
   addEntry,
   addFavorite,
+  groupEntries,
+  renameGroupEntry,
+  setGroupItemGrams,
   pasteEntriesToDay,
   rememberScannedProduct,
   removeFavorite,
@@ -92,6 +98,13 @@ export function NutritionView() {
   const [recipesEditing, setRecipesEditing] = useState(false);
   const [recipeModalOpen, setRecipeModalOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [renameEntry, setRenameEntry] = useState<Entry | null>(null);
+  // Which ingredient of which logged meal the grams sheet is editing.
+  const [gramsTarget, setGramsTarget] = useState<{ entryId: string; index: number } | null>(null);
+  const gramsItem = gramsTarget
+    ? (entries.find((e) => e.id === gramsTarget.entryId)?.items?.[gramsTarget.index] ?? null)
+    : null;
 
   const favorites = useAppStore((s) => s.favorites);
   const recipes = useAppStore((s) => s.recipes);
@@ -261,7 +274,13 @@ export function NutritionView() {
 
           {entries.length > 0 ? (
             <>
-              <EntryList entries={entries} dayKey={dayKey} onEdit={openEntryForEdit} />
+              <EntryList
+                entries={entries}
+                dayKey={dayKey}
+                onEdit={openEntryForEdit}
+                onEditGroup={setRenameEntry}
+                onEditItem={(e, index) => setGramsTarget({ entryId: e.id, index })}
+              />
               {/*
                 Multi-select has no visible control any more, so the gesture
                 needs teaching. Shown only when there's actually more than
@@ -299,17 +318,60 @@ export function NutritionView() {
       </main>
 
       <div className="action-bar">
-        <button className="btn btn--primary btn--block" onClick={() => setScanOpen(true)}>
-          <span className="btn-icon">
-            <ScanIcon />
-          </span>{" "}
-          Escanear
-        </button>
-        <button className="btn btn--secondary btn--block" onClick={openManualAdd}>
-          <span className="btn-icon">+</span> Añadir a mano
-        </button>
+        {selectionMode ? (
+          // Adding food mid-selection makes no sense, so the add buttons
+          // step aside for the one action the selection is for.
+          <button
+            className="btn btn--primary btn--block"
+            disabled={selectedCount < 2}
+            onClick={() => setGroupOpen(true)}
+          >
+            Agrupar ({selectedCount})
+          </button>
+        ) : (
+          <>
+            <button className="btn btn--primary btn--block" onClick={() => setScanOpen(true)}>
+              <span className="btn-icon">
+                <ScanIcon />
+              </span>{" "}
+              Escanear
+            </button>
+            <button className="btn btn--secondary btn--block" onClick={openManualAdd}>
+              <span className="btn-icon">+</span> Añadir a mano
+            </button>
+          </>
+        )}
       </div>
 
+      <GroupMealModal
+        open={groupOpen}
+        count={selectedCount}
+        onClose={() => setGroupOpen(false)}
+        onConfirm={(name, alsoSaveRecipe) => {
+          groupEntries(dayKey, selectedEntryIds, name, alsoSaveRecipe);
+          setGroupOpen(false);
+          setSelectionMode(false);
+          showToast(alsoSaveRecipe ? "Comida agrupada y guardada como receta" : "Comida agrupada");
+        }}
+      />
+      <RenameGroupModal
+        open={renameEntry !== null}
+        entry={renameEntry}
+        onClose={() => setRenameEntry(null)}
+        onSave={(name, time) => {
+          if (renameEntry) renameGroupEntry(dayKey, renameEntry.id, name, time || null);
+          setRenameEntry(null);
+        }}
+      />
+      <IngredientGramsModal
+        open={gramsTarget !== null}
+        item={gramsItem}
+        onClose={() => setGramsTarget(null)}
+        onSave={(grams) => {
+          if (gramsTarget) setGroupItemGrams(dayKey, gramsTarget.entryId, gramsTarget.index, grams);
+          setGramsTarget(null);
+        }}
+      />
       <PasteTargetSheet />
       <CalendarModal />
       <EntryModal

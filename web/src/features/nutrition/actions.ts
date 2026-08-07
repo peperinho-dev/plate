@@ -180,3 +180,114 @@ export function updateGroupItem(dayKey: string, entryId: string, itemIndex: numb
     );
   });
 }
+
+// --- Grouping ---------------------------------------------------------
+
+// Converts an already-logged flat entry into a re-scalable food item,
+// using the same "treat the logged amount as the 100g reference" fallback
+// applied everywhere else an item lacks an explicit basis.
+function entryToFoodItem(entry: Entry): FoodItemBasis {
+  return {
+    name: entry.name,
+    grams: 100,
+    kcalPer100: entry.calories,
+    proteinPer100: entry.protein || 0,
+    fatPer100: entry.fat || 0,
+    carbsPer100: entry.carbs || 0
+  };
+}
+
+// Collapses several logged entries into one "meal" entry. Returns the new
+// entry's id, or null if there was nothing to group.
+export function groupEntries(
+  dayKey: string,
+  entryIds: Set<string>,
+  name: string,
+  alsoSaveRecipe: boolean
+): string | null {
+  if (entryIds.size < 2) return null;
+  const groupedId = newId();
+  useAppStore.setState((s) => {
+    const day = s.days[dayKey];
+    if (!day) return {};
+    const selected = day.entries.filter((e) => entryIds.has(e.id));
+    if (selected.length < 2) return {};
+
+    // An already-grouped entry contributes its own items rather than being
+    // re-wrapped as one opaque ingredient, so grouping never nests.
+    const items = selected.flatMap((e) =>
+      e.items ? e.items.map((it) => ({ ...it })) : [entryToFoodItem(e)]
+    );
+    const totals = sumFoodItems(items);
+    const grouped: Entry = {
+      id: groupedId,
+      name,
+      calories: totals.calories,
+      qtyLabel: `${items.length} ingr.`,
+      protein: totals.protein,
+      fat: totals.fat,
+      carbs: totals.carbs,
+      // The per-100g basis carries no micro data, so these stay zero
+      // rather than inventing numbers.
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      items,
+      // Keeps the meal in the hour group its earliest component was in,
+      // instead of jumping to "now".
+      addedAt: Math.min(...selected.map((e) => e.addedAt))
+    };
+
+    const recipes = s.recipes.slice();
+    if (alsoSaveRecipe) {
+      const recipeId = newId();
+      recipes.push({ id: recipeId, name, items: items.map((it) => ({ ...it })), createdAt: Date.now() });
+      grouped.sourceRecipeId = recipeId;
+    }
+
+    const remaining = day.entries.filter((e) => !entryIds.has(e.id));
+    return { ...updateDay(s, dayKey, [...remaining, grouped]), recipes };
+  });
+  return groupedId;
+}
+
+// Renaming only ever touches the logged entry, never the recipe it came
+// from — the recipe's own name is a separate, deliberate decision (via
+// "Actualizar receta"), the same split grams edits follow.
+export function renameGroupEntry(dayKey: string, entryId: string, name: string, time: string | null) {
+  useAppStore.setState((s) => {
+    const day = s.days[dayKey];
+    if (!day) return {};
+    return updateDay(
+      s,
+      dayKey,
+      day.entries.map((e) => {
+        if (e.id !== entryId) return e;
+        let addedAt = e.addedAt;
+        if (time) {
+          const [h, m] = time.split(":").map(Number);
+          const d = new Date(addedAt);
+          d.setHours(h, m, 0, 0);
+          addedAt = d.getTime();
+        }
+        return { ...e, name, addedAt };
+      })
+    );
+  });
+}
+
+export function setGroupItemGrams(dayKey: string, entryId: string, itemIndex: number, grams: number) {
+  useAppStore.setState((s) => {
+    const day = s.days[dayKey];
+    if (!day) return {};
+    return updateDay(
+      s,
+      dayKey,
+      day.entries.map((e) => {
+        if (e.id !== entryId || !e.items) return e;
+        const items = e.items.map((it, i) => (i === itemIndex ? { ...it, grams } : it));
+        return recomputeGroupEntry({ ...e, items });
+      })
+    );
+  });
+}

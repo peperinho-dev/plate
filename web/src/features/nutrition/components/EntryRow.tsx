@@ -17,6 +17,10 @@ interface EntryRowProps {
   entry: Entry;
   dayKey: string;
   onEdit: (entry: Entry) => void;
+  /** Opens the rename/time sheet for a grouped meal. */
+  onEditGroup: (entry: Entry) => void;
+  /** Opens the grams editor for one ingredient of a grouped meal. */
+  onEditItem: (entry: Entry, itemIndex: number) => void;
 }
 
 function MacroLine({ entry }: { entry: Entry }) {
@@ -28,7 +32,7 @@ function MacroLine({ entry }: { entry: Entry }) {
   );
 }
 
-export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
+export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: EntryRowProps) {
   const expandedGroups = useUiStore((s) => s.expandedGroups);
   const toggleGroup = useUiStore((s) => s.toggleGroup);
   const selectionMode = useUiStore((s) => s.selectionMode);
@@ -154,7 +158,11 @@ export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
             const scaled = scaleFoodItem(item);
             return (
               <div className="sub-row" key={`${entry.id}-${i}`}>
-                <button type="button" className="sub-row-main">
+                <button
+                  type="button"
+                  className="sub-row-main"
+                  onClick={() => onEditItem(entry, i)}
+                >
                   <span className="sub-row-name">{item.name}</span>
                   <span className="sub-row-qty">{Math.round(item.grams)} g</span>
                 </button>
@@ -172,21 +180,30 @@ export function EntryRow({ entry, dayKey, onEdit }: EntryRowProps) {
           </div>
         )}
 
-        {/* Offered only when the logged meal has drifted from its recipe —
-            editing an ingredient "just for today" is a snapshot, so pushing
-            it back to the recipe has to be an explicit choice. */}
-        {isExpanded && driftedRecipe && (
+        {isExpanded && (
           <div className="group-actions">
             <button
               type="button"
-              className="link-btn group-update-banner"
-              onClick={() => {
-                commitGroupToRecipe(entry);
-                showToast(`Receta "${driftedRecipe.name}" actualizada`);
-              }}
+              className="link-btn link-btn--muted group-rename-btn"
+              onClick={() => onEditGroup(entry)}
             >
-              Actualizar receta con estos cambios →
+              Editar
             </button>
+            {/* Offered only when the logged meal has drifted from its
+                recipe — editing an ingredient "just for today" is a
+                snapshot, so pushing it back has to be an explicit choice. */}
+            {driftedRecipe && (
+              <button
+                type="button"
+                className="link-btn group-update-banner"
+                onClick={() => {
+                  commitGroupToRecipe(entry);
+                  showToast(`Receta "${driftedRecipe.name}" actualizada`);
+                }}
+              >
+                Actualizar receta con estos cambios →
+              </button>
+            )}
           </div>
         )}
       </div>

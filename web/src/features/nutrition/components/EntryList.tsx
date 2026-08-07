@@ -12,9 +12,11 @@ interface EntryListProps {
   entries: Entry[];
   dayKey: string;
   onEdit: (entry: Entry) => void;
+  onEditGroup: (entry: Entry) => void;
+  onEditItem: (entry: Entry, itemIndex: number) => void;
 }
 
-export function EntryList({ entries, dayKey, onEdit }: EntryListProps) {
+export function EntryList({ entries, dayKey, onEdit, onEditGroup, onEditItem }: EntryListProps) {
   const expandedHourGroups = useUiStore((s) => s.expandedHourGroups);
   const toggleHourGroup = useUiStore((s) => s.toggleHourGroup);
   const groups = groupEntriesByHour(entries);
@@ -54,7 +56,7 @@ export function EntryList({ entries, dayKey, onEdit }: EntryListProps) {
                       transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
                       style={{ overflow: "hidden" }}
                     >
-                      <EntryRow entry={entry} dayKey={dayKey} onEdit={onEdit} />
+                      <EntryRow entry={entry} dayKey={dayKey} onEdit={onEdit} onEditGroup={onEditGroup} onEditItem={onEditItem} />
                     </motion.div>
                   ))}
                 </AnimatePresence>
