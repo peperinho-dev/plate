@@ -2449,3 +2449,39 @@ button:focus-visible, input:focus-visible {
   width: var(--row-affordance);
   height: var(--row-affordance);
 }
+
+/* The + on a search result. Same size as the other row affordances, and
+   deliberately quieter than the row itself: tapping the row is still the
+   primary action, this is the "and also" beside it. */
+.row-add {
+  flex: 0 0 auto;
+  width: var(--row-affordance);
+  height: var(--row-affordance);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  transition: background 0.12s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.row-add:active { transform: scale(0.88); background: var(--accent-soft); color: var(--accent-ink); }
+
+/* "habitual" beside a food's name. It had no styles at all, so it ran
+   straight into the name — "Ensalada mixtahabitual". A quiet pill: it
+   qualifies the name rather than competing with it. */
+.row-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}

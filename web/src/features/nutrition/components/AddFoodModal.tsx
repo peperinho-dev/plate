@@ -11,7 +11,7 @@
 // is one pass with a review step, instead of four trips through a form.
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
-import { ScanIcon, XIcon } from "../../../shared/components/Icons";
+import { PlusIcon, ScanIcon, XIcon } from "../../../shared/components/Icons";
 import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
 import { foldText } from "../../../shared/lib/text";
 import { gramsFromUnits, hasUnit, pluralize, unitsFromGrams } from "../../../shared/lib/quantity";
@@ -67,7 +67,6 @@ export function AddFoodModal({
   // Off by default: logging one thing should be one tap, not tap-then-
   // confirm. Staging only earns its extra step when there's a meal to
   // assemble, so it's opt-in rather than the price of every add.
-  const [multi, setMulti] = useState(false);
   const [grouping, setGrouping] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,7 +84,6 @@ export function AddFoodModal({
       setQuery("");
       setPlate([]);
       setOffResults(null);
-      setMulti(false);
       setGrouping(false);
       setGroupName("");
       setEditingId(null);
@@ -133,10 +131,17 @@ export function AddFoodModal({
     setOffResults(null);
   };
 
-  // The common case is one food, so a tap logs it and closes. "Añadir
-  // varios" switches to building a plate instead.
+  // Two verbs, no mode. Tapping the row logs that one food and closes,
+  // which is the common case; tapping its + puts it on the plate and
+  // leaves the list up so the next one is another tap away.
+  //
+  // This replaces an "Añadir varios" switch that had to be found and
+  // flipped before the first item, i.e. before you necessarily knew you
+  // were adding several. Once anything is on the plate a bare tap joins
+  // it rather than logging past it, so a half-built meal can't be lost by
+  // tapping the wrong part of a row.
   const pick = (item: PlateItem) => {
-    if (multi) stage(item);
+    if (plate.length > 0) stage(item);
     else onCommit([item], null);
   };
 
@@ -214,14 +219,6 @@ export function AddFoodModal({
           <ScanIcon size={19} />
         </button>
       </div>
-
-      <button
-        type="button"
-        className={"link-btn multi-toggle" + (multi ? " is-on" : "")}
-        onClick={() => setMulti((v) => !v)}
-      >
-        {multi ? "Añadiendo varios · Listo" : "Añadir varios"}
-      </button>
 
       {plate.length > 0 && (
         <div className="plate">
@@ -324,6 +321,14 @@ export function AddFoodModal({
               </span>
             </button>
             <span className="row-amount">{Math.round(c.calories)} kcal</span>
+            <button
+              type="button"
+              className="row-add"
+              aria-label={`Añadir ${c.name} al plato`}
+              onClick={() => stage(plateItemFromCandidate(c))}
+            >
+              <PlusIcon />
+            </button>
           </div>
         ))}
         {canCreate && (
@@ -368,6 +373,14 @@ export function AddFoodModal({
                   >
                     <span className="row-name">{hit.name}</span>
                     <span className="row-qty">{Math.round(hit.kcalPer100 ?? 0)} kcal / 100 g</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="row-add"
+                    aria-label={`Añadir ${hit.name} al plato`}
+                    onClick={() => stage(plateItemFromSearchHit(hit))}
+                  >
+                    <PlusIcon />
                   </button>
                 </div>
               ))}
