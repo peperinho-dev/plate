@@ -76,32 +76,6 @@ export function addSet(dayKey: string, exerciseId: string, input: SetInput) {
   });
 }
 
-/**
- * Puts sets at the front of an exercise — warm-ups belong before the work
- * they lead into, not appended after it.
- */
-export function prependSets(dayKey: string, exerciseId: string, inputs: SetInput[]) {
-  if (inputs.length === 0) return;
-  useAppStore.setState((s) => {
-    const existing = s.workouts[dayKey]?.exercises ?? [];
-    return updateWorkoutDay(
-      s,
-      dayKey,
-      existing.map((e) =>
-        e.id === exerciseId
-          ? {
-              ...e,
-              sets: [
-                ...inputs.map((input) => ({ id: newId(), ...input, addedAt: Date.now() })),
-                ...e.sets
-              ]
-            }
-          : e
-      )
-    );
-  });
-}
-
 export function updateSet(dayKey: string, exerciseId: string, setId: string, input: SetInput) {
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
