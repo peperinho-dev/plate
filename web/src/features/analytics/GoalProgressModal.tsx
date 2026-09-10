@@ -190,20 +190,13 @@ export function GoalProgressModal({ open, onClose }: GoalProgressModalProps) {
           )}
           {goal.kind === "maintain" && (
             <p className="modal-hint">
-              Objetivo {goal.target.toFixed(1)} kg, margen ±{MAINTAIN_BAND_KG} kg.{" "}
-              {goal.done ? "Dentro del margen." : "Fuera del margen."}
+              {goal.done ? "Dentro" : "Fuera"} del margen de ±{MAINTAIN_BAND_KG} kg.
             </p>
           )}
 
           <div className="section-head">
             <span className="section-title">Por semana</span>
           </div>
-          {/* The chart shows a quantity nothing else in the app shows, so
-              it says in words what a bar is before you try to read one. */}
-          <p className="gp-caption">
-            Cuánto cambió tu peso cada semana, medido sobre la tendencia. Cada barra es una
-            semana; la línea naranja es el ritmo que buscas.
-          </p>
           <WeeklyWaterfall weeks={weeks} targetRate={targetRate} />
 
           <div className="log-list">

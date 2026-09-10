@@ -32,9 +32,9 @@ export function WeightModal({ open, onClose, onBack }: WeightModalProps) {
 
   return (
     <Modal open={open} title={title} onClose={onClose}>
-      <p className="modal-hint">
-        Registro de peso
-      </p>
+      <div className="section-head">
+        <span className="section-title">Registro de peso</span>
+      </div>
 
       {sorted.length > 0 ? (
         <div className="log-list">

@@ -95,9 +95,8 @@ export function ExpenditureModal({ open, onClose }: ExpenditureModalProps) {
       />
 
       <p className="modal-hint">
-        El gasto se estima a partir de lo que comes y de cuánto cambia tu peso tendencia: ingesta
-        media menos el peso ganado o perdido, a 7700 kcal por kilo. Necesita al menos dos semanas
-        de registro para asentarse.
+        Ingesta media menos el cambio de tu peso tendencia, a 7700 kcal/kg. Se asienta a las dos
+        semanas.
       </p>
     </Modal>
   );

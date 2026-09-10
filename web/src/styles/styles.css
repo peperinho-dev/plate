@@ -2118,12 +2118,6 @@ button:focus-visible, input:focus-visible {
 /* The grey was unexplained before — half the encoding with no key. */
 .gp-legend-item.is-off::before { background: var(--ink-faint); }
 
-.gp-caption {
-  margin: 0;
-  font-size: var(--fs-label);
-  color: var(--ink-soft);
-  line-height: 1.5;
-}
 
 .gp-track { display: flex; flex-direction: column; gap: var(--space-2); }
 .gp-track-bar {

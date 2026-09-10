@@ -22,11 +22,10 @@ export function BackupModal({ open, onClose }: BackupModalProps) {
   return (
     <Modal open={open} title="Copia de seguridad" onClose={onClose}>
       <p className="modal-hint">
-        Tus datos viven solo en este dispositivo. Si borras la app de la pantalla de inicio, se
-        borran con ella — exporta de vez en cuando.
+        Solo en este dispositivo: si borras la app, se borran con ella.{" "}
         {lastExportedAt
-          ? ` Última copia: ${new Date(lastExportedAt).toLocaleDateString("es-ES")}.`
-          : " Todavía no has hecho ninguna."}
+          ? `Última copia: ${new Date(lastExportedAt).toLocaleDateString("es-ES")}.`
+          : "Todavía ninguna."}
       </p>
 
       <div className="field-row">
@@ -42,15 +41,10 @@ export function BackupModal({ open, onClose }: BackupModalProps) {
         </button>
       </div>
 
-      <p className="modal-hint">
-        Importar reemplaza todo lo que hay ahora. Exporta antes si no estás seguro.
-      </p>
-      {/* Said here as well as in the photos sheet: this is the screen
-          where someone forms the belief about what a backup contains. */}
-      <p className="modal-hint">
-        Incluye las fotos de progreso, así que el archivo puede pesar bastante más si tienes
-        muchas.
-      </p>
+      {/* Both facts belong on this screen — it's where someone forms the
+          belief about what a backup does and contains — but they're one
+          line, not three paragraphs. */}
+      <p className="modal-hint">Incluye las fotos. Importar reemplaza todo.</p>
 
       <input
         ref={fileInputRef}

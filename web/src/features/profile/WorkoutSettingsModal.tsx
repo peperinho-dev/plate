@@ -59,9 +59,6 @@ export function WorkoutSettingsModal({ open, onClose }: WorkoutSettingsModalProp
           </div>
         </div>
 
-        <p className="modal-hint">
-          Puedes ajustar el descanso sobre la marcha con −10 / +10 sin cambiar este valor.
-        </p>
       </div>
     </Modal>
   );

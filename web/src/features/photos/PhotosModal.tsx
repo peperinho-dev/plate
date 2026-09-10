@@ -231,8 +231,7 @@ export function PhotosModal({ open, onClose }: PhotosModalProps) {
       )}
 
       <p className="modal-hint">
-        Las fotos se guardan solo en este dispositivo, pero <strong>sí van en la copia de
-        seguridad</strong>: expórtala antes de reinstalar la app y vuelven contigo.
+        Solo en este dispositivo, pero <strong>sí van en la copia de seguridad</strong>.
       </p>
 
       <input

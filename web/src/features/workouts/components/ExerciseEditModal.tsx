@@ -77,9 +77,7 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
           ))}
         </datalist>
 
-        <p className="modal-hint">
-          Agrupa variantes del mismo ejercicio para ver tu progresión entre ellas en Análisis.
-        </p>
+        <p className="modal-hint">Agrupa variantes para ver tu progresión en Análisis.</p>
 
         {/* The share is normally read off the exercise name, which is a
             guess and sometimes a wrong one. This is the correction, and
@@ -103,10 +101,7 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
             onChange={(e) => setShare(e.target.value)}
           />
         </label>
-        <p className="modal-hint">
-          Qué parte de tu peso mueve este ejercicio. Una dominada mueve el 100 %, una flexión
-          alrededor del 64 %. Cuenta como carga en el volumen.
-        </p>
+        <p className="modal-hint">Dominada 100 %, flexión 64 %. Cuenta como carga.</p>
 
         <button
           type="button"
