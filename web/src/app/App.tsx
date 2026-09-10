@@ -7,7 +7,7 @@ import { NutritionView } from "../features/nutrition/NutritionView";
 import { WorkoutView } from "../features/workouts/WorkoutView";
 import { AnalyticsView } from "../features/analytics/AnalyticsView";
 import { SettingsView } from "../features/profile/SettingsView";
-import { TargetIcon, DumbbellIcon, BarChartIcon, GearIcon } from "../shared/components/Icons";
+import { TargetIcon, DumbbellIcon, BarChartIcon, GearIcon, PlusIcon } from "../shared/components/Icons";
 import { Toast } from "../shared/components/Toast";
 import { QuickActionsSheet } from "./QuickActionsSheet";
 
@@ -59,7 +59,11 @@ export default function App() {
           disabled={selectionMode}
           onClick={() => setQuickOpen(true)}
         >
-          +
+          {/* An SVG, not a "+" character. The glyph sits entirely above
+              the baseline (ascent 11.4, descent -1.1), so centring its
+              line box leaves the visible mark high in the circle. The
+              icon is symmetric about its own viewBox. */}
+          <PlusIcon size={13} />
         </button>
 
         <div className="tabbar-group">

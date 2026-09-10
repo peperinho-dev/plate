@@ -68,3 +68,42 @@ export function bodyweightCoverage(
   });
   return { bodyweight, total };
 }
+
+export interface VolumeSplitPoint {
+  date: string;
+  /** Load that came from your own body. */
+  bodyweight: number;
+  /** Load that came off a bar, belt or machine. */
+  resistance: number;
+  trained: boolean;
+}
+
+/**
+ * Volume split by where the load came from, which article 277 shows as
+ * two series rather than one total.
+ *
+ * It's the distinction that matters most in a calisthenics log: adding
+ * bodyweight movements can drop resistance volume to nothing while the
+ * training got harder, and a single total hides that entirely.
+ */
+export function volumeSplit(
+  workouts: AppState["workouts"],
+  dateKeys: string[],
+  weightLog: AppState["weightLog"]
+): VolumeSplitPoint[] {
+  return dateKeys.map((date) => {
+    const bodyweightKg = bodyweightOn(weightLog, date);
+    const exercises = workouts[date]?.exercises ?? [];
+    let bodyweight = 0;
+    let resistance = 0;
+    exercises.forEach((ex) => {
+      const share = exerciseShare(ex);
+      ex.sets.forEach((s) => {
+        if (!s.reps) return;
+        if (share > 0 && bodyweightKg != null) bodyweight += bodyweightKg * share * s.reps;
+        resistance += (s.weightKg ?? 0) * s.reps;
+      });
+    });
+    return { date, bodyweight, resistance, trained: exercises.length > 0 };
+  });
+}

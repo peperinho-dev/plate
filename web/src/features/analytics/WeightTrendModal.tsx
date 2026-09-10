@@ -128,7 +128,11 @@ export function WeightTrendModal({ open, onClose }: WeightTrendModalProps) {
             label: "Peso en báscula",
             points: raw,
             color: "var(--ink-faint)",
-            faint: true
+            faint: true,
+            // A dot per actual weigh-in. The line between them is
+            // interpolated, so without these there is no way to tell a day
+            // you stood on the scale from a day the app guessed for you.
+            markers: sorted.map((e) => ({ x: dayOf(e.date), y: e.weightKg }))
           },
           {
             id: "trend",

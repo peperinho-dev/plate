@@ -26,6 +26,13 @@ export interface ChartSeries {
   faint?: boolean;
   /** Mark the final point, which is the one the headline quotes. */
   endDot?: boolean;
+  /**
+   * Points to mark with a dot. Separate from `points` because a line can
+   * be denser than its evidence: the weight line is interpolated to one
+   * point per day, but only some of those days were actually weighed, and
+   * a dot on every day would claim readings that were never taken.
+   */
+  markers?: ChartPoint[];
 }
 
 interface AxisChartProps {
@@ -104,6 +111,16 @@ export function AxisChart({ series, formatY, formatX, includeY = [], height = 18
               style={{ stroke: s.color }}
               d={s.points.map((p, i) => `${i ? "L" : "M"}${px(p.x).toFixed(2)} ${py(p.y).toFixed(2)}`).join(" ")}
             />
+            {s.markers?.map((mk, i) => (
+              <circle
+                key={"m" + i}
+                className="axis-marker"
+                style={{ fill: s.color }}
+                cx={px(mk.x)}
+                cy={py(mk.y)}
+                r={2}
+              />
+            ))}
             {s.endDot && s.points.length > 0 && (
               <circle
                 className="axis-dot"

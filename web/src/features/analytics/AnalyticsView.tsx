@@ -17,7 +17,7 @@ import { formatEyebrowDate } from "../../shared/lib/format";
 import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { InsightsGrid } from "./InsightsGrid";
-import { trainingSeries, bodyweightCoverage, TRAINING_METRICS, type TrainingMetric } from "./trainingSeries";
+import { trainingSeries, volumeSplit, TRAINING_METRICS, type TrainingMetric } from "./trainingSeries";
 import { latestWeightEntry } from "../../shared/lib/targets";
 import { WidgetDeck } from "./widgets/WidgetDeck";
 import { NutritionTargetsWidget } from "./widgets/NutritionTargetsWidget";
@@ -113,7 +113,7 @@ export function AnalyticsView() {
         const barW = 100 / Math.max(series.length, 1);
         const y = (v: number) => 64 - (v / scaleMax) * 64;
         const fmt = (v: number) => `${Math.round(v)}${spec.unit ? ` ${spec.unit}` : ""}`;
-        const cover = bodyweightCoverage(workouts, keys);
+        const split = volumeSplit(workouts, keys, weightLog);
         return (
           <>
             <div className="segmented segmented--compact">
@@ -134,29 +134,54 @@ export function AnalyticsView() {
               <div className="trend">
                 <svg className="trend-chart" viewBox="0 0 100 64" preserveAspectRatio="none" role="img"
                      aria-label={`${spec.label} por día`}>
-                  {series.map((p, i) =>
-                    p.trained && p.value > 0 ? (
-                      <rect key={p.date} x={i * barW + barW * 0.18} y={y(p.value)}
-                            width={barW * 0.64} height={Math.max(1, 64 - y(p.value))}
-                            className="trend-bar is-training" />
-                    ) : null
-                  )}
+                  {trainingMetric === "volume"
+                    ? // Stacked: bodyweight load under external load, as
+                      // article 277 splits it. A single total hides that
+                      // swapping barbell work for calisthenics can drop
+                      // resistance volume to nothing while the training got
+                      // harder.
+                      split.map((p, i) => {
+                        const total = p.bodyweight + p.resistance;
+                        if (!p.trained || total <= 0) return null;
+                        const hBw = (p.bodyweight / scaleMax) * 64;
+                        const hRes = (p.resistance / scaleMax) * 64;
+                        return (
+                          <g key={p.date}>
+                            <rect x={i * barW + barW * 0.18} y={64 - hBw}
+                                  width={barW * 0.64} height={Math.max(0, hBw)}
+                                  className="trend-bar is-training" />
+                            <rect x={i * barW + barW * 0.18} y={64 - hBw - hRes}
+                                  width={barW * 0.64} height={Math.max(0, hRes)}
+                                  className="trend-bar is-resistance" />
+                          </g>
+                        );
+                      })
+                    : series.map((p, i) =>
+                        p.trained && p.value > 0 ? (
+                          <rect key={p.date} x={i * barW + barW * 0.18} y={y(p.value)}
+                                width={barW * 0.64} height={Math.max(1, 64 - y(p.value))}
+                                className="trend-bar is-training" />
+                        ) : null
+                      )}
                   <line x1="0" y1={y(average)} x2="100" y2={y(average)} className="trend-ref is-average" />
                 </svg>
                 <div className="trend-legend">
-                  <span className="trend-legend-item is-average">Media {fmt(average)}</span>
+                  {trainingMetric === "volume" ? (
+                    <>
+                      <span className="trend-legend-item is-training">Peso corporal</span>
+                      <span className="trend-legend-item is-resistance">Carga añadida</span>
+                    </>
+                  ) : (
+                    <span className="trend-legend-item is-average">Media {fmt(average)}</span>
+                  )}
                   <span className="trend-legend-days">
                     {fmt(total)} · {trained.length} {trained.length === 1 ? "sesión" : "sesiones"}
                   </span>
                 </div>
-                {/* Volume is only meaningful once bodyweight counts, so the
-                    card says how much of it is bodyweight work rather than
-                    leaving the number to be read as barbell tonnage. */}
                 {trainingMetric === "volume" && (
                   <p className="stat-note">
-                    {bodyweightKg == null
-                      ? "Sin peso registrado — solo cuenta la carga añadida."
-                      : `Incluye el peso corporal de cada día en ${cover.bodyweight} de ${cover.total} ejercicios.`}
+                    Media {fmt(average)} por sesión.
+                    {bodyweightKg == null && " Sin peso registrado — solo cuenta la carga añadida."}
                   </p>
                 )}
               </div>
