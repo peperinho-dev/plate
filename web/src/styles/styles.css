@@ -2975,3 +2975,14 @@ button:focus-visible, input:focus-visible {
 /* Section headers stack down the settings index, so each needs the same
    air above it that the first one gets from the topbar. */
 .content > div + div > .section-head { margin-top: var(--space-6); }
+
+/* The detail line is one line. Restoring the timestamp made it long
+   enough to wrap on longer quantity labels ("2 rebanadas · 6P · 2F · 29C
+   · 08:18"), which put rows back to the three-line height the two-line
+   rewrite existed to remove. What gets clipped is the tail — the time,
+   the least load-bearing part of the line. */
+.row-qty {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
