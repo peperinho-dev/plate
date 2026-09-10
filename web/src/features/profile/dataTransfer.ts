@@ -8,6 +8,7 @@ import { useAppStore } from "../../shared/store";
 import { migrateData } from "../../shared/store/schema";
 import { todayKey } from "../../shared/lib/date";
 import { showToast } from "../../shared/components/Toast";
+import { exportPhotos, importPhotos } from "../photos/photoStore";
 
 // A week without an export is the point at which the reminder appears.
 export const BACKUP_REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -43,7 +44,14 @@ function downloadBlob(blob: Blob, filename: string) {
 export async function exportData() {
   const state = useAppStore.getState();
   const filename = `plate-backup-${todayKey(0)}.json`;
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  // Photos ride along in the same file. They live in IndexedDB rather
+  // than the store, so they have to be fetched and inlined deliberately —
+  // and they must be, because updating this app means reinstalling it,
+  // and a backup that quietly omitted them would lose them every time.
+  const photos = await exportPhotos();
+  const blob = new Blob([JSON.stringify({ ...state, photos }, null, 2)], {
+    type: "application/json"
+  });
   const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/json" }) : null;
 
   // Feature-detected off the object rather than by truthiness: TypeScript
@@ -81,6 +89,14 @@ export function importData(rawJson: string): boolean {
   // Runs through the same migration path as normal loading, so an older
   // backup is brought forward rather than rejected.
   useAppStore.setState(migrateData(parsed), true);
+
+  // Photos restore asynchronously into IndexedDB. The store is already
+  // swapped by then, so a failure here loses photos, not the log.
+  const photos = (parsed as { photos?: Parameters<typeof importPhotos>[0] })?.photos;
+  void importPhotos(photos).then((n) => {
+    if (n > 0) showToast(`${n} ${n === 1 ? "foto restaurada" : "fotos restauradas"}`);
+  });
+
   showToast("Datos importados");
   return true;
 }

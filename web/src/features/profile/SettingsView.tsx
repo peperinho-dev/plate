@@ -15,6 +15,7 @@ import { WeightModal } from "./WeightModal";
 import { TargetModal } from "./TargetModal";
 import { WorkoutSettingsModal } from "./WorkoutSettingsModal";
 import { BackupModal } from "./BackupModal";
+import { PhotosModal } from "../photos/PhotosModal";
 
 export function SettingsView() {
   const profile = useAppStore((s) => s.profile);
@@ -28,6 +29,7 @@ export function SettingsView() {
   const [targetOpen, setTargetOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
 
   // The food log's kcal chip and the central + both route here rather
   // than owning their own copies of these sheets.
@@ -61,6 +63,11 @@ export function SettingsView() {
           label: "Registro de peso",
           hint: latest ? `${latest.weightKg.toFixed(1)} kg · ${latest.date}` : "Sin registros",
           onClick: () => setWeightOpen(true)
+        },
+        {
+          label: "Fotos de progreso",
+          hint: "Solo en este dispositivo",
+          onClick: () => setPhotosOpen(true)
         }
       ]
     },
@@ -147,6 +154,7 @@ export function SettingsView() {
       <TargetModal open={targetOpen} onClose={() => setTargetOpen(false)} />
       <WorkoutSettingsModal open={workoutOpen} onClose={() => setWorkoutOpen(false)} />
       <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
+      <PhotosModal open={photosOpen} onClose={() => setPhotosOpen(false)} />
     </div>
   );
 }

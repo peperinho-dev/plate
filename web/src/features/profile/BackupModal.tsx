@@ -45,6 +45,12 @@ export function BackupModal({ open, onClose }: BackupModalProps) {
       <p className="modal-hint">
         Importar reemplaza todo lo que hay ahora. Exporta antes si no estás seguro.
       </p>
+      {/* Said here as well as in the photos sheet: this is the screen
+          where someone forms the belief about what a backup contains. */}
+      <p className="modal-hint">
+        Incluye las fotos de progreso, así que el archivo puede pesar bastante más si tienes
+        muchas.
+      </p>
 
       <input
         ref={fileInputRef}

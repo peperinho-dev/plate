@@ -38,7 +38,12 @@ const SHARES: [RegExp, number][] = [
   [/flexion.*(diamante|arquero|una mano)/, 0.75],
   [/flexion|push ?-?up|lagartija/, 0.64],
   [/elevacion de piernas|leg raise|toes to bar/, 0.5],
-  [/abdominal|crunch|plancha abdominal/, 0.35]
+  // "Planche" is the straight-arm hold and moves everything; "plancha"
+  // on its own is the plank. Both are bodyweight, so an exercise named
+  // either way stops scoring zero — which plain "Plancha" did, because
+  // the rule below used to require the full "plancha abdominal".
+  [/planche|plancha frontal/, 1],
+  [/abdominal|crunch|plancha/, 0.35]
 ];
 
 /** 0 when the movement isn't recognised as bodyweight-loaded. */
