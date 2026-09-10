@@ -1879,26 +1879,31 @@ button:focus-visible, input:focus-visible {
 
 .tabbar-add {
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
-  margin: 0 6px;
+  /* Sized to the tab icons beside it rather than to itself: at 48px and
+     lifted, its top edge sat on the bar's boundary and read as spilling
+     out. It sits in the row now, aligned with the icons, distinguished by
+     being filled rather than by being oversized. */
+  width: 38px;
+  height: 38px;
+  margin: 0 10px;
+  /* Top-aligned with no extra offset so its centre lands on the tab
+     icons' centre. The tabs carry a label underneath and this doesn't, so
+     centring it in the bar instead would sit it visibly lower than them. */
+  align-self: flex-start;
   border: none;
   border-radius: 50%;
   background: var(--ink);
   color: var(--surface);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 400;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Lifted just clear of the bar so it reads as the primary action rather
-     than a third tab, without floating free of it. */
-  transform: translateY(-8px);
   box-shadow: var(--shadow);
   transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease, opacity 0.15s ease;
 }
-.tabbar-add:active { transform: translateY(-8px) scale(0.9); background: var(--ink-pressed); }
+.tabbar-add:active { transform: scale(0.9); background: var(--ink-pressed); }
 .tabbar-add:disabled { opacity: 0; pointer-events: none; }
 
 /* Room for the bar, now that the per-view action bars are gone. */
