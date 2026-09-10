@@ -2685,3 +2685,106 @@ button:focus-visible, input:focus-visible {
 .trend-legend-item.is-average { color: var(--ink-soft); font-weight: 600; }
 .trend-legend-days { margin-left: auto; font-variant-numeric: tabular-nums; }
 .trend-empty { margin: var(--space-2) 0 0; font-size: 11px; color: var(--ink-faint); }
+
+/* ---------------------------------------------------------------------
+   Set table. Five columns on one grid so the header and every row share
+   their rails — the whole point of a table is that the numbers line up.
+   --------------------------------------------------------------------- */
+.set-table { display: flex; flex-direction: column; }
+.set-mode { display: flex; justify-content: flex-end; }
+
+.set-head,
+.set-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 62px 62px 26px;
+  align-items: center;
+  gap: var(--space-2);
+}
+.set-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.set-head .set-col-cell, .set-head .set-col-n { text-align: center; }
+.set-row { padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.set-row:last-of-type { border-bottom: none; }
+
+.set-col-n { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.set-n {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Normal is the overwhelmingly common case, so it recedes to a dash and
+   only a real set type earns colour. */
+.set-type {
+  padding: 0 4px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+.set-type--warmup { background: var(--fat-soft); color: var(--macro-fat); }
+.set-type--failure { background: var(--danger-soft); color: var(--danger); }
+.set-type--dropset { background: var(--carbs-soft); color: var(--macro-carbs); }
+
+.set-col-prev {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.set-cell {
+  width: 100%;
+  padding: 7px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.set-cell::-webkit-outer-spin-button,
+.set-cell::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.set-cell:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.set-cell::placeholder { color: var(--ink-faint); font-weight: 500; }
+
+.set-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+.set-add:active { background: var(--accent-soft); }

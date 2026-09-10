@@ -84,6 +84,31 @@ export function updateSet(dayKey: string, exerciseId: string, setId: string, inp
   });
 }
 
+/**
+ * Merges a partial change into one set — the inline table edits a single
+ * cell at a time, and rewriting the whole set to change its reps would
+ * silently reset whatever the other cells were mid-edit.
+ */
+export function patchSet(
+  dayKey: string,
+  exerciseId: string,
+  setId: string,
+  patch: Partial<SetInput>
+) {
+  useAppStore.setState((s) => {
+    const existing = s.workouts[dayKey]?.exercises ?? [];
+    return updateWorkoutDay(
+      s,
+      dayKey,
+      existing.map((e) =>
+        e.id === exerciseId
+          ? { ...e, sets: e.sets.map((st) => (st.id === setId ? { ...st, ...patch } : st)) }
+          : e
+      )
+    );
+  });
+}
+
 export function removeSet(dayKey: string, exerciseId: string, setId: string) {
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
