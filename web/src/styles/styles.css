@@ -1961,3 +1961,82 @@ button:focus-visible, input:focus-visible {
    it — without this it collides with whatever card precedes it, which is
    now Hoy at the top of Resumen. */
 .content .card + .insights-carousel { margin-top: 16px; }
+
+/* ---------------------------------------------------------------------
+   Structural pass: one spacing scale, and rails that mean something.
+
+   Spacing had grown ad hoc — 22px here, 14px there, 9px somewhere else —
+   so nothing lined up with anything and every new component invented its
+   own inset. Measuring the left edge of every text node in Resumen found
+   five different rails (14 / 20 / 22 / 30 / 32) where there should have
+   been one or two.
+
+   The fix is a 4px scale plus three named rails, each with a job:
+
+     screen rail  --rail        topbar titles, section headers, card edges
+     card rail    + --card-pad  anything inside a .card
+     tile rail    + --tile-pad  anything inside a tile nested in a card
+
+   Three levels is what the reference apps use too; the bug was never
+   having levels, it was having them by accident.
+   --------------------------------------------------------------------- */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --rail: 18px;
+  --card-pad: 16px;
+  --tile-pad: 12px;
+}
+
+/* Cards had an asymmetric 22/20/20 that made their contents sit low in
+   the box. One value, so the optical centre is the real centre. */
+.card { padding: var(--card-pad); }
+
+/* Tiles that live at the content rail, not inside a card, must use the
+   card's own inset — otherwise their text lands 4px left of every card
+   beside them, which is exactly what the carousel was doing. */
+.insight-card {
+  padding: var(--card-pad);
+  gap: var(--space-1);
+  /* Widened to pay for the inset above. At 136px the card had 104px of
+     text width and "ENTRENOS" clipped mid-word; the tiles sit in a
+     scroller, so buying the room costs nothing but a shorter first
+     glimpse of the next card. */
+  flex-basis: 152px;
+}
+
+/* Tiles nested inside a card share one inset between them. */
+.goal-progress-item { padding: var(--tile-pad); }
+
+/* Vertical rhythm: separators between blocks in a card were 14px in one
+   place, 16px in another, 10px in a third. All on the scale now. */
+.topbar { margin-bottom: var(--space-5); }
+.totals { margin-top: var(--space-4); padding-top: var(--space-4); }
+.today-rows { margin-top: var(--space-4); padding-top: var(--space-3); }
+.goal-progress-row { margin-top: var(--space-4); padding-top: var(--space-4); }
+.chart-legend { gap: var(--space-4); margin-bottom: var(--space-3); }
+.insights-carousel { gap: var(--space-3); margin-bottom: var(--space-4); }
+.content .card + .insights-carousel { margin-top: var(--space-4); }
+.quick-section { margin-bottom: var(--space-4); }
+.quick-label { margin-bottom: var(--space-2); }
+.row { padding: var(--space-3) 0; gap: var(--space-3); }
+
+/* Numbers that sit in a column line up on their digits, not just on
+   their right edge — "171" and "108" have different glyph widths in a
+   proportional face, so a column of them reads as slightly ragged. */
+.row-amount,
+.totals-value,
+.macro-value,
+.insight-card-value,
+.hour-summary,
+.today-row-value,
+.goal-progress-value,
+.sub-row-qty {
+  font-variant-numeric: tabular-nums;
+}

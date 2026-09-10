@@ -3,7 +3,6 @@
 // expandable row with per-ingredient sub-rows. Plain entries render flat.
 import { useAppStore } from "../../../shared/store";
 import type { Entry } from "../../../shared/store/types";
-import { formatTime } from "../../../shared/lib/format";
 import { scaleFoodItem } from "../../../shared/lib/foodItems";
 import { formatQuantity } from "../../../shared/lib/quantity";
 import { ChevronDown, XIcon } from "../../../shared/components/Icons";
@@ -24,13 +23,24 @@ interface EntryRowProps {
   onEditItem: (entry: Entry, itemIndex: number) => void;
 }
 
-function MacroLine({ entry }: { entry: Entry }) {
-  if (!(entry.protein || entry.fat || entry.carbs)) return null;
-  return (
-    <span className="row-macros">
-      {Math.round(entry.protein || 0)}P · {Math.round(entry.fat || 0)}F · {Math.round(entry.carbs || 0)}C
-    </span>
-  );
+// Quantity and macros on one line, the way the row reads out loud:
+// "2 huevos, 14 protein, 12 fat, 1 carb". They used to be two stacked
+// lines, which made every row three lines tall and the day a long scroll
+// for very little extra information.
+//
+// The logged time is deliberately absent: every row sits under an hour
+// header that already states the hour, so repeating "08:15" on each row
+// spent a whole line restating its own heading.
+function DetailLine({ entry }: { entry: Entry }) {
+  const parts: string[] = [];
+  if (entry.qtyLabel) parts.push(entry.qtyLabel);
+  if (entry.protein || entry.fat || entry.carbs) {
+    parts.push(
+      `${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C`
+    );
+  }
+  if (!parts.length) return null;
+  return <span className="row-qty">{parts.join(" · ")}</span>;
 }
 
 export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: EntryRowProps) {
@@ -42,7 +52,6 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
   const setSelectionMode = useUiStore((s) => s.setSelectionMode);
   const recipes = useAppStore((s) => s.recipes);
 
-  const qtyPrefix = entry.qtyLabel ? `${entry.qtyLabel} · ` : "";
   const isChecked = selectedEntryIds.has(entry.id);
 
   // Press-and-hold enters selection mode with this row already picked —
@@ -89,11 +98,7 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
             }}
           >
             <span className="row-name">{entry.name}</span>
-            <span className="row-qty">
-              {qtyPrefix}
-              {formatTime(entry.addedAt)}
-            </span>
-            <MacroLine entry={entry} />
+            <DetailLine entry={entry} />
           </button>
           <span className="row-amount">{Math.round(entry.calories)} kcal</span>
           {!selectionMode && (
@@ -139,11 +144,7 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
               <ChevronDown />
             </span>
           </span>
-          <span className="row-qty">
-            {qtyPrefix}
-            {formatTime(entry.addedAt)}
-          </span>
-          <MacroLine entry={entry} />
+          <DetailLine entry={entry} />
         </button>
         <span className="row-amount">{Math.round(entry.calories)} kcal</span>
         {!selectionMode && (
