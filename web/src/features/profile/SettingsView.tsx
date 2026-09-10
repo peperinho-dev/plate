@@ -40,6 +40,7 @@ export function SettingsView() {
     if (pendingAction === "weight") setWeightOpen(true);
     else if (pendingAction === "profile") setProfileOpen(true);
     else if (pendingAction === "target") setTargetOpen(true);
+    else if (pendingAction === "photo") setPhotosOpen(true);
     else return;
     clearAction();
   }, [pendingAction, clearAction]);
