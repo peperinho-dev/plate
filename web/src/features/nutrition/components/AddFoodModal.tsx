@@ -255,7 +255,7 @@ export function AddFoodModal({
           {editingId && (
             <>
               {editingUnit && editingItem?.basis && (
-                <div className="segmented segmented--compact" style={{ marginTop: 10 }}>
+                <div className="segmented segmented--compact">
                   <button
                     type="button"
                     className={"segmented-btn" + (editMode === "unit" ? " active" : "")}
@@ -272,7 +272,7 @@ export function AddFoodModal({
                   </button>
                 </div>
               )}
-              <div className="field-row" style={{ marginTop: 10 }}>
+              <div className="field-row">
                 <label className="field" style={{ flex: 1 }}>
                   <span>
                     {editMode === "unit" && editingItem?.basis
@@ -390,7 +390,7 @@ export function AddFoodModal({
       )}
 
       {plate.length > 0 && (
-        <div className="form" style={{ marginTop: 14 }}>
+        <div className="form">
           {/* Offered, not imposed: separate rows stay the default, because
               a day you can read food-by-food is more useful than a tidy
               one. Only worth asking once there's more than one thing. */}

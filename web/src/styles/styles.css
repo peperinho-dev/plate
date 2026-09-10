@@ -2485,3 +2485,41 @@ button:focus-visible, input:focus-visible {
   text-transform: uppercase;
   vertical-align: 1px;
 }
+
+/* ---------------------------------------------------------------------
+   Sheets own their vertical rhythm.
+
+   .modal-sheet was a plain block, so two adjacent children only had a gap
+   if one of them happened to bring a margin. Most did; the search field
+   didn't, which is why "EN EL PLATO" sat flush against it. Every new
+   block in a sheet was a fresh chance to reintroduce the same bug.
+
+   A flex column with a gap makes the spacing a property of the container
+   instead of a thing each child has to remember. flex-shrink is pinned
+   off because the sheet scrolls: without it, an overflowing sheet
+   squashes its children instead of scrolling them.
+   --------------------------------------------------------------------- */
+.modal-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.modal-sheet > * { flex-shrink: 0; }
+/* The header's own margin would now stack on top of the gap. */
+.modal-sheet > .modal-header { margin-bottom: 0; }
+/* The grab handle sits tight under the sheet's top edge, not a gap below it. */
+.modal-sheet > .sheet-handle { margin-bottom: calc(var(--space-4) * -1 + 2px); }
+
+/* A group label inside a sheet sits nearer the group it names than the
+   one above it. Its own margins used to stack on top of the sheet's gap
+   and land on 32/28 - neither on the scale, and neither chosen. Now the
+   gap does the work and this only adds the extra breathing room above. */
+.modal-sheet > .field-group-label {
+  margin: var(--space-2) 0 0;
+}
+
+/* Paragraph and form margins that predate the sheet gap and now stack on
+   top of it. The container owns the rhythm; these only need to not fight
+   it. */
+.modal-sheet > .modal-hint { margin: 0; }
+.modal-sheet > .form--divided { margin-top: 0; }

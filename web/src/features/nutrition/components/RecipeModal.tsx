@@ -121,7 +121,7 @@ export function RecipeModal({ open, recipe, onClose }: RecipeModalProps) {
         </p>
       )}
 
-      <div className="field-row" style={{ marginTop: 12 }}>
+      <div className="field-row">
         <label className="field" style={{ flex: 1 }}>
           <span>Añadir ingrediente</span>
           <input
@@ -155,7 +155,6 @@ export function RecipeModal({ open, recipe, onClose }: RecipeModalProps) {
       <button
         type="button"
         className="btn btn--primary btn--block"
-        style={{ marginTop: 16 }}
         disabled={!name.trim() || items.length === 0}
         onClick={() => {
           saveRecipe(name.trim(), items, recipe?.id);

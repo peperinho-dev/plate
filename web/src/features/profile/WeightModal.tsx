@@ -32,7 +32,7 @@ export function WeightModal({ open, onClose, onBack }: WeightModalProps) {
 
   return (
     <Modal open={open} title={title} onClose={onClose}>
-      <p className="modal-hint" style={{ marginTop: -4 }}>
+      <p className="modal-hint">
         Registro de peso
       </p>
 
@@ -70,7 +70,6 @@ export function WeightModal({ open, onClose, onBack }: WeightModalProps) {
 
       <form
         className="form form--divided"
-        style={{ marginTop: 14 }}
         onSubmit={(e) => {
           e.preventDefault();
           const w = parseFloat(weight);
