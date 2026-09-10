@@ -64,6 +64,10 @@ export function AddFoodModal({
   const [plate, setPlate] = useState<PlateItem[]>([]);
   const [offResults, setOffResults] = useState<SearchHit[] | null>(null);
   const [offSearching, setOffSearching] = useState(false);
+  // Off by default: logging one thing should be one tap, not tap-then-
+  // confirm. Staging only earns its extra step when there's a meal to
+  // assemble, so it's opt-in rather than the price of every add.
+  const [multi, setMulti] = useState(false);
   const [grouping, setGrouping] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,6 +85,7 @@ export function AddFoodModal({
       setQuery("");
       setPlate([]);
       setOffResults(null);
+      setMulti(false);
       setGrouping(false);
       setGroupName("");
       setEditingId(null);
@@ -126,6 +131,13 @@ export function AddFoodModal({
     setPlate((p) => [...p, item]);
     setQuery("");
     setOffResults(null);
+  };
+
+  // The common case is one food, so a tap logs it and closes. "Añadir
+  // varios" switches to building a plate instead.
+  const pick = (item: PlateItem) => {
+    if (multi) stage(item);
+    else onCommit([item], null);
   };
 
   const editingItem = plate.find((it) => it.id === editingId) ?? null;
@@ -187,7 +199,7 @@ export function AddFoodModal({
             onKeyDown={(e) => {
               if (e.key !== "Enter") return;
               e.preventDefault();
-              if (results.length > 0) stage(plateItemFromCandidate(results[0]));
+              if (results.length > 0) pick(plateItemFromCandidate(results[0]));
               else if (trimmed) void runOffSearch();
             }}
             autoFocus
@@ -202,6 +214,14 @@ export function AddFoodModal({
           <ScanIcon size={19} />
         </button>
       </div>
+
+      <button
+        type="button"
+        className={"link-btn multi-toggle" + (multi ? " is-on" : "")}
+        onClick={() => setMulti((v) => !v)}
+      >
+        {multi ? "Añadiendo varios · Listo" : "Añadir varios"}
+      </button>
 
       {plate.length > 0 && (
         <div className="plate">
@@ -293,7 +313,7 @@ export function AddFoodModal({
             <button
               type="button"
               className="row-main"
-              onClick={() => stage(plateItemFromCandidate(c))}
+              onClick={() => pick(plateItemFromCandidate(c))}
             >
               <span className="row-name">
                 {c.name}
@@ -344,7 +364,7 @@ export function AddFoodModal({
                   <button
                     type="button"
                     className="row-main"
-                    onClick={() => stage(plateItemFromSearchHit(hit))}
+                    onClick={() => pick(plateItemFromSearchHit(hit))}
                   >
                     <span className="row-name">{hit.name}</span>
                     <span className="row-qty">{Math.round(hit.kcalPer100 ?? 0)} kcal / 100 g</span>

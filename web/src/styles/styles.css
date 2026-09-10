@@ -1867,34 +1867,91 @@ button:focus-visible, input:focus-visible {
   animation-fill-mode: forwards;
 }
 
-/* The central add button. Docked above the tab bar rather than placed in
-   it: three evenly spaced tabs leave no middle slot, and adding a fourth
-   one would push the button off centre. Raised clear of the bar's top
-   edge so it never covers the middle tab's icon or label. */
+/* The central add button, sitting in the bar itself. Three tabs don't
+   divide evenly around a middle slot, so the tabs are split into two
+   groups of equal width instead — the button then lands dead centre
+   regardless of how many tabs sit on either side of it. */
+.tabbar-group {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
 .tabbar-add {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(78px + env(safe-area-inset-bottom));
-  width: 56px;
-  height: 56px;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  margin: 0 6px;
   border: none;
   border-radius: 50%;
   background: var(--ink);
   color: var(--surface);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 400;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Lifted just clear of the bar so it reads as the primary action rather
+     than a third tab, without floating free of it. */
+  transform: translateY(-8px);
   box-shadow: var(--shadow);
-  z-index: 41;
-  transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease;
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease, opacity 0.15s ease;
 }
-.tabbar-add:active { transform: translateX(-50%) scale(0.9); background: var(--ink-pressed); }
+.tabbar-add:active { transform: translateY(-8px) scale(0.9); background: var(--ink-pressed); }
+.tabbar-add:disabled { opacity: 0; pointer-events: none; }
 
-/* Room for it, now that the per-view action bars are gone. */
-.view { padding-bottom: calc(148px + env(safe-area-inset-bottom)); }
+/* Room for the bar, now that the per-view action bars are gone. */
+.view { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 
 .quick-action-icon { color: var(--ink-soft); display: flex; align-items: center; }
+
+/* "Añadir varios" — staging is opt-in, so this sits quietly under the
+   search rather than presenting itself as the main way to add. */
+.multi-toggle {
+  display: block;
+  margin: 10px 0 2px;
+  font-size: 12px;
+}
+.multi-toggle.is-on { color: var(--accent-ink); font-weight: 700; }
+
+/* Today's block on Resumen. */
+.today-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+.today-rows {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.today-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.today-row-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.today-row-value {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.today-row-trend { color: var(--ink-soft); font-weight: 600; }
+
+/* The carousel isn't a .card, so the `.card + .card` gap doesn't reach
+   it — without this it collides with whatever card precedes it, which is
+   now Hoy at the top of Resumen. */
+.content .card + .insights-carousel { margin-top: 16px; }

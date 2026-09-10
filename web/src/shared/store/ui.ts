@@ -4,7 +4,7 @@
 import { create } from "zustand";
 import type { Entry, Exercise } from "./types";
 
-export type TabId = "nutrition" | "workout" | "analytics";
+export type TabId = "dashboard" | "nutrition" | "workout" | "settings";
 
 // In-memory clipboard for copying entries to another day. Not persisted —
 // a session-scoped clipboard is the expected mental model, same as OS
@@ -29,7 +29,7 @@ export type ModalId = "paste" | "calendar" | "entry";
 // What the central + was asked for. The views own their own sheets, so
 // rather than hoisting every modal into the shell the button records an
 // intent and the relevant view opens it and clears the flag.
-export type QuickAction = "food" | "scan" | "weight" | "exercise";
+export type QuickAction = "food" | "scan" | "weight" | "exercise" | "profile" | "target";
 
 // The calendar serves two jobs: navigating the current view to a day, and
 // picking a paste destination. Tracked explicitly so a tap on a date knows
@@ -101,7 +101,15 @@ export const useUiStore = create<UiState>()((set) => ({
   shiftDay: (delta) => set((s) => ({ dayOffset: s.dayOffset + delta })),
   toggleHourGroup: (key) => set((s) => ({ collapsedHourGroups: toggleInSet(s.collapsedHourGroups, key) })),
   requestAction: (action) =>
-    set({ activeTab: action === "exercise" ? "workout" : "nutrition", pendingAction: action }),
+    set({
+      activeTab:
+        action === "exercise"
+          ? "workout"
+          : action === "weight" || action === "profile" || action === "target"
+            ? "settings"
+            : "nutrition",
+      pendingAction: action
+    }),
   clearAction: () => set({ pendingAction: null }),
   toggleGroup: (id) => set((s) => ({ expandedGroups: toggleInSet(s.expandedGroups, id) })),
   setClipboard: (clipboard) => set({ clipboard }),

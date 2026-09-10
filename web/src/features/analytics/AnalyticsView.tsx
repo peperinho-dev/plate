@@ -20,6 +20,7 @@ import { LineChart } from "./LineChart";
 import { CalorieChart } from "./CalorieChart";
 import { SessionsChart } from "./SessionsChart";
 import { InsightsCarousel } from "./InsightsCarousel";
+import { TodaySummary } from "./TodaySummary";
 import { ProgressionDetailModal } from "./ProgressionDetailModal";
 import { estimateCurrentTdee } from "../../shared/lib/targets";
 import {
@@ -366,7 +367,7 @@ export function AnalyticsView() {
   return (
     <div className="view">
       <header className="topbar">
-        <span className="day-label">Análisis</span>
+        <span className="day-label">Resumen</span>
         <div className="topbar-actions">
           <div className="segmented segmented--compact">
             {([7, 30, "all"] as const).map((p) => (
@@ -387,6 +388,10 @@ export function AnalyticsView() {
       </header>
 
       <main className="content">
+        <TodaySummary />
+
+        {/* Everything below is history, which is what the period toggle
+            in the header applies to. Today above never changes with it. */}
         <InsightsCarousel periodDays={periodDays} weightWithEma={periodEma} />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

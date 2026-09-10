@@ -7,15 +7,12 @@ import { rebaseTimeToDay, todayKey } from "../../shared/lib/date";
 import { formatDateLabel, capitalizeFirst } from "../../shared/lib/format";
 import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
-import { ChevronLeft, ChevronRight, GearIcon, TargetIcon } from "../../shared/components/Icons";
+import { ChevronLeft, ChevronRight, TargetIcon } from "../../shared/components/Icons";
 import { EntryList } from "./components/EntryList";
 import { DayTotals } from "./components/DayTotals";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
-import { ProfileModal } from "../profile/ProfileModal";
-import { WeightModal } from "../profile/WeightModal";
-import { TargetModal } from "../profile/TargetModal";
 import { BackupBanner } from "../profile/BackupBanner";
 import { AdaptiveBanner } from "../profile/AdaptiveBanner";
 import { RecipeModal } from "./components/RecipeModal";
@@ -94,9 +91,6 @@ export function NutritionView() {
   // Set when the form is editing an already-logged entry rather than
   // creating one; also reveals the Hora field.
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [weightOpen, setWeightOpen] = useState(false);
-  const [targetOpen, setTargetOpen] = useState(false);
   const [favoritesEditing, setFavoritesEditing] = useState(false);
   const [recipesEditing, setRecipesEditing] = useState(false);
   const [recipeModalOpen, setRecipeModalOpen] = useState(false);
@@ -141,11 +135,11 @@ export function NutritionView() {
   // modals; pick it up and clear it.
   const pendingAction = useUiStore((s) => s.pendingAction);
   const clearAction = useUiStore((s) => s.clearAction);
+  const requestAction = useUiStore((s) => s.requestAction);
   useEffect(() => {
     if (!pendingAction) return;
     if (pendingAction === "food") setAddFoodOpen(true);
     else if (pendingAction === "scan") setScanOpen(true);
-    else if (pendingAction === "weight") setWeightOpen(true);
     else return; // not ours — leave it for the view that owns it
     clearAction();
   }, [pendingAction, clearAction]);
@@ -249,12 +243,9 @@ export function NutritionView() {
           </button>
         </div>
         <div className="topbar-actions">
-          <button className="icon-btn" aria-label="Perfil" onClick={() => setProfileOpen(true)}>
-            <GearIcon />
-          </button>
-          {/* Matches vanilla: the chip opens the calorie-range editor
-              directly, a separate sheet from the profile modal. */}
-          <button className="chip" onClick={() => setTargetOpen(true)}>
+          {/* Ajustes is its own tab now, so these hand off rather than
+              keeping a second copy of those sheets alive in here. */}
+          <button className="chip" onClick={() => requestAction("target")}>
             {calorieTarget.min}–{calorieTarget.max} kcal
           </button>
         </div>
@@ -470,23 +461,6 @@ export function NutritionView() {
         onPendingHitConsumed={() => setPendingHit(null)}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
-      <ProfileModal
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        onOpenWeight={() => {
-          setProfileOpen(false);
-          setWeightOpen(true);
-        }}
-      />
-      <WeightModal
-        open={weightOpen}
-        onClose={() => setWeightOpen(false)}
-        onBack={() => {
-          setWeightOpen(false);
-          setProfileOpen(true);
-        }}
-      />
-      <TargetModal open={targetOpen} onClose={() => setTargetOpen(false)} />
       <RecipeModal
         open={recipeModalOpen}
         recipe={editingRecipeId ? (recipes.find((r) => r.id === editingRecipeId) ?? null) : null}

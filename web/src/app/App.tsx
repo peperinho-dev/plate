@@ -6,14 +6,20 @@ import { useUiStore, type TabId } from "../shared/store/ui";
 import { NutritionView } from "../features/nutrition/NutritionView";
 import { WorkoutView } from "../features/workouts/WorkoutView";
 import { AnalyticsView } from "../features/analytics/AnalyticsView";
-import { TargetIcon, DumbbellIcon, BarChartIcon } from "../shared/components/Icons";
+import { SettingsView } from "../features/profile/SettingsView";
+import { TargetIcon, DumbbellIcon, BarChartIcon, GearIcon } from "../shared/components/Icons";
 import { Toast } from "../shared/components/Toast";
 import { QuickActionsSheet } from "./QuickActionsSheet";
 
-const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
-  { id: "nutrition", label: "Nutrición", icon: <TargetIcon /> },
+// Split either side of the central +. The two groups get equal width, so
+// the button lands dead centre even though the tabs don't divide evenly.
+const LEFT_TABS: { id: TabId; label: string; icon: ReactNode }[] = [
+  { id: "dashboard", label: "Resumen", icon: <BarChartIcon /> },
+  { id: "nutrition", label: "Comida", icon: <TargetIcon /> }
+];
+const RIGHT_TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "workout", label: "Entreno", icon: <DumbbellIcon /> },
-  { id: "analytics", label: "Análisis", icon: <BarChartIcon /> }
+  { id: "settings", label: "Ajustes", icon: <GearIcon size={22} /> }
 ];
 
 export default function App() {
@@ -27,35 +33,46 @@ export default function App() {
   return (
     <>
       <div className="app">
+        {activeTab === "dashboard" && <AnalyticsView />}
         {activeTab === "nutrition" && <NutritionView />}
         {activeTab === "workout" && <WorkoutView />}
-        {activeTab === "analytics" && <AnalyticsView />}
+        {activeTab === "settings" && <SettingsView />}
       </div>
 
-      {/* Sits above the bar rather than inside it: with three evenly
-          spaced tabs there is no middle slot to put it in, and dropping it
-          into the row would push the button off centre. */}
-      {!selectionMode && (
+      <nav className="tabbar">
+        <div className="tabbar-group">
+          {LEFT_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={"tab-btn" + (activeTab === tab.id ? " active" : "")}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="tab-icon">{tab.icon}</span> {tab.label}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           className="tabbar-add"
           aria-label="Añadir"
+          disabled={selectionMode}
           onClick={() => setQuickOpen(true)}
         >
           +
         </button>
-      )}
 
-      <nav className="tabbar">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={"tab-btn" + (activeTab === tab.id ? " active" : "")}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <span className="tab-icon">{tab.icon}</span> {tab.label}
-          </button>
-        ))}
+        <div className="tabbar-group">
+          {RIGHT_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={"tab-btn" + (activeTab === tab.id ? " active" : "")}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="tab-icon">{tab.icon}</span> {tab.label}
+            </button>
+          ))}
+        </div>
       </nav>
 
       <QuickActionsSheet open={quickOpen} onClose={() => setQuickOpen(false)} />
