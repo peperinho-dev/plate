@@ -9,6 +9,7 @@
 // their viewBox to fill, which is harmless for a bare path and ruinous
 // here: it would squash the tick labels horizontally.
 import { useRef, useState, type ReactNode } from "react";
+import { niceTicks } from "../lib/chart";
 
 export interface ChartPoint {
   /** Day index or timestamp — any monotonic number. */
@@ -50,18 +51,6 @@ const W = 320;
 // the line starts at the left edge, so the numbers don't crowd its
 // beginning, and the eye finds them where the most recent values are.
 const PAD = { top: 8, right: 34, bottom: 20, left: 6 };
-
-/** ~4 intervals on a 1/2/2.5/5 ladder, so ticks land on readable numbers. */
-function niceTicks(min: number, max: number, target = 4): number[] {
-  if (!(max > min)) return [min];
-  const raw = (max - min) / target;
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? mag * 10;
-  const first = Math.ceil(min / step) * step;
-  const ticks: number[] = [];
-  for (let v = first; v <= max + step * 0.001; v += step) ticks.push(+v.toFixed(6));
-  return ticks;
-}
 
 export function AxisChart({ series, formatY, formatX, includeY = [], height = 180 }: AxisChartProps) {
   // Scrubbing: drag across the chart to read exact values off it, the way

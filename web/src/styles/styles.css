@@ -2082,14 +2082,15 @@ button:focus-visible, input:focus-visible {
 /* A waterfall of weekly changes hanging off a zero line. Same drawing
    conventions as the nutrient trend: bars in the accent, a dashed
    non-scaling reference, a legend under it. */
-.gp-chart { width: 100%; height: 96px; display: block; }
 .gp-bar.is-on { fill: var(--accent); }
 /* A week that missed the aim is stated, not scolded — muted rather than
    red. Missing a weekly target is ordinary, and this screen is read most
    often in the weeks it happens. */
 .gp-bar.is-off { fill: var(--ink-faint); }
+/* Solid, unlike the dashed gridlines: zero is the line the bars are
+   measured from, not a reference laid over them. */
 .gp-zero {
-  stroke: var(--line);
+  stroke: var(--ink-faint);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -2114,6 +2115,15 @@ button:focus-visible, input:focus-visible {
 }
 .gp-legend-item.is-target::before { background: var(--macro-fat); }
 .gp-legend-item.is-on::before { background: var(--accent); }
+/* The grey was unexplained before — half the encoding with no key. */
+.gp-legend-item.is-off::before { background: var(--ink-faint); }
+
+.gp-caption {
+  margin: 0;
+  font-size: var(--fs-label);
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
 
 .gp-track { display: flex; flex-direction: column; gap: var(--space-2); }
 .gp-track-bar {

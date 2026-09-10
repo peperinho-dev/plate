@@ -12,82 +12,110 @@ import { useAppStore } from "../../shared/store";
 import { computeEma } from "../profile/adaptive";
 import { readGoal, goalWeeks, targetWeeklyRate, MAINTAIN_BAND_KG, type GoalWeek } from "./goal";
 import { formatShortDate } from "../../shared/lib/format";
+import { niceTicks } from "../../shared/lib/chart";
 
 interface GoalProgressModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-const CHART_H = 96;
+// Same geometry as AxisChart, so the two detail screens read as one
+// family: y labels on the right, dashed gridlines, ticks on a nice ladder.
+const W = 320;
+const CHART_H = 150;
+const PAD = { top: 8, right: 34, bottom: 20, left: 6 };
 
 /** Signed kg, always with its sign, because the direction is the point. */
 function signed(kg: number, digits = 2): string {
-  return `${kg > 0 ? "+" : kg < 0 ? "−" : ""}${Math.abs(kg).toFixed(digits)}`;
+  return `${kg > 0 ? "+" : kg < 0 ? "\u2212" : ""}${Math.abs(kg).toFixed(digits)}`;
 }
 
 /**
- * One bar per week, hanging off a zero line rather than growing from the
- * floor: a week is a signed change, and a bar chart that puts a −0.2 kg
- * week and a +0.2 kg week at the same height would hide the only thing
- * worth seeing.
+ * One bar per week, measured from a zero line: a week is a signed change,
+ * so a chart that drew a −0.2 kg week and a +0.2 kg week at the same
+ * height would hide the only thing worth seeing.
+ *
+ * The first version of this had no axis at all — no ticks, no gridlines,
+ * no dates — which made the bar heights unreadable and the whole thing a
+ * shape rather than a measurement. A detail screen is exactly where the
+ * numbers belong.
  */
 function WeeklyWaterfall({ weeks, targetRate }: { weeks: GoalWeek[]; targetRate: number | null }) {
   if (weeks.length === 0) return null;
+
   // The y range covers the bars, the zero line and the target line, then
   // lets zero sit wherever it falls inside that. Centring zero instead
   // would be symmetrical and wrong: a cut only ever produces negative
-  // weeks, so half the chart was empty and every bar was squashed into
-  // the other half.
+  // weeks, so half the chart was empty and every bar squashed into the
+  // other half.
   const values = [...weeks.map((w) => w.change), 0];
   if (targetRate != null) values.push(targetRate);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const pad = (max - min) * 0.12 || 0.1;
-  const lo = min - pad;
-  const hi = max + pad;
-  const y = (v: number) => CHART_H - ((v - lo) / (hi - lo)) * CHART_H;
-  const zeroY = y(0);
-  const slot = 100 / weeks.length;
-  const barW = Math.min(slot * 0.6, 7);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const pad = (rawMax - rawMin || 0.2) * 0.15;
+  const yMin = rawMin - pad;
+  const yMax = rawMax + pad;
+
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = CHART_H - PAD.top - PAD.bottom;
+  const py = (v: number) => PAD.top + (1 - (v - yMin) / (yMax - yMin || 1)) * plotH;
+  const zeroY = py(0);
+
+  const slot = plotW / weeks.length;
+  const barW = Math.min(slot * 0.55, 26);
+
   // Anything within a tenth of the aim counts as hitting it; a bar that
   // lands 40 g short is not a week you did anything wrong.
   const onTarget = (change: number) =>
-    targetRate == null ? true : Math.sign(change) === Math.sign(targetRate) && Math.abs(change) >= Math.abs(targetRate) - 0.1;
+    targetRate == null
+      ? true
+      : Math.sign(change) === Math.sign(targetRate) && Math.abs(change) >= Math.abs(targetRate) - 0.1;
 
   return (
-    <div className="gp-chart-wrap">
-      <svg
-        className="gp-chart"
-        viewBox={`0 0 100 ${CHART_H}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="Cambio de peso por semana"
-      >
+    <div className="axis-chart">
+      <svg viewBox={`0 0 ${W} ${CHART_H}`} width="100%" height={CHART_H}
+           role="img" aria-label="Cambio de peso por semana">
+        {niceTicks(yMin, yMax).map((t) => (
+          <g key={"y" + t}>
+            <line className="axis-grid" x1={PAD.left} y1={py(t)} x2={W - PAD.right} y2={py(t)} />
+            <text className="axis-label" x={W - PAD.right + 5} y={py(t)}
+                  textAnchor="start" dominantBaseline="middle">
+              {signed(t, 1)}
+            </text>
+          </g>
+        ))}
+        {/* Zero is the baseline the bars are measured from, not a
+            reference like the gridlines, so it draws solid. */}
+        <line className="gp-zero" x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY} />
         {targetRate != null && (
-          <line x1="0" y1={y(targetRate)} x2="100" y2={y(targetRate)} className="gp-ref" />
+          <line className="gp-ref" x1={PAD.left} y1={py(targetRate)} x2={W - PAD.right} y2={py(targetRate)} />
         )}
         {weeks.map((w, i) => {
-          const top = Math.min(zeroY, y(w.change));
-          const h = Math.abs(y(w.change) - zeroY);
+          const cx = PAD.left + i * slot + slot / 2;
+          const top = Math.min(zeroY, py(w.change));
+          const h = Math.abs(py(w.change) - zeroY);
           return (
-            <rect
-              key={w.weekStart}
-              x={i * slot + (slot - barW) / 2}
-              y={top}
-              width={barW}
-              height={Math.max(h, 1)}
-              className={"gp-bar" + (onTarget(w.change) ? " is-on" : " is-off")}
-            />
+            <g key={w.weekStart}>
+              <rect
+                x={cx - barW / 2}
+                y={top}
+                width={barW}
+                height={Math.max(h, 1)}
+                className={"gp-bar" + (onTarget(w.change) ? " is-on" : " is-off")}
+              />
+              <text className="axis-label" x={cx} y={CHART_H - 6} textAnchor="middle">
+                {formatShortDate(w.weekStart)}
+              </text>
+            </g>
           );
         })}
-        <line x1="0" y1={zeroY} x2="100" y2={zeroY} className="gp-zero" />
       </svg>
       <div className="trend-legend">
-        {targetRate != null && (
-          <span className="gp-legend-item is-target">Objetivo {signed(targetRate)} kg/sem</span>
-        )}
         <span className="gp-legend-item is-on">En objetivo</span>
-        <span className="trend-legend-days">{weeks.length} semanas</span>
+        <span className="gp-legend-item is-off">Sin llegar</span>
+        {targetRate != null && (
+          <span className="gp-legend-item is-target">Objetivo {signed(targetRate)}</span>
+        )}
       </div>
     </div>
   );
@@ -170,6 +198,12 @@ export function GoalProgressModal({ open, onClose }: GoalProgressModalProps) {
           <div className="section-head">
             <span className="section-title">Por semana</span>
           </div>
+          {/* The chart shows a quantity nothing else in the app shows, so
+              it says in words what a bar is before you try to read one. */}
+          <p className="gp-caption">
+            Cuánto cambió tu peso cada semana, medido sobre la tendencia. Cada barra es una
+            semana; la línea naranja es el ritmo que buscas.
+          </p>
           <WeeklyWaterfall weeks={weeks} targetRate={targetRate} />
 
           <div className="log-list">
