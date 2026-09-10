@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { PlusIcon, ScanIcon, XIcon } from "../../../shared/components/Icons";
+import { foodEmoji } from "../foodEmoji";
 import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
 import { foldText } from "../../../shared/lib/text";
 import { gramsFromUnits, hasUnit, pluralize, unitsFromGrams } from "../../../shared/lib/quantity";
@@ -307,6 +308,7 @@ export function AddFoodModal({
       <div className="log-list">
         {results.map((c) => (
           <div className="row" key={c.key}>
+            <span className="row-emoji" aria-hidden="true">{foodEmoji(c.name)}</span>
             <button
               type="button"
               className="row-main"
@@ -366,6 +368,7 @@ export function AddFoodModal({
             <div className="log-list">
               {offResults.map((hit) => (
                 <div className="row" key={hit.id}>
+                  <span className="row-emoji" aria-hidden="true">{foodEmoji(hit.name)}</span>
                   <button
                     type="button"
                     className="row-main"

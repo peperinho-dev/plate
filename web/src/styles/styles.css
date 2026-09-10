@@ -2862,3 +2862,16 @@ button:focus-visible, input:focus-visible {
 .ss-delta.is-up { color: var(--accent-ink); }
 .ss-delta.is-down { color: var(--ink-faint); }
 .ss-delta.is-flat { color: var(--ink-faint); }
+
+/* The picture on a food row. A list of near-identical grey rows is hard
+   to scan; an icon per row makes the one you want findable by shape
+   before you've read a word. Sized to the two-line row it sits in. */
+.row-emoji {
+  flex: 0 0 auto;
+  width: 26px;
+  font-size: 19px;
+  line-height: 1;
+  text-align: center;
+  /* Emoji sit high on their line box next to the name's cap height. */
+  transform: translateY(1px);
+}

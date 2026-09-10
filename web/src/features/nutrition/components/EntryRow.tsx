@@ -10,6 +10,7 @@ import { SwipeToDelete } from "../../../shared/components/SwipeToDelete";
 import { showToast } from "../../../shared/components/Toast";
 import { useLongPress } from "../../../shared/hooks/useLongPress";
 import { formatTime } from "../../../shared/lib/format";
+import { foodEmoji } from "../foodEmoji";
 import { useUiStore } from "../../../shared/store/ui";
 import { deleteEntry, deleteGroupItem, restoreEntry } from "../actions";
 import { commitGroupToRecipe, recipeItemsDiffer } from "../recipeActions";
@@ -86,6 +87,7 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
       <SwipeToDelete onDelete={handleSwipeDelete} disabled={selectionMode}>
         <div className="row" data-id={entry.id}>
           {selectMark}
+          <span className="row-emoji" aria-hidden="true">{foodEmoji(entry.name)}</span>
           <button
             type="button"
             className={"row-main " + (selectionMode ? "row-select" : "row-edit")}
@@ -131,6 +133,7 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
       <div className="row row-group" data-id={entry.id}>
         <div className="row-main-line">
         {selectMark}
+        <span className="row-emoji" aria-hidden="true">{foodEmoji(entry.name)}</span>
         <button
           type="button"
           className={"row-main " + (selectionMode ? "row-select" : "row-group-toggle")}
