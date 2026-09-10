@@ -2955,3 +2955,7 @@ button:focus-visible, input:focus-visible {
   flex-wrap: wrap;
   overflow-x: visible;
 }
+
+/* Training volume bars share the nutrient-trend chart's shape, so the two
+   read as the same kind of thing on the same screen. */
+.trend-bar.is-training { fill: var(--accent); }

@@ -7,6 +7,7 @@
 // completion.
 import type { AppState, Exercise, ExerciseSet } from "../../shared/store/types";
 import { computeWorkoutDayTotals, isBetterSet, isHoldSet } from "../../shared/lib/workouts";
+import { setLoadKg } from "../../shared/lib/bodyweight";
 
 export interface ExerciseSummary {
   id: string;
@@ -32,9 +33,9 @@ export interface SessionSummary {
   timerCount: number;
 }
 
-function exerciseVolume(ex: Exercise): number {
+function exerciseVolume(ex: Exercise, bodyweightKg: number | null): number {
   return ex.sets.reduce(
-    (sum, s) => sum + (s.weightKg && s.reps ? s.weightKg * s.reps : 0),
+    (sum, s) => sum + (s.reps ? setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps : 0),
     0
   );
 }
@@ -47,7 +48,8 @@ function bestOf(sets: ExerciseSet[]): ExerciseSet | null {
 
 export function summarizeSession(
   workouts: AppState["workouts"],
-  dayKey: string
+  dayKey: string,
+  bodyweightKg: number | null = null
 ): SessionSummary | null {
   const day = workouts[dayKey];
   if (!day || (day.exercises.length === 0 && (day.timerLogs?.length ?? 0) === 0)) return null;
@@ -75,7 +77,7 @@ export function summarizeSession(
         // everywhere else in the app.
         if (previousBest === null) {
           previousBest = b;
-          previousVolume = exerciseVolume(other);
+          previousVolume = exerciseVolume(other, bodyweightKg);
         }
       }
     }
@@ -84,7 +86,7 @@ export function summarizeSession(
       id: ex.id,
       name: ex.name,
       sets: ex.sets.length,
-      volume: exerciseVolume(ex),
+      volume: exerciseVolume(ex, bodyweightKg),
       reps: ex.sets.reduce((sum, s) => sum + (isHoldSet(s) ? 0 : s.reps || 0), 0),
       holdSeconds: ex.sets.reduce((sum, s) => sum + (isHoldSet(s) ? s.holdSeconds || 0 : 0), 0),
       best: mine,
@@ -97,7 +99,7 @@ export function summarizeSession(
 
   const logs = day.timerLogs ?? [];
   return {
-    totals: computeWorkoutDayTotals(day.exercises),
+    totals: computeWorkoutDayTotals(day.exercises, bodyweightKg),
     exercises,
     records: exercises.filter((e) => e.isRecord),
     timerSeconds: logs.reduce((sum, l) => sum + l.totalSeconds, 0),

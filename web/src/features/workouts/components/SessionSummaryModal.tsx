@@ -10,6 +10,7 @@ import { Modal } from "../../../shared/components/Modal";
 import { useAppStore } from "../../../shared/store";
 import { formatDuration, formatSet } from "../../../shared/lib/workouts";
 import { summarizeSession } from "../sessionSummary";
+import { latestWeightEntry } from "../../../shared/lib/targets";
 
 interface SessionSummaryModalProps {
   open: boolean;
@@ -31,7 +32,9 @@ function Delta({ now, before, unit }: { now: number; before: number | null; unit
 
 export function SessionSummaryModal({ open, dayKey, onClose }: SessionSummaryModalProps) {
   const workouts = useAppStore((s) => s.workouts);
-  const summary = summarizeSession(workouts, dayKey);
+  const weightLog = useAppStore((s) => s.weightLog);
+  const bodyweightKg = latestWeightEntry(weightLog)?.weightKg ?? null;
+  const summary = summarizeSession(workouts, dayKey, bodyweightKg);
 
   return (
     <Modal open={open} title="Resumen del entreno" onClose={onClose}>

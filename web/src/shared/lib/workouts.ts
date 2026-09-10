@@ -4,6 +4,7 @@
 // used for calisthenics: weighted (weight x reps), plain reps, and timed
 // holds (planks, L-sits). A set is a hold when holdSeconds is present.
 import type { AppState, Exercise, ExerciseSet } from "../store/types";
+import { setLoadKg } from "./bodyweight";
 import { foldText } from "./text";
 
 export function formatDuration(totalSeconds: number): string {
@@ -24,14 +25,22 @@ export function formatSet(s: ExerciseSet): string {
   return s.weightKg !== null && s.weightKg !== undefined ? `${s.weightKg}×${s.reps}` : `${s.reps} reps`;
 }
 
-export function summarizeExercise(ex: Exercise): string {
+/**
+ * `bodyweightKg` is threaded in rather than read from the store so these
+ * stay pure — and optional so a caller that genuinely means loaded-only
+ * volume can still ask for it.
+ */
+export function summarizeExercise(ex: Exercise, bodyweightKg: number | null = null): string {
   const n = ex.sets.length;
   if (n === 0) return "Sin series";
   const label = `${n} serie${n === 1 ? "" : "s"}`;
 
   const hasWeight = ex.sets.some((s) => s.weightKg !== null && s.weightKg !== undefined);
   if (hasWeight) {
-    const volume = ex.sets.reduce((sum, s) => sum + (s.weightKg && s.reps ? s.weightKg * s.reps : 0), 0);
+    const volume = ex.sets.reduce(
+      (sum, s) => sum + (s.reps ? setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps : 0),
+      0
+    );
     return `${label} · ${Math.round(volume)} kg vol.`;
   }
 
@@ -53,7 +62,10 @@ export interface WorkoutDayTotals {
   holdSeconds: number;
 }
 
-export function computeWorkoutDayTotals(exercises: Exercise[]): WorkoutDayTotals {
+export function computeWorkoutDayTotals(
+  exercises: Exercise[],
+  bodyweightKg: number | null = null
+): WorkoutDayTotals {
   let sets = 0;
   let volume = 0;
   let reps = 0;
@@ -63,7 +75,7 @@ export function computeWorkoutDayTotals(exercises: Exercise[]): WorkoutDayTotals
       sets += 1;
       if (isHoldSet(s)) holdSeconds += s.holdSeconds!;
       else reps += s.reps || 0;
-      if (s.weightKg !== null && s.weightKg !== undefined && s.reps) volume += s.weightKg * s.reps;
+      if (s.reps) volume += setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps;
     });
   });
   return { sets, volume, reps, holdSeconds };

@@ -17,6 +17,8 @@ import { formatEyebrowDate } from "../../shared/lib/format";
 import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { InsightsGrid } from "./InsightsGrid";
+import { trainingSeries, bodyweightCoverage, TRAINING_METRICS, type TrainingMetric } from "./trainingSeries";
+import { latestWeightEntry } from "../../shared/lib/targets";
 import { WidgetDeck } from "./widgets/WidgetDeck";
 import { NutritionTargetsWidget } from "./widgets/NutritionTargetsWidget";
 import { EnergyBalanceWidget } from "./widgets/EnergyBalanceWidget";
@@ -37,10 +39,11 @@ import { setAnalyticsLayout } from "./actions";
 // Trimmed to the widgets MacroFactor actually has. Calories, weight and
 // macros moved up into the widget deck; contributors and progressions had
 // no counterpart there and were cut rather than kept for their own sake.
-const ALL_CARDS = ["records", "streak"] as const;
+const ALL_CARDS = ["training", "records", "streak"] as const;
 type CardId = (typeof ALL_CARDS)[number];
 
 const CARD_TITLES: Record<CardId, string> = {
+  training: "Entreno",
   records: "Récords recientes",
   streak: "Constancia"
 };
@@ -51,9 +54,12 @@ export function AnalyticsView() {
   const weightLog = useAppStore((s) => s.weightLog);
   const layout = useAppStore((s) => s.analyticsLayout);
 
+  const bodyweightKg = latestWeightEntry(weightLog)?.weightKg ?? null;
+
   const [period, setPeriod] = useState<number | "all">(7);
   const [editing, setEditing] = useState(false);
   const [recordsMode, setRecordsMode] = useState<"reps" | "hold">("reps");
+  const [trainingMetric, setTrainingMetric] = useState<TrainingMetric>("sets");
 
   // Touch needs a small activation distance, or a scroll gesture that
   // starts on the handle would be swallowed as a drag.
@@ -96,6 +102,69 @@ export function AnalyticsView() {
 
   const renderCard = (id: CardId) => {
     switch (id) {
+      case "training": {
+        const keys = periodDays.map((d) => d.date);
+        const series = trainingSeries(workouts, keys, trainingMetric, weightLog);
+        const spec = TRAINING_METRICS.find((m) => m.id === trainingMetric)!;
+        const trained = series.filter((p) => p.trained);
+        const total = series.reduce((sum, p) => sum + p.value, 0);
+        const average = trained.length ? total / trained.length : 0;
+        const scaleMax = Math.max(...series.map((p) => p.value), 1) * 1.1;
+        const barW = 100 / Math.max(series.length, 1);
+        const y = (v: number) => 64 - (v / scaleMax) * 64;
+        const fmt = (v: number) => `${Math.round(v)}${spec.unit ? ` ${spec.unit}` : ""}`;
+        const cover = bodyweightCoverage(workouts, keys);
+        return (
+          <>
+            <div className="segmented segmented--compact">
+              {TRAINING_METRICS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={"segmented-btn" + (trainingMetric === m.id ? " active" : "")}
+                  onClick={() => setTrainingMetric(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {trained.length === 0 ? (
+              <p className="empty-state">Sin entrenos en este periodo.</p>
+            ) : (
+              <div className="trend">
+                <svg className="trend-chart" viewBox="0 0 100 64" preserveAspectRatio="none" role="img"
+                     aria-label={`${spec.label} por día`}>
+                  {series.map((p, i) =>
+                    p.trained && p.value > 0 ? (
+                      <rect key={p.date} x={i * barW + barW * 0.18} y={y(p.value)}
+                            width={barW * 0.64} height={Math.max(1, 64 - y(p.value))}
+                            className="trend-bar is-training" />
+                    ) : null
+                  )}
+                  <line x1="0" y1={y(average)} x2="100" y2={y(average)} className="trend-ref is-average" />
+                </svg>
+                <div className="trend-legend">
+                  <span className="trend-legend-item is-average">Media {fmt(average)}</span>
+                  <span className="trend-legend-days">
+                    {fmt(total)} · {trained.length} {trained.length === 1 ? "sesión" : "sesiones"}
+                  </span>
+                </div>
+                {/* Volume is only meaningful once bodyweight counts, so the
+                    card says how much of it is bodyweight work rather than
+                    leaving the number to be read as barbell tonnage. */}
+                {trainingMetric === "volume" && (
+                  <p className="stat-note">
+                    {bodyweightKg == null
+                      ? "Sin peso registrado — solo cuenta la carga añadida."
+                      : `Incluye el peso corporal de cada día en ${cover.bodyweight} de ${cover.total} ejercicios.`}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        );
+      }
+
       case "streak": {
         // Fixed 30-day window regardless of the period toggle — the point
         // is the pattern at a glance, not a slice of it.

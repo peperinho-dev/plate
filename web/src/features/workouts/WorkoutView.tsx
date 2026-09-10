@@ -2,6 +2,7 @@
 // keeps the same day in view.
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
+import { latestWeightEntry } from "../../shared/lib/targets";
 import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
 import { capitalizeFirst, formatDateLabel } from "../../shared/lib/format";
@@ -58,11 +59,17 @@ export function WorkoutView() {
   const clipboard = useUiStore((s) => s.clipboard);
   const setClipboard = useUiStore((s) => s.setClipboard);
   const workouts = useAppStore((s) => s.workouts);
+  const weightLog = useAppStore((s) => s.weightLog);
+
+  // Bodyweight counts as resistance for calisthenics, so the day's volume
+  // needs to know what you weigh. Null until the first weigh-in, which
+  // falls back to loaded-only volume rather than guessing.
+  const bodyweightKg = latestWeightEntry(weightLog)?.weightKg ?? null;
 
   const dayKey = todayKey(dayOffset);
   const exercises = workouts[dayKey]?.exercises ?? [];
   const label = formatDateLabel(dayOffset);
-  const totals = computeWorkoutDayTotals(exercises);
+  const totals = computeWorkoutDayTotals(exercises, bodyweightKg);
   const sessions = countWorkoutSessions(workouts);
 
   const timerLogs = workouts[dayKey]?.timerLogs ?? [];
@@ -218,7 +225,7 @@ export function WorkoutView() {
                         <div className="row">
                           <button type="button" className="row-main" onClick={() => setDetailId(ex.id)}>
                             <span className="row-name">{ex.name}</span>
-                            <span className="row-qty">{summarizeExercise(ex)}</span>
+                            <span className="row-qty">{summarizeExercise(ex, bodyweightKg)}</span>
                           </button>
                           {ex.progressionGroup && (
                             <button
