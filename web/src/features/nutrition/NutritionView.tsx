@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
 import { atHourOnDay, rebaseTimeToDay, todayKey } from "../../shared/lib/date";
+import { cloneEntry } from "../../shared/lib/cloneEntry";
 import { formatDateLabel, capitalizeFirst } from "../../shared/lib/format";
 import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
@@ -67,15 +68,22 @@ export function NutritionView() {
   // otherwise it copies the whole day. (The vanilla version originally
   // always copied the day, which read as a bug once anything was ticked.)
   const selectedCount = selectedEntryIds.size;
-  const handleCopy = () => {
+  const startTransfer = (intent: "copy" | "move") => {
     const source = selectionMode && selectedCount > 0
       ? entries.filter((e) => selectedEntryIds.has(e.id))
       : entries;
     if (source.length === 0) return;
-    setClipboard({ type: "nutrition", entries: source.map((e) => ({ ...e })) });
+    setClipboard({
+      type: "nutrition",
+      entries: source.map((e) => cloneEntry(e)),
+      intent,
+      sourceDayKey: dayKey
+    });
     if (selectionMode) setSelectionMode(false);
     openModal("paste");
   };
+  const handleCopy = () => startTransfer("copy");
+  const handleMove = () => startTransfer("move");
 
   const handleCopyYesterday = () => {
     pasteEntriesToDay(prevEntries, dayKey, "keep");
@@ -321,6 +329,14 @@ export function NutritionView() {
                     disabled={selectedCount === 0}
                   >
                     Copiar{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={handleMove}
+                    disabled={selectedCount === 0}
+                  >
+                    Mover
                   </button>
                   <button type="button" className="link-btn link-btn--muted" onClick={() => setSelectionMode(false)}>
                     Cancelar

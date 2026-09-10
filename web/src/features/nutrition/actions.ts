@@ -27,6 +27,20 @@ export function deleteEntry(dayKey: string, entryId: string) {
   });
 }
 
+/**
+ * Removes several entries from a day in one write — the second half of a
+ * move. One setState rather than a loop of deleteEntry calls, so the list
+ * never renders a half-moved day.
+ */
+export function removeEntries(dayKey: string, entryIds: string[]) {
+  const doomed = new Set(entryIds);
+  useAppStore.setState((s) => {
+    const day = s.days[dayKey];
+    if (!day) return {};
+    return updateDay(s, dayKey, day.entries.filter((e) => !doomed.has(e.id)));
+  });
+}
+
 // Puts a deleted entry back where it was, so undo restores list order
 // rather than appending it to the end.
 export function restoreEntry(dayKey: string, entry: Entry, index: number) {

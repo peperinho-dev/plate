@@ -12,6 +12,13 @@ export type TabId = "dashboard" | "nutrition" | "workout" | "settings";
 export interface NutritionClipboard {
   type: "nutrition";
   entries: Entry[];
+  /**
+   * Move removes the originals once they land somewhere else, so the
+   * clipboard has to remember which day to take them from — by the time
+   * the destination is picked the user may have navigated away.
+   */
+  intent: "copy" | "move";
+  sourceDayKey: string;
 }
 
 // The workout tab has its own whole-day copy, same clipboard slot: copying
