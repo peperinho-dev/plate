@@ -283,6 +283,10 @@ export function WorkoutView() {
           setAddOpen(false);
           run.start(timer);
         }}
+        onLogTimer={(timer) => {
+          logTimerRun(dayKey, timer);
+          showToast(`${timer.name} registrado`);
+        }}
       />
 
       <ExerciseDetailModal

@@ -31,6 +31,7 @@ interface AddWorkoutModalProps {
   exercises: Exercise[];
   onAddExercise: (name: string) => void;
   onRunTimer: (timer: TimerPreset) => void;
+  onLogTimer: (timer: TimerPreset) => void;
 }
 
 export function AddWorkoutModal({
@@ -39,7 +40,8 @@ export function AddWorkoutModal({
   dayKey,
   exercises,
   onAddExercise,
-  onRunTimer
+  onRunTimer,
+  onLogTimer
 }: AddWorkoutModalProps) {
   const workouts = useAppStore((s) => s.workouts);
   const routines = useAppStore((s) => s.routines);
@@ -150,6 +152,7 @@ export function AddWorkoutModal({
             expanded={isExpanded("warmup")}
             onToggle={() => toggle("warmup")}
             onRun={onRunTimer}
+            onLog={onLogTimer}
           />
 
           <LibrarySection
@@ -211,6 +214,7 @@ export function AddWorkoutModal({
             expanded={isExpanded("stretch")}
             onToggle={() => toggle("stretch")}
             onRun={onRunTimer}
+            onLog={onLogTimer}
           />
         </div>
       </Modal>

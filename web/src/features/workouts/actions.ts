@@ -239,8 +239,11 @@ export function removeTimerPreset(id: string) {
 }
 
 // Logged separately from exercises: a warmup isn't a set, but it should
-// still count as having shown up that day. Only called on natural
-// completion — a skipped timer never happened.
+// still count as having shown up that day.
+//
+// Reached two ways: finishing the countdown, or marking one done from the
+// library when you already did it away from the phone. A skipped
+// countdown still logs nothing — abandoning a timer isn't completing it.
 export function logTimerRun(dayKey: string, timer: TimerPreset) {
   useAppStore.setState((s) => {
     const day = s.workouts[dayKey] ?? { exercises: [] };
@@ -251,7 +254,9 @@ export function logTimerRun(dayKey: string, timer: TimerPreset) {
         name: timer.name,
         category: timer.category,
         totalSeconds: timerTotalSeconds(timer),
-        completedAt: Date.now()
+        // Stamped on the day being viewed, not the wall clock, so filing
+        // a warm-up on Monday doesn't record it as happening today.
+        completedAt: rebaseTimeToDay(Date.now(), dayKey)
       }
     ];
     return { workouts: { ...s.workouts, [dayKey]: { ...day, timerLogs } } };
