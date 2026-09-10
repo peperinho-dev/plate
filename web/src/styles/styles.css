@@ -2996,7 +2996,14 @@ button:focus-visible, input:focus-visible {
    screen to read values off it.
    --------------------------------------------------------------------- */
 .axis-chart { display: flex; flex-direction: column; gap: var(--space-2); }
-.axis-grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Dashed, as the reference charts draw them: a gridline is a reference,
+   not data, and a solid rule competes with the series. */
+.axis-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
 .axis-label {
   font-size: 8px;
   fill: var(--ink-faint);
@@ -3059,3 +3066,54 @@ button:focus-visible, input:focus-visible {
 .trend-legend-item.is-training::before { background: var(--accent); }
 .trend-legend-item.is-resistance { color: var(--macro-fat); }
 .trend-legend-item.is-resistance::before { background: var(--macro-fat); }
+
+/* Scrub readout: the value under your finger. */
+.axis-scrub { stroke: var(--ink-faint); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.axis-scrub-dot { stroke: var(--surface); stroke-width: 1.5; }
+.axis-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.axis-readout-x { color: var(--ink-soft); }
+.axis-readout-item { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Top exercises under the training chart. Rows, chevrons, same idiom as
+   every other list that leads somewhere. */
+.top-exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.top-exercise {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.top-exercise + .top-exercise { border-top: 1px solid var(--line); }
+.top-exercise svg { color: var(--ink-faint); flex: 0 0 auto; }
+.top-exercise-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.top-exercise-value { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.ss-total-value.is-up { color: var(--accent-ink); }

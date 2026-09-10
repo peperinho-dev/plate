@@ -18,6 +18,9 @@ import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { InsightsGrid } from "./InsightsGrid";
 import { trainingSeries, volumeSplit, TRAINING_METRICS, type TrainingMetric } from "./trainingSeries";
+import { topExercises } from "./exerciseTrend";
+import { ExerciseTrendModal } from "./ExerciseTrendModal";
+import { ChevronRight } from "../../shared/components/Icons";
 import { latestWeightEntry } from "../../shared/lib/targets";
 import { WidgetDeck } from "./widgets/WidgetDeck";
 import { NutritionTargetsWidget } from "./widgets/NutritionTargetsWidget";
@@ -60,6 +63,7 @@ export function AnalyticsView() {
   const [editing, setEditing] = useState(false);
   const [recordsMode, setRecordsMode] = useState<"reps" | "hold">("reps");
   const [trainingMetric, setTrainingMetric] = useState<TrainingMetric>("sets");
+  const [exerciseDetail, setExerciseDetail] = useState<string | null>(null);
 
   // Touch needs a small activation distance, or a scroll gesture that
   // starts on the handle would be swallowed as a drag.
@@ -114,6 +118,7 @@ export function AnalyticsView() {
         const y = (v: number) => 64 - (v / scaleMax) * 64;
         const fmt = (v: number) => `${Math.round(v)}${spec.unit ? ` ${spec.unit}` : ""}`;
         const split = volumeSplit(workouts, keys, weightLog);
+        const top = topExercises(workouts, keys, weightLog);
         return (
           <>
             <div className="segmented segmented--compact">
@@ -183,6 +188,29 @@ export function AnalyticsView() {
                     Media {fmt(average)} por sesión.
                     {bodyweightKg == null && " Sin peso registrado — solo cuenta la carga añadida."}
                   </p>
+                )}
+
+                {/* Article 277 lists the top exercises under the chart,
+                    each opening its own history. It answers the question
+                    the chart raises — the shape changed, because of what? */}
+                {top.length > 0 && (
+                  <div className="top-exercises">
+                    <span className="ss-section-title">Más entrenados</span>
+                    {top.map((t) => (
+                      <button
+                        type="button"
+                        className="top-exercise"
+                        key={t.name}
+                        onClick={() => setExerciseDetail(t.name)}
+                      >
+                        <span className="top-exercise-name">{t.name}</span>
+                        <span className="top-exercise-value">
+                          {t.sets} {t.sets === 1 ? "serie" : "series"}
+                        </span>
+                        <ChevronRight />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -333,6 +361,11 @@ export function AnalyticsView() {
         </DndContext>
       </main>
 
+      <ExerciseTrendModal
+        open={exerciseDetail !== null}
+        name={exerciseDetail}
+        onClose={() => setExerciseDetail(null)}
+      />
     </div>
   );
 }
