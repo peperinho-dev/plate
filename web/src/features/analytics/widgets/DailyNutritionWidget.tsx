@@ -8,6 +8,7 @@ import { useAppStore } from "../../../shared/store";
 import { todayKey } from "../../../shared/lib/date";
 import { sumMacros } from "../../../shared/lib/nutrition";
 import { targetMidpoints } from "../week";
+import { StatCell } from "./StatCell";
 
 export function DailyNutritionWidget() {
   const days = useAppStore((s) => s.days);
@@ -20,10 +21,12 @@ export function DailyNutritionWidget() {
   const t = targetMidpoints(calorieTarget, macroTargets);
   const remaining = t.kcal == null ? null : Math.max(0, t.kcal - consumed);
 
-  const rows = [
-    { label: "Proteína", value: macros.protein, target: t.protein, cls: "is-protein" },
-    { label: "Grasa", value: macros.fat, target: t.fat, cls: "is-fat" },
-    { label: "Carbos", value: macros.carbs, target: t.carbs, cls: "is-carbs" }
+  // Same cells, same order as the weekly widget's grid, so swiping
+  // between the two doesn't rearrange the same four numbers.
+  const cells = [
+    { kind: "fat" as const, value: macros.fat, target: t.fat, suffix: "G" },
+    { kind: "protein" as const, value: macros.protein, target: t.protein, suffix: "P" },
+    { kind: "carbs" as const, value: macros.carbs, target: t.carbs, suffix: "C" }
   ];
 
   return (
@@ -33,39 +36,20 @@ export function DailyNutritionWidget() {
       </div>
 
       <div className="dn-hero">
-        <div className="dn-hero-main">
-          <span className="dn-hero-value">{remaining == null ? Math.round(consumed) : remaining}</span>
-          <span className="dn-hero-label">{remaining == null ? "kcal consumidas" : "kcal restantes"}</span>
-        </div>
-        <div className="dn-hero-side">
-          <div className="dn-side-item">
-            <span className="dn-side-value">{Math.round(consumed)}</span>
-            <span className="dn-side-label">Consumido</span>
-          </div>
-          <div className="dn-side-item">
-            <span className="dn-side-value">{t.kcal == null ? "—" : Math.round(t.kcal)}</span>
-            <span className="dn-side-label">Objetivo</span>
-          </div>
-        </div>
+        <span className="dn-hero-value">{remaining == null ? Math.round(consumed) : remaining}</span>
+        <span className="dn-hero-label">{remaining == null ? "kcal consumidas" : "kcal restantes"}</span>
       </div>
 
+      {/* The same cell as everywhere else, rather than a second reading of
+          consumed and target in a different shape beside the hero. */}
+      <StatCell kind="kcal" value={consumed} target={t.kcal} />
+
       <div className="dn-macros">
-        {rows.map((r) => {
-          const pct = r.target ? Math.min(100, (r.value / r.target) * 100) : 0;
-          return (
-            <div className={"dn-macro " + r.cls} key={r.label}>
-              <span className="dn-macro-label">{r.label}</span>
-              <span className="dn-macro-value">
-                {Math.round(r.value)}
-                <span className="dn-macro-target">{r.target == null ? "" : ` / ${Math.round(r.target)} g`}</span>
-              </span>
-              <span className="dn-macro-track">
-                <span className="dn-macro-fill" style={{ width: `${pct}%` }} />
-              </span>
-            </div>
-          );
-        })}
+        {cells.map((c) => (
+          <StatCell key={c.kind} kind={c.kind} value={c.value} target={c.target} suffix={c.suffix} />
+        ))}
       </div>
+
     </div>
   );
 }

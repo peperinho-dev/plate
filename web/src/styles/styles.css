@@ -1987,6 +1987,14 @@ button:focus-visible, input:focus-visible {
   --rail: 18px;
   --card-pad: 16px;
   --tile-pad: 12px;
+
+  /* Protein had no colour of its own: the vanilla palette only ever
+     needed fat and carbs. The widgets show all four series at once, so
+     it gets one, warm enough to separate from the green accent. */
+  --macro-protein: #D8562B;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --macro-protein: #F0865C; }
 }
 
 /* Cards had an asymmetric 22/20/20 that made their contents sit low in
@@ -2163,26 +2171,54 @@ button:focus-visible, input:focus-visible {
 .widget-note, .eb-caption {
   margin: 0;
   font-size: 11px;
-  color: var(--ink-faint);
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 .eb-caption { text-align: right; }
 
-/* --- Nutrición y objetivos ------------------------------------------ */
-.ntw-body { display: flex; gap: var(--space-4); align-items: stretch; flex: 1; }
-.ntw-week {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 4px;
+/* --- The shared stat cell ------------------------------------------- */
+/* "1431 / 1573" on one line, bar beneath. Every widget showing intake
+   against a target renders it through this, so the same fact keeps the
+   same shape across the deck. */
+.stat-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat-cell-pair {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
+.stat-cell-value { font-weight: 800; }
+.stat-cell-target { font-weight: 600; color: var(--ink-faint); }
+.stat-cell-suffix { font-weight: 700; font-size: 11px; color: var(--ink-soft); }
+.stat-cell-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+.stat-cell-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ink-faint);
+  transition: width 0.35s ease;
+}
+.stat-cell.is-kcal .stat-cell-fill { background: var(--accent); }
+.stat-cell.is-protein .stat-cell-fill { background: var(--macro-protein); }
+.stat-cell.is-fat .stat-cell-fill { background: var(--macro-fat); }
+.stat-cell.is-carbs .stat-cell-fill { background: var(--macro-carbs); }
+.stat-cell-caption { font-size: 10px; color: var(--ink-faint); }
+
+/* --- Nutrición y objetivos ------------------------------------------ */
+.ntw-week { display: flex; gap: 4px; }
 .ntw-day {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 5px;
-  padding: 4px 2px;
+  padding: 6px 4px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
@@ -2190,55 +2226,41 @@ button:focus-visible, input:focus-visible {
   color: inherit;
 }
 .ntw-day.is-focused { border-color: var(--line); background: var(--surface-alt); }
-.ntw-day.is-future { opacity: 0.4; }
-/* Four bars per day, filling upward: calories, protein, fat, carbs. */
-.ntw-bars { display: flex; gap: 2px; height: 62px; align-items: flex-end; }
+.ntw-day.is-future { opacity: 0.35; }
+/* Four horizontal bars per day, stacked calories/protein/fat/carbs and
+   filling left to right - a four-line barcode you read as a shape, which
+   is the point of showing a whole week at once. */
+.ntw-bars { display: flex; flex-direction: column; gap: 3px; }
 .ntw-bar {
-  position: relative;
-  width: 5px;
-  height: 100%;
+  height: 3px;
   border-radius: 999px;
   background: var(--surface-alt);
   overflow: hidden;
-  display: flex;
-  align-items: flex-end;
 }
 .ntw-day.is-focused .ntw-bar { background: var(--line); }
-.ntw-bar-fill {
-  width: 100%;
-  border-radius: 999px;
-  background: var(--ink-faint);
-  transition: height 0.3s ease;
-}
-.ntw-bar.is-kcal .ntw-bar-fill { background: var(--ink-faint); }
-.ntw-bar.is-protein .ntw-bar-fill { background: var(--accent); }
+.ntw-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--ink-faint); }
+.ntw-bar.is-kcal .ntw-bar-fill { background: var(--accent); }
+.ntw-bar.is-protein .ntw-bar-fill { background: var(--macro-protein); }
 .ntw-bar.is-fat .ntw-bar-fill { background: var(--macro-fat); }
 .ntw-bar.is-carbs .ntw-bar-fill { background: var(--macro-carbs); }
-/* Reaching the target is the one state worth calling out, so it darkens
-   to full ink the way the reference app does. */
-.ntw-bar.is-kcal.is-met .ntw-bar-fill { background: var(--ink); }
-.ntw-letter { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+.ntw-letter { font-size: 10px; font-weight: 700; color: var(--ink-soft); text-align: center; }
 .ntw-day.is-today .ntw-letter { color: var(--accent-ink); }
 
-.ntw-stats {
-  flex: 0 0 96px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 2px;
+/* Two by two, matching the reference app's header grid. */
+.ntw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
 }
-.ntw-stat { display: flex; flex-direction: column; }
-.ntw-stat-value {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-.ntw-stat-unit { font-size: 10px; font-weight: 700; color: var(--ink-soft); margin-left: 2px; }
-.ntw-stat-target { font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.ntw-stat.is-protein .ntw-stat-unit { color: var(--accent); }
-.ntw-stat.is-fat .ntw-stat-unit { color: var(--macro-fat); }
-.ntw-stat.is-carbs .ntw-stat-unit { color: var(--macro-carbs); }
+/* The caption names what the grid below is counting - today, a given
+   day, or the week - so it sits with the grid rather than drifting under
+   the chart. The auto margin lives here so the pair stays bottom-aligned
+   as one block. */
+.widget .widget-note { margin-top: auto; }
+.ntw-grid + .widget-note, .widget-note + .ntw-grid { margin-top: 0; }
+.ntw-grid ~ .widget-note { margin-top: 0; }
 
 /* --- Balance energético --------------------------------------------- */
 .eb-chart { width: 100%; height: 90px; display: block; }
@@ -2273,30 +2295,23 @@ button:focus-visible, input:focus-visible {
 .eb-op { font-size: 13px; color: var(--ink-faint); }
 
 /* --- Hoy ------------------------------------------------------------- */
-.dn-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
-.dn-hero-main { display: flex; flex-direction: column; min-width: 0; }
-.dn-hero-value { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.dn-hero-label { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
-.dn-hero-side { display: flex; gap: var(--space-4); }
-.dn-side-item { display: flex; flex-direction: column; align-items: flex-end; }
-.dn-side-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.dn-side-label { font-size: 10px; color: var(--ink-faint); }
-.dn-macros { display: flex; flex-direction: column; gap: var(--space-2); margin-top: auto; }
-.dn-macro { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-2); }
-.dn-macro-label { font-size: 12px; color: var(--ink-soft); }
-.dn-macro-value { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.dn-macro-target { color: var(--ink-faint); font-weight: 500; }
-.dn-macro-track {
-  grid-column: 1 / -1;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--surface-alt);
-  overflow: hidden;
+.dn-hero { display: flex; flex-direction: column; }
+.dn-hero-value {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.dn-macro-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.35s ease; }
-.dn-macro.is-protein .dn-macro-fill { background: var(--accent); }
-.dn-macro.is-fat .dn-macro-fill { background: var(--macro-fat); }
-.dn-macro.is-carbs .dn-macro-fill { background: var(--macro-carbs); }
+.dn-hero-label { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.dn-macros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
 
 /* --- Entreno semanal (rings) ---------------------------------------- */
 .ring-row { display: flex; gap: var(--space-3); flex: 1; align-items: center; }

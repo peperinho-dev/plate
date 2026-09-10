@@ -12,17 +12,24 @@
 import { useState } from "react";
 import { useAppStore } from "../../../shared/store";
 import { currentWeek, targetMidpoints, type WeekDay } from "../week";
+import { StatCell, type MacroKind } from "./StatCell";
 
 type Mode = "consumed" | "remaining";
 
+// Ordered as the reference app's header grid reads: calories and fat on
+// the top row, protein and carbs beneath.
 const MACROS = [
-  { key: "kcal", label: "kcal", cls: "is-kcal" },
-  { key: "protein", label: "P", cls: "is-protein" },
-  { key: "fat", label: "G", cls: "is-fat" },
-  { key: "carbs", label: "C", cls: "is-carbs" }
+  { key: "kcal", suffix: undefined },
+  { key: "fat", suffix: "G" },
+  { key: "protein", suffix: "P" },
+  { key: "carbs", suffix: "C" }
 ] as const;
 
-type MacroKey = (typeof MACROS)[number]["key"];
+type MacroKey = MacroKind;
+
+// The per-day bars keep the article's stacking order - calories, protein,
+// fat, carbs, top to bottom - which is not the grid's reading order.
+const BAR_ORDER: MacroKey[] = ["kcal", "protein", "fat", "carbs"];
 
 const valueOf = (d: WeekDay, k: MacroKey) => (k === "kcal" ? d.total : d[k]);
 
@@ -78,57 +85,38 @@ export function NutritionTargetsWidget() {
         </div>
       </div>
 
-      <div className="ntw-body">
-        <div className="ntw-week">
-          {week.map((d, i) => (
-            <button
-              type="button"
-              key={d.date}
-              className={
-                "ntw-day" +
-                (focus === i ? " is-focused" : "") +
-                (d.isFuture ? " is-future" : "") +
-                (d.isToday ? " is-today" : "")
-              }
-              // Tapping the focused day clears the focus, which is how the
-              // week view is reached.
-              onClick={() => setFocus(focus === i ? null : i)}
-              aria-pressed={focus === i}
-            >
-              <span className="ntw-bars">
-                {MACROS.map(({ key, cls }) => {
-                  const target = targets[key];
-                  const v = valueOf(d, key);
-                  const pct = target ? Math.min(100, (v / target) * 100) : 0;
-                  const met = target != null && v >= target;
-                  return (
-                    <span className={"ntw-bar " + cls + (met ? " is-met" : "")} key={key}>
-                      <span className="ntw-bar-fill" style={{ height: `${pct}%` }} />
-                    </span>
-                  );
-                })}
-              </span>
-              <span className="ntw-letter">{d.letter}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="ntw-stats">
-          {MACROS.map(({ key, label, cls }) => {
-            const { shown, target } = readout(key);
-            return (
-              <div className={"ntw-stat " + cls} key={key}>
-                <span className="ntw-stat-value">
-                  {Math.round(shown)}
-                  <span className="ntw-stat-unit">{label}</span>
-                </span>
-                <span className="ntw-stat-target">
-                  {target == null ? "sin objetivo" : `de ${Math.round(target)}`}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      <div className="ntw-week">
+        {week.map((d, i) => (
+          <button
+            type="button"
+            key={d.date}
+            className={
+              "ntw-day" +
+              (focus === i ? " is-focused" : "") +
+              (d.isFuture ? " is-future" : "") +
+              (d.isToday ? " is-today" : "")
+            }
+            // Tapping the focused day clears the focus, which is how the
+            // week view is reached.
+            onClick={() => setFocus(focus === i ? null : i)}
+            aria-pressed={focus === i}
+          >
+            <span className="ntw-bars">
+              {BAR_ORDER.map((key) => {
+                const target = targets[key];
+                const v = valueOf(d, key);
+                const pct = target ? Math.min(100, (v / target) * 100) : 0;
+                const met = target != null && v >= target;
+                return (
+                  <span className={"ntw-bar is-" + key + (met ? " is-met" : "")} key={key}>
+                    <span className="ntw-bar-fill" style={{ width: `${pct}%` }} />
+                  </span>
+                );
+              })}
+            </span>
+            <span className="ntw-letter">{d.letter}</span>
+          </button>
+        ))}
       </div>
 
       <p className="widget-note">
@@ -138,6 +126,14 @@ export function NutritionTargetsWidget() {
             : focused.label
           : `Semana · ${elapsed.length} ${elapsed.length === 1 ? "día" : "días"}`}
       </p>
+
+      <div className="ntw-grid">
+        {MACROS.map(({ key, suffix }) => {
+          const { shown, target } = readout(key);
+          return <StatCell key={key} kind={key} value={shown} target={target} suffix={suffix} />;
+        })}
+      </div>
+
     </div>
   );
 }
