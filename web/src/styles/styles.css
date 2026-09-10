@@ -1812,8 +1812,7 @@ button:focus-visible, input:focus-visible {
    header and the two read as one block. Same values as .form--divided so
    the rhythm matches the rest of the app. */
 .workout-pickers {
-  padding-top: 16px;
-  margin-top: 4px;
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
 
@@ -1837,8 +1836,10 @@ button:focus-visible, input:focus-visible {
 /* What you've already added, above the search — the sheet stays open
    while you build a session, so this is both the receipt for "did that
    land?" and the undo. */
+/* The sheet's own gap spaces this; its margins were stacking on top and
+   landing on 28 and 20. */
 .added-track {
-  margin: 12px 0 4px;
+  margin: 0;
 }
 .added-track-label {
   display: block;
@@ -2874,4 +2875,15 @@ button:focus-visible, input:focus-visible {
   text-align: center;
   /* Emoji sit high on their line box next to the name's cap height. */
   transform: translateY(1px);
+}
+
+/* Direct children of a sheet carry no vertical margin of their own. The
+   sheet's gap supplies the rhythm; anything extra stacks on it silently
+   and lands on numbers nobody chose — 20, 28, 32. Fixing those one at a
+   time was whack-a-mole, so the default is now "no margin" and the
+   deliberate exceptions (the grab handle's negative offset, the extra
+   air above a group label) override it by specificity above. */
+.modal-sheet > * {
+  margin-top: 0;
+  margin-bottom: 0;
 }

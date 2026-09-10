@@ -15,7 +15,7 @@ import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
 import { SwipeToDelete } from "../../shared/components/SwipeToDelete";
 import { showToast } from "../../shared/components/Toast";
-import { ChevronLeft, ChevronRight, DumbbellIcon, XIcon } from "../../shared/components/Icons";
+import { ChevronLeft, ChevronRight, DumbbellIcon, PlusIcon, XIcon } from "../../shared/components/Icons";
 import type { TimerLog } from "../../shared/store/types";
 import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
@@ -141,6 +141,18 @@ export function WorkoutView() {
               {capitalizeFirst(`${label.weekday}, ${label.day} de ${label.month}`)}
             </div>
             <div className="card-date-actions">
+              {/* The food log grew a + on every hour row, and this tab had
+                  nothing at all — the only way to add a session was the
+                  central +, which you had to already know about. The
+                  reference app puts one in this header too. */}
+              <button
+                type="button"
+                className="hour-add"
+                aria-label="Añadir ejercicio"
+                onClick={() => setAddOpen(true)}
+              >
+                <PlusIcon />
+              </button>
               {exercises.length > 0 && (
                 <button
                   type="button"
