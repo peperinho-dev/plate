@@ -1866,3 +1866,35 @@ button:focus-visible, input:focus-visible {
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
+
+/* The central add button. Docked above the tab bar rather than placed in
+   it: three evenly spaced tabs leave no middle slot, and adding a fourth
+   one would push the button off centre. Raised clear of the bar's top
+   edge so it never covers the middle tab's icon or label. */
+.tabbar-add {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  z-index: 41;
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease;
+}
+.tabbar-add:active { transform: translateX(-50%) scale(0.9); background: var(--ink-pressed); }
+
+/* Room for it, now that the per-view action bars are gone. */
+.view { padding-bottom: calc(148px + env(safe-area-inset-bottom)); }
+
+.quick-action-icon { color: var(--ink-soft); display: flex; align-items: center; }

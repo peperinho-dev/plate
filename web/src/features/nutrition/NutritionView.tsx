@@ -1,6 +1,6 @@
 // The Nutrición tab. Structure mirrors the #nutritionView markup in the
 // vanilla index.html so the ported stylesheet applies unchanged.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
 import { rebaseTimeToDay, todayKey } from "../../shared/lib/date";
@@ -136,6 +136,19 @@ export function NutritionView() {
     setEntryOpen(false);
     showToast("Añadido");
   };
+
+  // The central + records an intent rather than reaching into this view's
+  // modals; pick it up and clear it.
+  const pendingAction = useUiStore((s) => s.pendingAction);
+  const clearAction = useUiStore((s) => s.clearAction);
+  useEffect(() => {
+    if (!pendingAction) return;
+    if (pendingAction === "food") setAddFoodOpen(true);
+    else if (pendingAction === "scan") setScanOpen(true);
+    else if (pendingAction === "weight") setWeightOpen(true);
+    else return; // not ours — leave it for the view that owns it
+    clearAction();
+  }, [pendingAction, clearAction]);
 
   const handlePlateCommit = (items: PlateItem[], groupName: string | null) => {
     // Stamped on the day being viewed rather than "now", so logging to an
@@ -330,10 +343,11 @@ export function NutritionView() {
         </div>
       </main>
 
-      <div className="action-bar">
-        {selectionMode ? (
-          // Adding food mid-selection makes no sense, so the add buttons
-          // step aside for the one action the selection is for.
+      {/* There is no standing action bar any more — the central + covers
+          adding. Selection still needs somewhere to act from, though, and
+          this only exists while something is selected. */}
+      {selectionMode && (
+        <div className="action-bar">
           <button
             className="btn btn--primary btn--block"
             disabled={selectedCount < 2}
@@ -341,12 +355,9 @@ export function NutritionView() {
           >
             Agrupar ({selectedCount})
           </button>
-        ) : (
-          <button className="btn btn--primary btn--block" onClick={() => setAddFoodOpen(true)}>
-            <span className="btn-icon">+</span> Añadir
-          </button>
-        )}
-      </div>
+        </div>
+      )}
+
 
       <GroupMealModal
         open={groupOpen}

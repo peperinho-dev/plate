@@ -1,6 +1,6 @@
 // The Entreno tab. Shares dayOffset with Nutrición, so switching tabs
 // keeps the same day in view.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
@@ -74,6 +74,16 @@ export function WorkoutView() {
 
   // Logged only on natural completion — stopping early never happened.
   const run = useTimerRun((timer) => logTimerRun(dayKey, timer));
+
+  // The central + records an intent rather than reaching into this view's
+  // modals; pick up the one that belongs here and clear it.
+  const pendingAction = useUiStore((s) => s.pendingAction);
+  const clearAction = useUiStore((s) => s.clearAction);
+  useEffect(() => {
+    if (pendingAction !== "exercise") return;
+    setAddOpen(true);
+    clearAction();
+  }, [pendingAction, clearAction]);
 
   // The sheet stays open so several exercises can go in at once; the set
   // logger opens when you tap the row back on the day card.
@@ -226,11 +236,6 @@ export function WorkoutView() {
         </div>
       </main>
 
-      <div className="action-bar">
-        <button type="button" className="btn btn--primary btn--block" onClick={() => setAddOpen(true)}>
-          <span className="btn-icon">+</span> Añadir
-        </button>
-      </div>
 
       <AddWorkoutModal
         open={addOpen}

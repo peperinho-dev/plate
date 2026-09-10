@@ -26,6 +26,11 @@ export type DayClipboard = NutritionClipboard | WorkoutClipboard;
 
 export type ModalId = "paste" | "calendar" | "entry";
 
+// What the central + was asked for. The views own their own sheets, so
+// rather than hoisting every modal into the shell the button records an
+// intent and the relevant view opens it and clears the flag.
+export type QuickAction = "food" | "scan" | "weight" | "exercise";
+
 // The calendar serves two jobs: navigating the current view to a day, and
 // picking a paste destination. Tracked explicitly so a tap on a date knows
 // which one it's doing.
@@ -45,6 +50,7 @@ interface UiState {
   expandedGroups: Set<string>;
   clipboard: DayClipboard | null;
 
+  pendingAction: QuickAction | null;
   activeModal: ModalId | null;
   calendarMode: CalendarMode;
 
@@ -56,6 +62,9 @@ interface UiState {
   setDayOffset: (offset: number) => void;
   shiftDay: (delta: number) => void;
   toggleHourGroup: (key: string) => void;
+  /** Switches to the tab that owns the action, then records the intent. */
+  requestAction: (action: QuickAction) => void;
+  clearAction: () => void;
   toggleGroup: (id: string) => void;
   setClipboard: (clipboard: DayClipboard | null) => void;
   openModal: (id: ModalId) => void;
@@ -81,6 +90,7 @@ export const useUiStore = create<UiState>()((set) => ({
   collapsedHourGroups: new Set(),
   expandedGroups: new Set(),
   clipboard: null,
+  pendingAction: null,
   activeModal: null,
   calendarMode: "navigate",
   selectionMode: false,
@@ -90,6 +100,9 @@ export const useUiStore = create<UiState>()((set) => ({
   setDayOffset: (offset) => set({ dayOffset: offset }),
   shiftDay: (delta) => set((s) => ({ dayOffset: s.dayOffset + delta })),
   toggleHourGroup: (key) => set((s) => ({ collapsedHourGroups: toggleInSet(s.collapsedHourGroups, key) })),
+  requestAction: (action) =>
+    set({ activeTab: action === "exercise" ? "workout" : "nutrition", pendingAction: action }),
+  clearAction: () => set({ pendingAction: null }),
   toggleGroup: (id) => set((s) => ({ expandedGroups: toggleInSet(s.expandedGroups, id) })),
   setClipboard: (clipboard) => set({ clipboard }),
   openModal: (id) => set({ activeModal: id }),
