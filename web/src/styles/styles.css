@@ -2533,3 +2533,102 @@ button:focus-visible, input:focus-visible {
   margin-bottom: var(--space-3);
 }
 .totals-modes .segmented { flex: 0 0 auto; }
+
+/* ---------------------------------------------------------------------
+   Nutrition Overview
+   --------------------------------------------------------------------- */
+
+/* Period selector: an underlined tab strip rather than a segmented pill,
+   because five options in a pill at 325px would each be four characters
+   wide. Scrolls horizontally if it still doesn't fit. */
+.period-tabs {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+}
+.period-tabs::-webkit-scrollbar { display: none; }
+.period-tab {
+  flex: 0 0 auto;
+  padding: 0 0 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.period-tab.is-active { color: var(--ink); border-bottom-color: var(--accent); }
+
+.overview-note { margin: 0; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+
+.nut-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.nut-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.nut-section-title { font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-soft); }
+.nut-switch { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
+
+/* label · value · percent, then the bar - the reference app's row, and
+   the same three-rail shape used elsewhere in the app. */
+.nut-row { display: flex; flex-direction: column; gap: 5px; }
+.nut-head { display: flex; align-items: baseline; gap: var(--space-2); }
+.nut-label { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
+.nut-value { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nut-target { color: var(--ink-faint); font-weight: 500; }
+.nut-pct {
+  min-width: 42px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.nut-track { height: 4px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; }
+.nut-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.35s ease; }
+.nut-fill.is-kcal { background: var(--accent); }
+.nut-fill.is-protein { background: var(--macro-protein); }
+.nut-fill.is-fat { background: var(--macro-fat); }
+.nut-fill.is-carbs { background: var(--macro-carbs); }
+.nut-fill.is-other { background: var(--ink-faint); }
+
+.nut-contributors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding-left: var(--tile-pad);
+  border-left: 2px solid var(--line);
+}
+.nut-contributors-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.nut-contributor { display: flex; align-items: baseline; gap: var(--space-2); font-size: 12px; }
+.nut-contributor-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); }
+.nut-contributor-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+.nut-contributor-share { min-width: 34px; text-align: right; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+/* Opens the overview from the totals card. A quiet full-width footer, so
+   the card's own mode switch keeps its taps. */
+.totals-more {
+  margin-top: var(--space-3);
+  padding: var(--space-2) 0 0;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  text-align: center;
+}

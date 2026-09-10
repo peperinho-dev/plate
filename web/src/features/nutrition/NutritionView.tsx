@@ -10,6 +10,7 @@ import { CalendarModal } from "../../shared/components/CalendarModal";
 import { ChevronLeft, ChevronRight, TargetIcon } from "../../shared/components/Icons";
 import { EntryList } from "./components/EntryList";
 import { DayTotals } from "./components/DayTotals";
+import { NutritionOverviewModal } from "./components/NutritionOverviewModal";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
 import { EntryModal } from "./components/EntryModal";
 import { ScanModal } from "./components/ScanModal";
@@ -103,6 +104,7 @@ export function NutritionView() {
   // the central + and the top bar's add both mean; a number comes from
   // tapping the + on one of the timeline's hour rows.
   const [targetHour, setTargetHour] = useState<number | null>(null);
+  const [overviewOpen, setOverviewOpen] = useState(false);
   // A scan resolves here and is handed to the sheet to stage.
   const [pendingHit, setPendingHit] = useState<import("../../shared/lib/foodLookup").SearchHit | null>(null);
   const [gramsTarget, setGramsTarget] = useState<{ entryId: string; index: number } | null>(null);
@@ -276,8 +278,19 @@ export function NutritionView() {
       <main className="content">
         {/* Totals lead the tab: the number you opened the app to check
             shouldn't be below a scrollable list of everything you ate. */}
+        {/* The card opens the overview, but the mode switch inside it is
+            its own control — hence a wrapper with an explicit button
+            rather than an onClick on the card, which would swallow the
+            toggle's taps. */}
         <div className="card card--totals">
           <DayTotals entries={entries} dayKey={dayKey} />
+          <button
+            type="button"
+            className="totals-more"
+            onClick={() => setOverviewOpen(true)}
+          >
+            Resumen nutricional
+          </button>
         </div>
 
         <div className="card">
@@ -394,6 +407,11 @@ export function NutritionView() {
           if (gramsTarget) setGroupItemGrams(dayKey, gramsTarget.entryId, gramsTarget.index, grams);
           setGramsTarget(null);
         }}
+      />
+      <NutritionOverviewModal
+        open={overviewOpen}
+        dayKey={dayKey}
+        onClose={() => setOverviewOpen(false)}
       />
       <PasteTargetSheet />
       <CalendarModal />
