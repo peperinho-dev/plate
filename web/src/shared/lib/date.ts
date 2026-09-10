@@ -41,3 +41,16 @@ export function dateOffsetFromToday(d: Date): number {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / DAY_MS);
 }
+
+/**
+ * Timestamp for a given whole hour on a given day.
+ *
+ * Used when the hour is chosen rather than observed — tapping the 11:00
+ * row on the timeline means "this was eaten at 11", so the entry is
+ * stamped there instead of at the moment of logging.
+ */
+export function atHourOnDay(dayKey: string, hour: number): number {
+  const d = parseDateKey(dayKey);
+  d.setHours(hour, 0, 0, 0);
+  return d.getTime();
+}

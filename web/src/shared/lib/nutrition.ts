@@ -7,6 +7,7 @@ export interface HourGroup {
   hour: number;
   entries: Entry[];
   total: number;
+  macros: MacroTotals;
 }
 
 export function groupEntriesByHour(entries: Entry[]): HourGroup[] {
@@ -21,8 +22,34 @@ export function groupEntriesByHour(entries: Entry[]): HourGroup[] {
     .map(([hour, groupEntries]) => ({
       hour,
       entries: groupEntries,
-      total: groupEntries.reduce((sum, e) => sum + e.calories, 0)
+      total: groupEntries.reduce((sum, e) => sum + e.calories, 0),
+      macros: sumMacros(groupEntries)
     }));
+}
+
+/**
+ * The day as an unbroken run of hours rather than only the ones that have
+ * food in them.
+ *
+ * An empty hour is still somewhere you might want to log — the 10am snack
+ * you forgot — and it can only be tapped if it's drawn. The run spans the
+ * first logged hour through `throughHour` (the current hour on today, the
+ * last logged hour on any other day) so the list stays as long as the day
+ * actually is, instead of always rendering all 24.
+ */
+export function timelineHours(entries: Entry[], throughHour: number | null): HourGroup[] {
+  const logged = groupEntriesByHour(entries);
+  if (logged.length === 0) return [];
+
+  const byHour = new Map(logged.map((g) => [g.hour, g]));
+  const first = logged[0].hour;
+  const last = Math.max(logged[logged.length - 1].hour, throughHour ?? -1);
+
+  const out: HourGroup[] = [];
+  for (let h = first; h <= last; h++) {
+    out.push(byHour.get(h) ?? { hour: h, entries: [], total: 0, macros: sumMacros([]) });
+  }
+  return out;
 }
 
 export function sumCalories(entries: Entry[]): number {

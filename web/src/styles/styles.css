@@ -1988,6 +1988,11 @@ button:focus-visible, input:focus-visible {
   --card-pad: 16px;
   --tile-pad: 12px;
 
+  /* The little circular controls that sit at the end of a row - delete,
+     add-at-this-hour. One token so they can't drift apart: they read as
+     the same class of thing and should stay the same size. */
+  --row-affordance: 22px;
+
   /* Protein had no colour of its own: the vanilla palette only ever
      needed fat and carbs. The widgets show all four series at once, so
      it gets one, warm enough to separate from the green accent. */
@@ -2373,4 +2378,74 @@ button:focus-visible, input:focus-visible {
   padding: 4px 9px;
   color: var(--ink-soft);
   background: var(--surface-alt);
+}
+
+/* ---------------------------------------------------------------------
+   Timeline hour rows. The header stopped being one big button when it
+   grew a + of its own — a button inside a button is invalid, and the two
+   do different things.
+   --------------------------------------------------------------------- */
+.hour-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+}
+.hour-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+}
+.hour-toggle:disabled { opacity: 1; }
+
+/* That hour's own totals, in the same four columns as the rest of the
+   app so a glance down the timeline compares like with like. */
+.hour-macros {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.hour-kcal { font-weight: 700; color: var(--ink-soft); }
+.hour-macro { min-width: 26px; text-align: right; }
+
+.hour-add {
+  flex: 0 0 auto;
+  width: var(--row-affordance);
+  height: var(--row-affordance);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease;
+}
+.hour-add:active { transform: scale(0.88); background: var(--line); }
+
+/* An hour with nothing in it is a target, not content: it keeps its + and
+   recedes otherwise, so the run of hours reads as a timeline rather than
+   a list of things you didn't eat. */
+.hour-group.is-empty .hour-time { color: var(--ink-faint); font-weight: 600; }
+.hour-group.is-empty .hour-header { padding: 2px 0; }
+
+/* Sized down from 26px and pinned to the shared token: at the old size
+   these read as buttons competing with the row's content, when they are
+   secondary to it. */
+.row-del {
+  width: var(--row-affordance);
+  height: var(--row-affordance);
 }

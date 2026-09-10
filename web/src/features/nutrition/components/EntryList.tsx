@@ -1,43 +1,83 @@
-// Timeline of the day's entries, bucketed by the hour they were logged.
-// Ported from renderEntryTimeline() in app.js — groups default collapsed
-// so the day view opens tidy.
+// The day as a timeline of hours.
+//
+// Every hour between the first meal and now is drawn, not only the ones
+// with food in them: an empty hour is a place you might want to log the
+// snack you forgot, and it can only be tapped if it's on screen. Each
+// hour carries its own totals and its own + , so adding at 11am is one
+// tap from the 11am row rather than a trip through a time picker.
 import { AnimatePresence, motion } from "framer-motion";
 import type { Entry } from "../../../shared/store/types";
-import { groupEntriesByHour } from "../../../shared/lib/nutrition";
+import { timelineHours } from "../../../shared/lib/nutrition";
 import { useUiStore } from "../../../shared/store/ui";
-import { ChevronDown } from "../../../shared/components/Icons";
+import { ChevronDown, PlusIcon } from "../../../shared/components/Icons";
 import { EntryRow } from "./EntryRow";
 
 interface EntryListProps {
   entries: Entry[];
   dayKey: string;
+  /** Current hour when the day on screen is today; null otherwise. */
+  throughHour: number | null;
   onEdit: (entry: Entry) => void;
   onEditGroup: (entry: Entry) => void;
   onEditItem: (entry: Entry, itemIndex: number) => void;
+  onAddAtHour: (hour: number) => void;
 }
 
-export function EntryList({ entries, dayKey, onEdit, onEditGroup, onEditItem }: EntryListProps) {
+export function EntryList({
+  entries,
+  dayKey,
+  throughHour,
+  onEdit,
+  onEditGroup,
+  onEditItem,
+  onAddAtHour
+}: EntryListProps) {
   const collapsedHourGroups = useUiStore((s) => s.collapsedHourGroups);
   const toggleHourGroup = useUiStore((s) => s.toggleHourGroup);
-  const groups = groupEntriesByHour(entries);
+  const groups = timelineHours(entries, throughHour);
 
   return (
     <div className="log-list">
-      {groups.map(({ hour, entries: groupEntries, total }) => {
+      {groups.map(({ hour, entries: groupEntries, total, macros }) => {
         const groupKey = `${dayKey}-${hour}`;
         const collapsed = collapsedHourGroups.has(groupKey);
+        const empty = groupEntries.length === 0;
         return (
-          <div className="hour-group" key={groupKey}>
-            <button type="button" className="hour-header" onClick={() => toggleHourGroup(groupKey)}>
-              <span className="hour-time">{String(hour).padStart(2, "0")}:00</span>
-              <span className="hour-summary">
-                {groupEntries.length} · {Math.round(total)} kcal
-              </span>
-              <span className={"hour-chevron" + (collapsed ? " is-collapsed" : "")}>
-                <ChevronDown />
-              </span>
-            </button>
-            {!collapsed && (
+          <div className={"hour-group" + (empty ? " is-empty" : "")} key={groupKey}>
+            <div className="hour-header">
+              <button
+                type="button"
+                className="hour-toggle"
+                onClick={() => !empty && toggleHourGroup(groupKey)}
+                // An empty hour has nothing to collapse, so its label is
+                // not pretending to be a control.
+                disabled={empty}
+              >
+                <span className="hour-time">{String(hour).padStart(2, "0")}:00</span>
+                {!empty && (
+                  <span className="hour-macros">
+                    <span className="hour-kcal">{Math.round(total)}</span>
+                    <span className="hour-macro">{Math.round(macros.protein)}P</span>
+                    <span className="hour-macro">{Math.round(macros.fat)}G</span>
+                    <span className="hour-macro">{Math.round(macros.carbs)}C</span>
+                  </span>
+                )}
+                {!empty && (
+                  <span className={"hour-chevron" + (collapsed ? " is-collapsed" : "")}>
+                    <ChevronDown />
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="hour-add"
+                aria-label={`Añadir a las ${String(hour).padStart(2, "0")}:00`}
+                onClick={() => onAddAtHour(hour)}
+              >
+                <PlusIcon />
+              </button>
+            </div>
+            {!empty && !collapsed && (
               <div className="hour-entries">
                 {/*
                   Rows animate in and out rather than popping. `layout` also
@@ -56,7 +96,13 @@ export function EntryList({ entries, dayKey, onEdit, onEditGroup, onEditItem }: 
                       transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
                       style={{ overflow: "hidden" }}
                     >
-                      <EntryRow entry={entry} dayKey={dayKey} onEdit={onEdit} onEditGroup={onEditGroup} onEditItem={onEditItem} />
+                      <EntryRow
+                        entry={entry}
+                        dayKey={dayKey}
+                        onEdit={onEdit}
+                        onEditGroup={onEditGroup}
+                        onEditItem={onEditItem}
+                      />
                     </motion.div>
                   ))}
                 </AnimatePresence>

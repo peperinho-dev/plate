@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
-import { rebaseTimeToDay, todayKey } from "../../shared/lib/date";
+import { atHourOnDay, rebaseTimeToDay, todayKey } from "../../shared/lib/date";
 import { formatDateLabel, capitalizeFirst } from "../../shared/lib/format";
 import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
@@ -99,6 +99,10 @@ export function NutritionView() {
   const [renameEntry, setRenameEntry] = useState<Entry | null>(null);
   // Which ingredient of which logged meal the grams sheet is editing.
   const [addFoodOpen, setAddFoodOpen] = useState(false);
+  // Which hour the logger is filing into. Null means "now", which is what
+  // the central + and the top bar's add both mean; a number comes from
+  // tapping the + on one of the timeline's hour rows.
+  const [targetHour, setTargetHour] = useState<number | null>(null);
   // A scan resolves here and is handed to the sheet to stage.
   const [pendingHit, setPendingHit] = useState<import("../../shared/lib/foodLookup").SearchHit | null>(null);
   const [gramsTarget, setGramsTarget] = useState<{ entryId: string; index: number } | null>(null);
@@ -148,10 +152,24 @@ export function NutritionView() {
     // Stamped on the day being viewed rather than "now", so logging to an
     // earlier day files the entry under that day's clock time instead of
     // today's. The +i keeps the staged order stable within the same second.
-    const base = rebaseTimeToDay(Date.now(), dayKey);
+    //
+    // An hour-row + overrides the clock entirely: you tapped 11:00 because
+    // that is when you ate, so the entry lands at 11:00 rather than
+    // whenever you got round to logging it.
+    const base =
+      targetHour == null
+        ? rebaseTimeToDay(Date.now(), dayKey)
+        : atHourOnDay(dayKey, targetHour);
     commitPlate(dayKey, items.map((it, i) => plateItemToEntry(it, base + i)), groupName);
-    setAddFoodOpen(false);
+    closeAddFood();
     showToast(groupName ? `${groupName} registrada` : items.length === 1 ? "Añadido" : `${items.length} añadidos`);
+  };
+
+  // One close path, so a target hour can't survive the sheet and quietly
+  // misfile the next thing logged from the central +.
+  const closeAddFood = () => {
+    setAddFoodOpen(false);
+    setTargetHour(null);
   };
 
   const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
@@ -303,6 +321,11 @@ export function NutritionView() {
             <EntryList
               entries={entries}
               dayKey={dayKey}
+              throughHour={dayOffset === 0 ? new Date().getHours() : null}
+              onAddAtHour={(hour) => {
+                setTargetHour(hour);
+                setAddFoodOpen(true);
+              }}
               onEdit={openEntryForEdit}
               onEditGroup={setRenameEntry}
               onEditItem={(e, index) => setGramsTarget({ entryId: e.id, index })}
@@ -446,11 +469,11 @@ export function NutritionView() {
       />
       <AddFoodModal
         open={addFoodOpen}
-        hour={new Date().getHours()}
-        onClose={() => setAddFoodOpen(false)}
+        hour={targetHour ?? new Date().getHours()}
+        onClose={closeAddFood}
         onScanClick={() => setScanOpen(true)}
         onCreateManual={(name) => {
-          setAddFoodOpen(false);
+          closeAddFood();
           setForm({ ...emptyEntryForm(), name });
           setPendingBarcode(null);
           setEditingEntryId(null);

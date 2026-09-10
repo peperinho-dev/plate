@@ -30,7 +30,7 @@ export function ChevronDown({ size = 13 }: IconProps) {
   );
 }
 
-export function XIcon({ size = 11 }: IconProps) {
+export function XIcon({ size = 9 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
       <path d="M18 6L6 18M6 6l12 12" />
@@ -105,6 +105,14 @@ export function BarChartIcon({ size = 22 }: IconProps) {
       <line x1="5" y1="20" x2="5" y2="12" />
       <line x1="12" y1="20" x2="12" y2="4" />
       <line x1="19" y1="20" x2="19" y2="15" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ size = 10 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M7 1.5v11M1.5 7h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
