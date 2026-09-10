@@ -6,6 +6,7 @@
 // whatever they were logged as.
 import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
+import { showToast } from "../../../shared/components/Toast";
 import { useAppStore } from "../../../shared/store";
 import type { Exercise } from "../../../shared/store/types";
 import { formatShortDate } from "../../../shared/lib/format";
@@ -16,7 +17,8 @@ import {
   formatSet,
   isHoldSet
 } from "../../../shared/lib/workouts";
-import { addSet } from "../actions";
+import { addSet, prependSets } from "../actions";
+import { warmupSetsFor } from "../warmup";
 import { SetTable } from "./SetTable";
 import { useRestTimer } from "../useRestTimer";
 
@@ -28,7 +30,10 @@ interface ExerciseDetailModalProps {
   onEditExercise: () => void;
 }
 
-const REST_PRESETS = [45, 60, 90];
+// 15-second steps, as article 303 describes, rather than three fixed
+// buttons — rest that has to be 45, 60 or 90 is rest you round to fit the
+// app.
+const REST_PRESETS = [30, 45, 60, 90, 120, 180];
 
 export function ExerciseDetailModal({
   open,
@@ -67,6 +72,12 @@ export function ExerciseDetailModal({
   // A new set starts from what you did in this slot last session, and
   // failing that from the row above it. Either way the common case —
   // three sets at the same weight — is three taps, not three re-entries.
+  // What the warm-up should lead into: the first working set if there is
+  // one, else what you did in this slot last session.
+  const hasWarmup = exercise.sets.some((s) => s.type === "warmup");
+  const warmupTarget =
+    exercise.sets.find((s) => (s.type || "normal") === "normal") ?? suggestion ?? null;
+
   const handleAddSet = () => {
     const seed = suggestion ?? exercise.sets[exercise.sets.length - 1] ?? null;
     const hold = seed ? isHoldSet(seed) : mode === "hold";
@@ -115,6 +126,22 @@ export function ExerciseDetailModal({
         onAddSet={handleAddSet}
       />
 
+      {/* Ramps into whatever the first set is measured in — load for
+          weighted work, reps for bodyweight. Only offered when there is a
+          set to ramp towards, and when no warm-up is already there. */}
+      {warmupTarget && !hasWarmup && (
+        <button
+          type="button"
+          className="btn btn--secondary btn--block"
+          onClick={() => {
+            prependSets(dayKey, exercise.id, warmupSetsFor(warmupTarget));
+            showToast("Calentamiento añadido");
+          }}
+        >
+          Añadir calentamiento
+        </button>
+      )}
+
       {rest.isRunning && (
         <div className="rest-timer">
           <div className="rest-timer-info">
@@ -122,6 +149,24 @@ export function ExerciseDetailModal({
             <span className="rest-timer-time">{formatDuration(rest.remaining ?? 0)}</span>
           </div>
           <div className="rest-timer-actions">
+            {/* Nudging the running timer, from article 310 — adjusting rest
+                mid-set shouldn't mean restarting it. */}
+            <button
+              type="button"
+              className="rest-timer-preset"
+              aria-label="Quitar 10 segundos"
+              onClick={() => rest.adjust(-10)}
+            >
+              −10
+            </button>
+            <button
+              type="button"
+              className="rest-timer-preset"
+              aria-label="Añadir 10 segundos"
+              onClick={() => rest.adjust(10)}
+            >
+              +10
+            </button>
             {REST_PRESETS.map((secs) => (
               <button
                 key={secs}

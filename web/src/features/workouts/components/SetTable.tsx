@@ -101,6 +101,21 @@ interface SetTableProps {
 }
 
 export function SetTable({ exercise, dayKey, previous, mode, onAddSet }: SetTableProps) {
+  // "Anterior" pairs like with like rather than by row position. Position
+  // breaks the moment warm-ups are prepended: every working set shifts
+  // down and starts quoting the wrong session's set back at you. Warm-ups
+  // match previous warm-ups, working sets match previous working sets.
+  const previousFor = new Map<string, ExerciseSet>();
+  if (previous) {
+    const queue = { warmup: [...previous.filter((p) => p.type === "warmup")],
+                    working: [...previous.filter((p) => p.type !== "warmup")] };
+    exercise.sets.forEach((s) => {
+      const lane = s.type === "warmup" ? queue.warmup : queue.working;
+      const match = lane.shift();
+      if (match) previousFor.set(s.id, match);
+    });
+  }
+
   return (
     <div className="set-table">
       <div className="set-head">
@@ -113,7 +128,7 @@ export function SetTable({ exercise, dayKey, previous, mode, onAddSet }: SetTabl
 
       {exercise.sets.map((s, i) => {
         const hold = isHoldSet(s);
-        const prev = previous?.[i];
+        const prev = previousFor.get(s.id);
         const type = s.type || "normal";
         return (
           <div className="set-row" key={s.id}>

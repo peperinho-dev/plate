@@ -48,8 +48,21 @@ export function useRestTimer(onFinished?: () => void) {
     }, 1000);
   }, []);
 
+  /**
+   * Nudges a running countdown without restarting it. Clamped at 5s so a
+   * double-tap on −10 can't drive it to zero and fire the beep as if the
+   * rest had elapsed; does nothing when no timer is running, since there
+   * is no such thing as adjusting a rest you aren't taking.
+   */
+  const adjust = useCallback((delta: number) => {
+    if (remainingRef.current == null) return;
+    const next = Math.max(5, remainingRef.current + delta);
+    remainingRef.current = next;
+    setRemaining(next);
+  }, []);
+
   // Never leave an interval running after the sheet closes.
   useEffect(() => () => clearInterval(intervalRef.current), []);
 
-  return { remaining, start, stop, isRunning: remaining !== null };
+  return { remaining, start, stop, adjust, isRunning: remaining !== null };
 }
