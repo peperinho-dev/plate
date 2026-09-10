@@ -2523,3 +2523,13 @@ button:focus-visible, input:focus-visible {
    it. */
 .modal-sheet > .modal-hint { margin: 0; }
 .modal-sheet > .form--divided { margin-top: 0; }
+
+/* The Consumido/Restante switch above the day's totals. Right-aligned on
+   its own line: the totals value is large enough that a control beside it
+   would either crowd it or shrink it. */
+.totals-modes {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+.totals-modes .segmented { flex: 0 0 auto; }

@@ -5,6 +5,7 @@ import type { Entry } from "../../../shared/store/types";
 import { useAppStore } from "../../../shared/store";
 import { AnimatedNumber } from "../../../shared/components/AnimatedNumber";
 import { sumCalories, sumMacros, sumMicros } from "../../../shared/lib/nutrition";
+import { useUiStore } from "../../../shared/store/ui";
 
 interface DayTotalsProps {
   entries: Entry[];
@@ -12,14 +13,30 @@ interface DayTotalsProps {
   dayKey: string;
 }
 
-function MacroCol({ label, total, min, max }: { label: string; total: number; min: number; max: number }) {
+function MacroCol({
+  label,
+  total,
+  min,
+  max,
+  remaining
+}: {
+  label: string;
+  total: number;
+  min: number;
+  max: number;
+  remaining: boolean;
+}) {
+  // The bar always shows progress toward the target. Only the figure
+  // changes with the mode — a bar that emptied as you ate would invert
+  // the meaning of every other bar in the app.
   const pct = Math.min(100, (total / max) * 100 || 0);
   const inRange = total >= min && total <= max;
+  const shown = remaining ? Math.max(0, max - total) : total;
   return (
     <div className="macro-col">
       <div className="macro-label">{label}</div>
       <div className="macro-value">
-        {Math.round(total)}/{max} g
+        {Math.round(shown)}/{max} g
       </div>
       <div className="macro-track">
         <div className={"macro-fill" + (inRange ? " in-range" : "")} style={{ width: `${pct}%` }} />
@@ -31,15 +48,24 @@ function MacroCol({ label, total, min, max }: { label: string; total: number; mi
 export function DayTotals({ entries, dayKey }: DayTotalsProps) {
   const calorieTarget = useAppStore((s) => s.calorieTarget);
   const macroTargets = useAppStore((s) => s.macroTargets);
+  const totalsMode = useUiStore((s) => s.totalsMode);
+  const setTotalsMode = useUiStore((s) => s.setTotalsMode);
+  const remaining = totalsMode === "remaining";
 
   const total = sumCalories(entries);
   const { min, max } = calorieTarget;
   const inRange = total >= min && total <= max;
 
+  // In Restante mode the headline counts down to the top of the range, so
+  // an under-range status phrased as "por debajo" put two different
+  // remaining figures side by side with nothing saying they measure to
+  // opposite ends of the band. Naming the destination fixes that.
   const statusText = inRange
     ? "dentro del rango"
     : total < min
-      ? `${Math.round(min - total)} kcal por debajo del rango`
+      ? remaining
+        ? `${Math.round(min - total)} kcal para entrar en el rango`
+        : `${Math.round(min - total)} kcal por debajo del rango`
       : `${Math.round(total - max)} kcal por encima del rango`;
 
   // Scale the bar so both the band and the marker stay on-screen even when
@@ -50,12 +76,35 @@ export function DayTotals({ entries, dayKey }: DayTotalsProps) {
   const micros = sumMicros(entries);
   const showMacros = macroTargets.proteinMin !== null;
 
+  // Counted against the top of the range: the range's ceiling is the
+  // number you'd exceed, so "restante" is how much is still available
+  // rather than how far you are from its midpoint.
+  const remainingKcal = Math.max(0, max - total);
+
   return (
     <div className="totals">
+      <div className="totals-modes">
+        <div className="segmented segmented--compact">
+          <button
+            type="button"
+            className={"segmented-btn" + (!remaining ? " active" : "")}
+            onClick={() => setTotalsMode("consumed")}
+          >
+            Consumido
+          </button>
+          <button
+            type="button"
+            className={"segmented-btn" + (remaining ? " active" : "")}
+            onClick={() => setTotalsMode("remaining")}
+          >
+            Restante
+          </button>
+        </div>
+      </div>
       <div className="totals-row">
-        <span className="totals-label">Total</span>
+        <span className="totals-label">{remaining ? "Restante" : "Total"}</span>
         <span className="totals-value">
-          <AnimatedNumber value={total} resetKey={dayKey} /> kcal
+          <AnimatedNumber value={remaining ? remainingKcal : total} resetKey={dayKey + totalsMode} /> kcal
         </span>
       </div>
       <div className={"range-status" + (inRange ? " in-range" : "")}>{statusText}</div>
@@ -75,9 +124,9 @@ export function DayTotals({ entries, dayKey }: DayTotalsProps) {
 
       {showMacros && (
         <div className="macro-row">
-          <MacroCol label="Prot." total={macros.protein} min={macroTargets.proteinMin!} max={macroTargets.proteinMax!} />
-          <MacroCol label="Grasa" total={macros.fat} min={macroTargets.fatMin!} max={macroTargets.fatMax!} />
-          <MacroCol label="Carbos" total={macros.carbs} min={macroTargets.carbsMin!} max={macroTargets.carbsMax!} />
+          <MacroCol label="Prot." total={macros.protein} min={macroTargets.proteinMin!} max={macroTargets.proteinMax!} remaining={remaining} />
+          <MacroCol label="Grasa" total={macros.fat} min={macroTargets.fatMin!} max={macroTargets.fatMax!} remaining={remaining} />
+          <MacroCol label="Carbos" total={macros.carbs} min={macroTargets.carbsMin!} max={macroTargets.carbsMax!} remaining={remaining} />
         </div>
       )}
 

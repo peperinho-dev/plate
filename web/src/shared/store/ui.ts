@@ -45,6 +45,8 @@ interface UiState {
   // to look at, and hiding it behind a tap per hour made the log feel like
   // navigation rather than reading. Only the ones tapped shut stay shut,
   // and only for this session.
+  /** Whether the day totals count what you've eaten or what's left. */
+  totalsMode: "consumed" | "remaining";
   collapsedHourGroups: Set<string>;
   // Grouped (meal) entries currently expanded to show their ingredients.
   expandedGroups: Set<string>;
@@ -61,6 +63,7 @@ interface UiState {
   setActiveTab: (tab: TabId) => void;
   setDayOffset: (offset: number) => void;
   shiftDay: (delta: number) => void;
+  setTotalsMode: (mode: "consumed" | "remaining") => void;
   toggleHourGroup: (key: string) => void;
   /** Switches to the tab that owns the action, then records the intent. */
   requestAction: (action: QuickAction) => void;
@@ -87,6 +90,7 @@ function toggleInSet(set: Set<string>, key: string): Set<string> {
 export const useUiStore = create<UiState>()((set) => ({
   activeTab: "nutrition",
   dayOffset: 0,
+  totalsMode: "consumed",
   collapsedHourGroups: new Set(),
   expandedGroups: new Set(),
   clipboard: null,
@@ -99,6 +103,7 @@ export const useUiStore = create<UiState>()((set) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   setDayOffset: (offset) => set({ dayOffset: offset }),
   shiftDay: (delta) => set((s) => ({ dayOffset: s.dayOffset + delta })),
+  setTotalsMode: (mode) => set({ totalsMode: mode }),
   toggleHourGroup: (key) => set((s) => ({ collapsedHourGroups: toggleInSet(s.collapsedHourGroups, key) })),
   requestAction: (action) =>
     set({
