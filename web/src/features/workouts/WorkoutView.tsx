@@ -20,6 +20,7 @@ import type { TimerLog } from "../../shared/store/types";
 import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
 import { ProgressionDetailModal } from "./components/ProgressionDetailModal";
+import { SessionSummaryModal } from "./components/SessionSummaryModal";
 import { collectProgressionGroups } from "./progressions";
 import { AddWorkoutModal } from "./components/AddWorkoutModal";
 import { TimerRunModal } from "./components/TimerRunModal";
@@ -70,6 +71,7 @@ export function WorkoutView() {
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   // Progressions live here rather than on the dashboard: a progression is
   // a property of a movement, so it belongs beside the movement you just
   // logged, not in a chart three tabs away.
@@ -246,6 +248,12 @@ export function WorkoutView() {
                 </span>
               </div>
               <p className="stat-note">{totalsNote}</p>
+              {/* Same gesture as the food log's totals, which open the
+                  nutrition overview — the day's numbers are where you go
+                  for more about the day. */}
+              <button type="button" className="totals-more" onClick={() => setSummaryOpen(true)}>
+                Resumen del entreno
+              </button>
             </div>
           )}
         </div>
@@ -271,6 +279,7 @@ export function WorkoutView() {
         onClose={() => setDetailId(null)}
         onEditExercise={() => setEditOpen(true)}
       />
+      <SessionSummaryModal open={summaryOpen} dayKey={dayKey} onClose={() => setSummaryOpen(false)} />
       <ProgressionDetailModal
         open={progressionGroup !== null}
         groupName={progressionGroup}

@@ -2788,3 +2788,77 @@ button:focus-visible, input:focus-visible {
   color: var(--accent-ink);
 }
 .set-add:active { background: var(--accent-soft); }
+
+/* ---------------------------------------------------------------------
+   Session summary
+   --------------------------------------------------------------------- */
+.ss-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.ss-total { display: flex; flex-direction: column; gap: 2px; }
+.ss-total-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.ss-total-label { font-size: 10px; color: var(--ink-faint); }
+
+.ss-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.ss-records { display: flex; flex-direction: column; gap: var(--space-2); }
+.ss-record {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--tile-pad);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+.ss-record-name { font-size: 13px; font-weight: 700; color: var(--accent-ink); min-width: 0; }
+.ss-record-set { font-size: 13px; font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+
+.ss-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.ss-row { display: flex; flex-direction: column; gap: 3px; }
+.ss-row + .ss-row { padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.ss-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.ss-row-name { font-size: 14px; font-weight: 700; min-width: 0; }
+.ss-row-best { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ss-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.ss-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ss-sep { color: var(--ink-faint); }
+.ss-row-prev { font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.ss-delta { font-weight: 700; }
+.ss-delta.is-up { color: var(--accent-ink); }
+.ss-delta.is-down { color: var(--ink-faint); }
+.ss-delta.is-flat { color: var(--ink-faint); }
