@@ -14,6 +14,9 @@ export function WidgetDeck({ children }: WidgetDeckProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const pages = children.length;
+  // The page we believe we're on, kept separately from scroll position
+  // because a resize invalidates the position but not the intent.
+  const pageRef = useRef(0);
 
   // Derives the page from scroll position rather than tracking the
   // gesture, so a snap that lands from a fling, a keyboard scroll or a
@@ -26,7 +29,9 @@ export function WidgetDeck({ children }: WidgetDeckProps) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const width = el.clientWidth || 1;
-        setPage(Math.max(0, Math.min(pages - 1, Math.round(el.scrollLeft / width))));
+        const next = Math.max(0, Math.min(pages - 1, Math.round(el.scrollLeft / width)));
+        pageRef.current = next;
+        setPage(next);
       });
     };
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -36,9 +41,30 @@ export function WidgetDeck({ children }: WidgetDeckProps) {
     };
   }, [pages]);
 
+  // Scroll offsets are in pixels, so a width change leaves the deck
+  // parked between two widgets — half of one and half of the next, with
+  // the dots still claiming a whole page. Snapping is not re-applied by
+  // the browser on resize, so the page is restored explicitly.
+  //
+  // This is rotation on a phone, and also the keyboard opening: both
+  // change the viewport under a deck that has been scrolled.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const width = el.clientWidth;
+      if (!width) return;
+      const wanted = pageRef.current * width;
+      if (Math.abs(el.scrollLeft - wanted) > 1) el.scrollLeft = wanted;
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const goTo = (i: number) => {
     const el = trackRef.current;
     if (!el) return;
+    pageRef.current = i;
     el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   };
 
