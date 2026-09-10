@@ -2078,6 +2078,82 @@ button:focus-visible, input:focus-visible {
 .card:has(+ .section-head) .empty-state-icon { display: none; }
 .card:has(+ .section-head) .empty-state p { margin-bottom: 0; }
 
+/* --- Progreso detail ------------------------------------------------- */
+/* A waterfall of weekly changes hanging off a zero line. Same drawing
+   conventions as the nutrient trend: bars in the accent, a dashed
+   non-scaling reference, a legend under it. */
+.gp-chart { width: 100%; height: 96px; display: block; }
+.gp-bar.is-on { fill: var(--accent); }
+/* A week that missed the aim is stated, not scolded — muted rather than
+   red. Missing a weekly target is ordinary, and this screen is read most
+   often in the weeks it happens. */
+.gp-bar.is-off { fill: var(--ink-faint); }
+.gp-zero {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.gp-ref {
+  stroke: var(--macro-fat);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.gp-legend-item {
+  font-size: var(--fs-label);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gp-legend-item::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.gp-legend-item.is-target::before { background: var(--macro-fat); }
+.gp-legend-item.is-on::before { background: var(--accent); }
+
+.gp-track { display: flex; flex-direction: column; gap: var(--space-2); }
+.gp-track-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+.gp-track-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.gp-track-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.gp-track-pct { color: var(--accent-ink); font-weight: 700; }
+
+/* The cumulative figure is context for the week's own change, so it
+   stays quieter than the number the row is about. */
+.gp-week-cum {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.gp-week-change {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* A row you read rather than tap: name on the left, figure on the right,
    both on one line. The tappable .row puts its two texts in a stacked
    .row-main, which is right when the second line is a subtitle and wrong

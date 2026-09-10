@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Docs belonging to the separate diet + training project that happen to
+# live in this folder. They carry personal health details and this repo is
+# public, so they stay ignored rather than untracked-and-one-git-add-away.
+CALISTHENICS_SYSTEM.md
+DIET_SYSTEM.md

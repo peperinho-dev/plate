@@ -10,6 +10,7 @@ import { useAppStore } from "../../shared/store";
 import { WeightTrendModal } from "./WeightTrendModal";
 import { ExpenditureModal } from "./ExpenditureModal";
 import { TrainingDetailModal } from "./TrainingDetailModal";
+import { GoalProgressModal } from "./GoalProgressModal";
 import { ExerciseTrendModal } from "./ExerciseTrendModal";
 import { trainingSeries } from "./trainingSeries";
 import { getRecentDays } from "../../shared/lib/analytics";
@@ -84,7 +85,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   // The cards state a figure; tapping one opens the series behind it, with
   // numbers on both axes. Goal has no detail of its own yet — its story is
   // the weight trend, so it opens that.
-  const [detail, setDetail] = useState<"weight" | "expenditure" | "training" | null>(null);
+  const [detail, setDetail] = useState<"weight" | "expenditure" | "training" | "goal" | null>(null);
   const [exercise, setExercise] = useState<string | null>(null);
   const days = useAppStore((s) => s.days);
   const workouts = useAppStore((s) => s.workouts);
@@ -145,7 +146,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     const pct = Math.round(goal.fraction * 100);
     cards.push(
       <button type="button" className="insight-card is-tappable" key="goal"
-              onClick={() => setDetail("weight")}>
+              onClick={() => setDetail("goal")}>
         <span className="insight-card-label">Progreso</span>
         <span className="insight-card-value">
           {goal.kind === "maintain"
@@ -220,6 +221,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     <>
       <div className="insights-grid">{cards}</div>
       <WeightTrendModal open={detail === "weight"} onClose={() => setDetail(null)} />
+      <GoalProgressModal open={detail === "goal"} onClose={() => setDetail(null)} />
       <ExpenditureModal open={detail === "expenditure"} onClose={() => setDetail(null)} />
       <TrainingDetailModal
         open={detail === "training"}

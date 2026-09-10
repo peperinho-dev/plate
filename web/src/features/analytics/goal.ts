@@ -6,6 +6,8 @@
 // salty dinner isn't progress, it's noise.
 import type { Profile } from "../../shared/store/types";
 import type { EmaPoint } from "../profile/adaptive";
+import { formatDateKey, parseDateKey } from "../../shared/lib/date";
+import { mondayOf } from "../../shared/lib/analytics";
 
 export interface GoalReading {
   kind: "directional" | "maintain";
@@ -54,4 +56,74 @@ export function readGoal(profile: Profile, ema: EmaPoint[]): GoalReading | null 
     profile.goalType === "lose" ? current <= target : current >= target;
 
   return { kind: "directional", fraction, remaining, target, current, done };
+}
+
+/**
+ * The goal broken into weeks — what the reference app's Goal Progress
+ * screen charts.
+ *
+ * A single "4.3 kg to go" figure says where you are but not how you got
+ * there, and gaining weight is a weekly business: the question you
+ * actually have is whether last week moved you the right amount, and
+ * whether the week before that did too. Each entry is one Monday-to-
+ * Sunday block of the smoothed trend.
+ *
+ * Measured on the trend, not the scale, for the same reason the headline
+ * is: a week that ends on a salty dinner isn't a week you failed.
+ */
+export interface GoalWeek {
+  /** Day key of that week's Monday. */
+  weekStart: string;
+  /** Trend weight at the start and end of the week. */
+  startEma: number;
+  endEma: number;
+  /** Signed change across the week, in kg. */
+  change: number;
+  /** Cumulative change since the first week shown. */
+  cumulative: number;
+  /** How many weigh-ins the week's trend rests on. */
+  readings: number;
+}
+
+export function goalWeeks(ema: EmaPoint[]): GoalWeek[] {
+  if (ema.length === 0) return [];
+  const buckets = new Map<string, EmaPoint[]>();
+  for (const point of ema) {
+    const key = formatDateKey(mondayOf(parseDateKey(point.date)));
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(point);
+    else buckets.set(key, [point]);
+  }
+
+  const weekStarts = Array.from(buckets.keys()).sort();
+  const out: GoalWeek[] = [];
+  let cumulative = 0;
+  let previousEnd: number | null = null;
+
+  for (const weekStart of weekStarts) {
+    const points = buckets.get(weekStart)!.sort((a, b) => (a.date < b.date ? -1 : 1));
+    const endEma = points[points.length - 1].ema;
+    // A week's change is measured from where the *previous* week left
+    // off, not from its own first reading — otherwise everything that
+    // happened between Sunday night and the next weigh-in falls into a
+    // gap between the bars and the totals stop adding up.
+    const startEma = previousEnd ?? points[0].ema;
+    const change = endEma - startEma;
+    cumulative += change;
+    out.push({ weekStart, startEma, endEma, change, cumulative, readings: points.length });
+    previousEnd = endEma;
+  }
+  return out;
+}
+
+/**
+ * The signed weekly rate the profile is aiming at — positive for a bulk,
+ * negative for a cut, null when there's no rate to compare against. The
+ * profile stores the magnitude and the direction separately.
+ */
+export function targetWeeklyRate(profile: Profile): number | null {
+  if (profile.rateKgPerWeek == null || !profile.goalType || profile.goalType === "maintain") return null;
+  return profile.goalType === "lose"
+    ? -Math.abs(profile.rateKgPerWeek)
+    : Math.abs(profile.rateKgPerWeek);
 }

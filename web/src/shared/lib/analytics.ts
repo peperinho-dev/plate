@@ -148,7 +148,7 @@ function hasSession(workouts: AppState["workouts"], dayKey: string): boolean {
   return !!(workouts[dayKey] && workouts[dayKey].exercises.length > 0);
 }
 
-function mondayOf(date: Date): Date {
+export function mondayOf(date: Date): Date {
   const d = new Date(date);
   const dow = (d.getDay() + 6) % 7; // 0 = Monday
   d.setDate(d.getDate() - dow);
