@@ -9,6 +9,10 @@ import { useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { WeightTrendModal } from "./WeightTrendModal";
 import { ExpenditureModal } from "./ExpenditureModal";
+import { TrainingDetailModal } from "./TrainingDetailModal";
+import { ExerciseTrendModal } from "./ExerciseTrendModal";
+import { trainingSeries } from "./trainingSeries";
+import { getRecentDays } from "../../shared/lib/analytics";
 import { smoothPath, type Point } from "../../shared/lib/svgPath";
 import { expenditureSeries, trendRatePerWeek } from "./expenditure";
 import { readGoal, MAINTAIN_BAND_KG } from "./goal";
@@ -43,8 +47,10 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   // The cards state a figure; tapping one opens the series behind it, with
   // numbers on both axes. Goal has no detail of its own yet — its story is
   // the weight trend, so it opens that.
-  const [detail, setDetail] = useState<"weight" | "expenditure" | null>(null);
+  const [detail, setDetail] = useState<"weight" | "expenditure" | "training" | null>(null);
+  const [exercise, setExercise] = useState<string | null>(null);
   const days = useAppStore((s) => s.days);
+  const workouts = useAppStore((s) => s.workouts);
   const weightLog = useAppStore((s) => s.weightLog);
   const profile = useAppStore((s) => s.profile);
 
@@ -150,12 +156,40 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     );
   }
 
+  // A fourth card, so the grid reads as a grid rather than three and a
+  // hole. Their nutrition dashboard has three because workouts live in a
+  // separate app with their own; this one is blended, so training belongs
+  // in the same set.
+  const trainKeys = getRecentDays(days, 30).map((d) => d.date);
+  const trainSeries = trainingSeries(workouts, trainKeys, "sets", weightLog);
+  const sessions = trainSeries.filter((p) => p.trained);
+  if (sessions.length > 0) {
+    const totalSets = sessions.reduce((sum, p) => sum + p.value, 0);
+    cards.push(
+      <button type="button" className="insight-card is-tappable" key="training"
+              onClick={() => setDetail("training")}>
+        <span className="insight-card-label">Entreno</span>
+        <span className="insight-card-value">{sessions.length} sesiones</span>
+        <span className="insight-card-sub">{Math.round(totalSets)} series · 30 días</span>
+        <span className="insight-card-spark">
+          <Sparkline values={trainSeries.map((p) => p.value)} />
+        </span>
+      </button>
+    );
+  }
+
   if (cards.length === 0) return null;
   return (
     <>
       <div className="insights-grid">{cards}</div>
       <WeightTrendModal open={detail === "weight"} onClose={() => setDetail(null)} />
       <ExpenditureModal open={detail === "expenditure"} onClose={() => setDetail(null)} />
+      <TrainingDetailModal
+        open={detail === "training"}
+        onClose={() => setDetail(null)}
+        onPickExercise={(name) => setExercise(name)}
+      />
+      <ExerciseTrendModal open={exercise !== null} name={exercise} onClose={() => setExercise(null)} />
     </>
   );
 }
