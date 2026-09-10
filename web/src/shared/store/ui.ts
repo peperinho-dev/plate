@@ -38,7 +38,15 @@ export type ModalId = "paste" | "calendar" | "entry";
 // What the central + was asked for. The views own their own sheets, so
 // rather than hoisting every modal into the shell the button records an
 // intent and the relevant view opens it and clears the flag.
-export type QuickAction = "food" | "scan" | "weight" | "exercise" | "profile" | "target" | "photo";
+export type QuickAction =
+  | "food"
+  | "scan"
+  | "weight"
+  | "exercise"
+  | "profile"
+  | "target"
+  | "workoutGoal"
+  | "photo";
 
 // The calendar serves two jobs: navigating the current view to a day, and
 // picking a paste destination. Tracked explicitly so a tap on a date knows
@@ -119,7 +127,11 @@ export const useUiStore = create<UiState>()((set) => ({
       activeTab:
         action === "exercise"
           ? "workout"
-          : action === "weight" || action === "profile" || action === "target" || action === "photo"
+          : action === "weight" ||
+              action === "profile" ||
+              action === "target" ||
+              action === "workoutGoal" ||
+              action === "photo"
             ? "settings"
             : "nutrition",
       pendingAction: action

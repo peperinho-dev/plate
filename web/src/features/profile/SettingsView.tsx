@@ -40,6 +40,7 @@ export function SettingsView() {
     if (pendingAction === "weight") setWeightOpen(true);
     else if (pendingAction === "profile") setProfileOpen(true);
     else if (pendingAction === "target") setTargetOpen(true);
+    else if (pendingAction === "workoutGoal") setWorkoutOpen(true);
     else if (pendingAction === "photo") setPhotosOpen(true);
     else return;
     clearAction();
@@ -107,8 +108,13 @@ export function SettingsView() {
 
   return (
     <div className="view">
-      <header className="topbar">
-        <span className="day-label">Ajustes</span>
+      {/* The stacked variant, same as Resumen: this is a screen title, not
+          the day button the other two tabs put here, and it was picking up
+          the day button's smaller, lighter styling by sharing its topbar. */}
+      <header className="topbar topbar--stacked">
+        <div className="topbar-heading">
+          <span className="day-label">Ajustes</span>
+        </div>
       </header>
 
       <main className="content">

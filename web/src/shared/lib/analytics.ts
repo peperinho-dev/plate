@@ -52,6 +52,8 @@ export function getAllDays(days: AppState["days"], weightLog: AppState["weightLo
 }
 
 export interface ExerciseRecord {
+  /** The day the best set happened, so the row can say when. */
+  date: string;
   name: string;
   value: number;
 }
@@ -75,7 +77,7 @@ export function computeExerciseRecords(
         const value = hold ? s.holdSeconds! : s.reps ?? 0;
         if (!value) return;
         const existing = best.get(ex.name);
-        if (!existing || value > existing.value) best.set(ex.name, { name: ex.name, value });
+        if (!existing || value > existing.value) best.set(ex.name, { name: ex.name, value, date: dayKey });
       });
     });
   });

@@ -39,6 +39,43 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+/**
+ * Training is a series of discrete events, not a continuous trend: on most
+ * of the last 30 days there is simply no session. Drawn as a line — which
+ * is what this card used to do — every rest day plunged to the floor and
+ * every session spiked back, producing a seismograph that read as noise
+ * next to the two genuinely continuous sparklines beside it.
+ *
+ * Bars encode absence as absence. A rest day is a baseline tick rather
+ * than a data point at zero, so the shape you read is the rhythm of
+ * training against rest.
+ */
+function MiniBars({ values }: { values: number[] }) {
+  if (values.length === 0) return <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} />;
+  const maxV = Math.max(...values, 1);
+  const slot = SPARK_W / values.length;
+  const barW = Math.max(slot * 0.62, 0.8);
+  return (
+    <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
+      {values.map((v, i) => {
+        // Trained days get at least 3px so a single-set day still reads as
+        // a session; rest days get a 1.5px tick, present but clearly empty.
+        const h = v > 0 ? Math.max((v / maxV) * (SPARK_H - 4), 3) : 1.5;
+        return (
+          <rect
+            key={i}
+            x={i * slot + (slot - barW) / 2}
+            y={SPARK_H - h}
+            width={barW}
+            height={h}
+            fill={v > 0 ? "var(--accent)" : "var(--line)"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 interface InsightsGridProps {
   weightWithEma: EmaPoint[];
 }
@@ -172,7 +209,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
         <span className="insight-card-value">{sessions.length} sesiones</span>
         <span className="insight-card-sub">{Math.round(totalSets)} series · 30 días</span>
         <span className="insight-card-spark">
-          <Sparkline values={trainSeries.map((p) => p.value)} />
+          <MiniBars values={trainSeries.map((p) => p.value)} />
         </span>
       </button>
     );

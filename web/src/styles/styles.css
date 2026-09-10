@@ -19,6 +19,26 @@
   --shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 12px 28px rgba(16, 16, 20, 0.07);
   --shadow-sheet: 0 -8px 30px rgba(16, 16, 20, 0.12);
   --font: 'Inter', system-ui, sans-serif;
+
+  /* Type scale. Eight steps, one per role — before this the app used
+     every integer from 8 to 19 plus 20/22/24/26/36/44, which read as
+     "close enough" locally and as drift across screens. Add a step only
+     when a genuinely new role appears, never to nudge one label. */
+  --fs-micro: 10px;      /* axis ticks, badges, counters */
+  --fs-caption: 11px;    /* uppercase eyebrows, macro labels, meta rows */
+  --fs-label: 12px;      /* supporting text, hints, secondary actions */
+  --fs-body: 13px;       /* default reading size, chips, dense values */
+  --fs-body-lg: 15px;    /* primary row names and amounts, buttons */
+  --fs-heading: 17px;    /* section titles, modal headers, day nav */
+  --fs-title: 24px;      /* page titles */
+  --fs-display: 36px;    /* the one hero number on a screen */
+  /* The full-screen rest timer is the sole exception: it is a single
+     number on an otherwise empty screen, meant to be read from across
+     the room. Not a general step — do not reuse it. */
+  --fs-display-xl: 44px;
+  /* Functional, not aesthetic: iOS zooms the viewport when a focused
+     input is under 16px. Never fold this into the scale above. */
+  --fs-input: 16px;
   --radius-lg: 22px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -119,7 +139,7 @@ button {
   border: none;
   padding: 6px 4px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-faint);
   white-space: nowrap;
@@ -146,7 +166,7 @@ button {
 }
 .adaptive-banner p {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--accent-ink);
   line-height: 1.5;
 }
@@ -173,8 +193,8 @@ button {
 }
 
 .day-label {
-  font-weight: 700;
-  font-size: 17px;
+  font-weight: 800;
+  font-size: var(--fs-heading);
   letter-spacing: -0.01em;
   min-width: 64px;
   text-align: center;
@@ -195,7 +215,7 @@ button {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  font-size: 17px;
+  font-size: var(--fs-heading);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -231,22 +251,28 @@ button {
 }
 .week-strip-day:active { transform: scale(0.94); }
 .week-strip-letter {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 .week-strip-num {
-  font-size: 14px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   color: var(--ink);
 }
+/* Selection speaks the app's one selected-state language: the soft
+   accent wash the tab bar and chips already use. It used to fill with
+   --ink — a *text* colour, which in dark mode is near-white, so the
+   selected day became the brightest element on the screen and sat off
+   the palette entirely. */
 .week-strip-day.is-selected {
-  background: var(--ink);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow), inset 0 0 0 1.5px var(--accent);
 }
-.week-strip-day.is-selected .week-strip-letter { color: var(--surface); opacity: 0.65; }
-.week-strip-day.is-selected .week-strip-num { color: var(--surface); }
+.week-strip-day.is-selected .week-strip-letter { color: var(--accent-ink); opacity: 0.8; }
+.week-strip-day.is-selected .week-strip-num { color: var(--accent-ink); }
 .week-strip-day.is-future:not(.is-selected) {
   opacity: 0.5;
 }
@@ -271,7 +297,7 @@ button {
   color: var(--accent-ink);
   border-radius: 999px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -304,7 +330,7 @@ button.chip:active { transform: scale(0.95); }
 }
 
 .card-date {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -343,7 +369,7 @@ button.chip:active { transform: scale(0.95); }
 }
 
 .hour-time {
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink-soft);
   min-width: 40px;
@@ -351,7 +377,7 @@ button.chip:active { transform: scale(0.95); }
 
 .hour-summary {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -393,14 +419,14 @@ button.row-main { cursor: pointer; }
 button.row-main:active { opacity: 0.55; }
 
 .row-name {
-  font-size: 15px;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .row-qty {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-soft);
 }
 .row-prev {
@@ -418,7 +444,7 @@ button.row-main:active { opacity: 0.55; }
 
 .set-type-tag {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -430,13 +456,13 @@ button.row-main:active { opacity: 0.55; }
 .set-type-tag--failure { background: var(--danger-soft); color: var(--danger); }
 .set-type-tag--dropset { background: var(--carbs-soft); color: var(--macro-carbs); }
 .row-macros {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
 
 .row-amount {
-  font-size: 15px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -449,7 +475,7 @@ button.row-main:active { opacity: 0.55; }
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -462,12 +488,12 @@ button.row-main:active { opacity: 0.55; }
 .empty-state {
   text-align: center;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--fs-body);
   padding: 22px 0;
   line-height: 1.6;
 }
 .empty-state p { margin: 0 0 10px; }
-.empty-state .link-btn { font-size: 13px; }
+.empty-state .link-btn { font-size: var(--fs-body); }
 .empty-state-icon {
   display: flex;
   align-items: center;
@@ -486,7 +512,7 @@ button.row-main:active { opacity: 0.55; }
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -525,21 +551,21 @@ button.row-main:active { opacity: 0.55; }
   gap: 5px;
 }
 .insight-card-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
 }
-.insight-card-value { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
-.insight-card-sub { font-size: 11px; color: var(--ink-faint); }
+.insight-card-value { font-size: var(--fs-heading); font-weight: 800; letter-spacing: -0.01em; }
+.insight-card-sub { font-size: var(--fs-caption); color: var(--ink-faint); }
 .insight-card-spark { margin-top: 2px; }
 
 /* ---------- Quick add ---------- */
 .quick-section { margin-bottom: 16px; }
 
 .quick-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -580,7 +606,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .quick-empty-hint {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-faint);
 }
 
@@ -592,7 +618,7 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 50%;
   width: 20px;
   height: 20px;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -627,14 +653,14 @@ button.row-main:active { opacity: 0.55; }
 .quick-chip:active { background: var(--line); transform: scale(0.96); }
 
 .quick-chip-name {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .quick-chip-kcal {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
@@ -654,7 +680,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .totals-label {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -662,15 +688,15 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .totals-value {
-  font-size: 36px;
-  font-weight: 900;
+  font-size: var(--fs-display);
+  font-weight: 800;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 .range-status {
   text-align: right;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--ink-soft);
   margin-top: 2px;
@@ -678,7 +704,7 @@ button.row-main:active { opacity: 0.55; }
 .range-status.in-range { color: var(--accent-ink); }
 
 .stat-note {
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--ink-soft);
   margin: 2px 0 14px;
@@ -703,7 +729,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .goal-progress-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -712,7 +738,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .goal-progress-value {
-  font-size: 22px;
+  font-size: var(--fs-title);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -756,7 +782,7 @@ button.row-main:active { opacity: 0.55; }
 .range-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-faint);
   margin-top: 8px;
@@ -772,7 +798,7 @@ button.row-main:active { opacity: 0.55; }
 .macro-col { flex: 1; min-width: 0; }
 
 .macro-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -781,7 +807,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .macro-value {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   margin: 3px 0 6px;
   font-variant-numeric: tabular-nums;
@@ -811,7 +837,7 @@ button.row-main:active { opacity: 0.55; }
 }
 .micro-item { flex: 1; min-width: 0; }
 .micro-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -820,7 +846,7 @@ button.row-main:active { opacity: 0.55; }
   display: block;
 }
 .micro-value {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   margin-top: 3px;
   font-variant-numeric: tabular-nums;
@@ -838,7 +864,7 @@ button.row-main:active { opacity: 0.55; }
   border: none;
   border-radius: 999px;
   padding: 15px 18px;
-  font-size: 15px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -861,8 +887,8 @@ button.row-main:active { opacity: 0.55; }
 }
 .btn--secondary:active { background: var(--line); }
 
-.btn-icon { font-size: 15px; }
-.btn--small { padding: 8px 14px; font-size: 13px; }
+.btn-icon { font-size: var(--fs-body-lg); }
+.btn--small { padding: 8px 14px; font-size: var(--fs-body); }
 
 .search-select-bar {
   display: flex;
@@ -925,7 +951,7 @@ button.row-main:active { opacity: 0.55; }
   justify-content: space-between;
   align-items: center;
   font-weight: 800;
-  font-size: 17px;
+  font-size: var(--fs-heading);
   letter-spacing: -0.01em;
   margin-bottom: 16px;
 }
@@ -933,7 +959,7 @@ button.row-main:active { opacity: 0.55; }
 .modal-close {
   background: var(--surface-alt);
   border: none;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--ink-soft);
   width: 28px;
   height: 28px;
@@ -958,21 +984,21 @@ button.row-main:active { opacity: 0.55; }
   gap: 4px;
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
   color: var(--ink-soft);
   padding: 4px;
 }
 
 .live-preview {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--accent-ink);
   margin: -4px 0 0;
 }
 
 .modal-hint {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--ink-soft);
   line-height: 1.6;
   background: var(--surface-alt);
@@ -1009,7 +1035,7 @@ button.row-main:active { opacity: 0.55; }
 }
 .calendar-month-label {
   font-weight: 800;
-  font-size: 16px;
+  font-size: var(--fs-heading);
   letter-spacing: -0.01em;
   text-transform: capitalize;
 }
@@ -1020,7 +1046,7 @@ button.row-main:active { opacity: 0.55; }
 }
 .calendar-weekdays span {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1047,7 +1073,7 @@ button.row-main:active { opacity: 0.55; }
   transition: background 0.15s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
 }
 .calendar-day:active { transform: scale(0.92); background: var(--surface-alt); }
-.calendar-day-num { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calendar-day-num { font-size: var(--fs-body-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .calendar-day-dots { display: flex; gap: 3px; height: 5px; align-items: center; }
 .calendar-day.is-outside { color: var(--ink-faint); }
 .calendar-day.is-today .calendar-day-num { color: var(--accent-ink); font-weight: 800; }
@@ -1065,7 +1091,7 @@ button.row-main:active { opacity: 0.55; }
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-soft);
   font-weight: 600;
 }
@@ -1094,7 +1120,7 @@ button.row-main:active { opacity: 0.55; }
 .streak-block:last-of-type { margin-bottom: 4px; }
 .streak-label {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink-soft);
   margin-bottom: 8px;
@@ -1109,8 +1135,12 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 4px;
   background: var(--line);
 }
-.streak-cell.is-nutrition { background: var(--ink-pressed); }
-.streak-cell.is-workout { background: var(--accent); }
+/* One fill for both grids: "I did it that day" is the same fact whether
+   the row is food or training, and the block labels already say which is
+   which. Nutrition used --ink-pressed, a *button state* token that
+   resolves to near-white in dark mode — which made the least important
+   widget on the dashboard the brightest thing on the screen. */
+.streak-cell.is-done { background: var(--accent); }
 
 .record-list {
   display: flex;
@@ -1123,30 +1153,31 @@ button.row-main:active { opacity: 0.55; }
   align-items: center;
   gap: 10px;
 }
+/* The name gets the room. It used to be pinned at 92px to make space for
+   a bar whose length compared reps across different exercises — which is
+   not a comparison that exists: 14 inverted rows outranked 8 pull-ups.
+   The bar also only re-stated the sort order. Dropping it buys back the
+   width that was truncating the one thing identifying the row. */
 .record-name {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--ink);
-  width: 92px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.record-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--surface-alt);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.record-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
+/* When the best set happened — real information, in the space the bar
+   was using to say nothing. */
+.record-date {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .record-value {
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink-soft);
   width: 52px;
@@ -1177,7 +1208,7 @@ button.row-main:active { opacity: 0.55; }
   min-width: 0;
 }
 .rest-timer-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1185,7 +1216,7 @@ button.row-main:active { opacity: 0.55; }
   white-space: nowrap;
 }
 .rest-timer-time {
-  font-size: 24px;
+  font-size: var(--fs-title);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -1202,7 +1233,7 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 999px;
   padding: 6px 10px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink-soft);
   white-space: nowrap;
@@ -1218,7 +1249,7 @@ button.row-main:active { opacity: 0.55; }
   border: none;
   padding: 6px 4px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink-faint);
   white-space: nowrap;
@@ -1230,7 +1261,7 @@ button.row-main:active { opacity: 0.55; }
   padding: 0;
   color: var(--accent-ink);
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 /* ---------- Forms ---------- */
@@ -1250,14 +1281,14 @@ button.row-main:active { opacity: 0.55; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--ink-soft);
 }
 
 .field-group-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -1279,7 +1310,7 @@ button.row-main:active { opacity: 0.55; }
 .field input,
 .field select {
   font-family: inherit;
-  font-size: 16px;
+  font-size: var(--fs-input);
   font-weight: 600;
   color: var(--ink);
   border: none;
@@ -1343,6 +1374,7 @@ button.row-main:active { opacity: 0.55; }
 }
 .field-row .field { flex: 1; min-width: 0; }
 .field-row .btn { flex: 1; }
+/* Glyph size, not a type step: this button's content is a single icon. */
 .field-row .btn--icon-only { flex: 0 0 52px; font-size: 20px; align-self: flex-end; }
 
 .segmented {
@@ -1359,7 +1391,7 @@ button.row-main:active { opacity: 0.55; }
   background: transparent;
   padding: 9px 6px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink-soft);
   white-space: nowrap;
@@ -1373,7 +1405,7 @@ button.row-main:active { opacity: 0.55; }
 .segmented-btn:active { opacity: 0.6; }
 
 .segmented--compact { padding: 2px; }
-.segmented--compact .segmented-btn { padding: 6px 12px; font-size: 12px; }
+.segmented--compact .segmented-btn { padding: 6px 12px; font-size: var(--fs-label); }
 
 .scanner-viewport {
   position: relative;
@@ -1432,7 +1464,7 @@ button.row-main:active { opacity: 0.55; }
   border: none;
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
-  font-size: 18px;
+  font-size: var(--fs-heading);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1441,7 +1473,7 @@ button.row-main:active { opacity: 0.55; }
 
 .scanner-hint {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-soft);
   margin-top: 10px;
 }
@@ -1502,18 +1534,18 @@ button.row-main:active { opacity: 0.55; }
 }
 .sub-row-main:active { opacity: 0.6; }
 .sub-row-name {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sub-row-qty {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-soft);
 }
 .sub-row-amount {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
@@ -1526,7 +1558,7 @@ button.row-main:active { opacity: 0.55; }
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1542,7 +1574,7 @@ button.row-main:active { opacity: 0.55; }
   gap: 18px;
   padding: 6px 0 4px 16px;
 }
-.group-actions .link-btn { font-size: 12px; }
+.group-actions .link-btn { font-size: var(--fs-label); }
 
 /* ---------- Entry selection mode (group into meal) ---------- */
 .row-select-check {
@@ -1563,7 +1595,7 @@ button.row-main:active { opacity: 0.55; }
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: var(--fs-body-lg);
   color: var(--ink);
 }
 .field-check input[type="checkbox"] {
@@ -1606,7 +1638,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .timer-run-step {
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1659,13 +1691,13 @@ button.row-main:active { opacity: 0.55; }
   padding: 0 20px;
 }
 .timer-run-time {
-  font-size: 44px;
+  font-size: var(--fs-display-xl);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .timer-run-name {
-  font-size: 15px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   color: var(--ink-soft);
   overflow: hidden;
@@ -1675,7 +1707,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .timer-run-next {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--ink-soft);
   margin: 0 0 20px;
   text-align: center;
@@ -1692,7 +1724,7 @@ button.row-main:active { opacity: 0.55; }
   border-radius: 999px;
   padding: 13px 10px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   white-space: nowrap;
   transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
@@ -1714,7 +1746,7 @@ button.row-main:active { opacity: 0.55; }
   color: var(--surface);
   padding: 11px 18px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
   z-index: 60;
   box-shadow: var(--shadow);
@@ -1781,7 +1813,7 @@ button:focus-visible, input:focus-visible {
   flex-wrap: wrap;
   gap: 4px 10px;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
@@ -1799,7 +1831,7 @@ button:focus-visible, input:focus-visible {
 }
 .workout-block-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -1830,7 +1862,7 @@ button:focus-visible, input:focus-visible {
    row that fills it. */
 .empty-state--inline {
   padding: 6px 0 2px;
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 /* What you've already added, above the search — the sheet stays open
@@ -1843,7 +1875,7 @@ button:focus-visible, input:focus-visible {
 }
 .added-track-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -1917,14 +1949,14 @@ button:focus-visible, input:focus-visible {
 .multi-toggle {
   display: block;
   margin: 10px 0 2px;
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 .multi-toggle.is-on { color: var(--accent-ink); font-weight: 700; }
 
 /* Today's block on Resumen. */
 .today-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -1946,12 +1978,12 @@ button:focus-visible, input:focus-visible {
   gap: 12px;
 }
 .today-row-label {
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--ink-soft);
 }
 .today-row-value {
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2019,6 +2051,34 @@ button:focus-visible, input:focus-visible {
   flex-basis: 152px;
 }
 
+/* The trailing visual sits on the card's floor. The four tiles carry
+   different encodings — a line for a continuous trend, bars for discrete
+   sessions, a meter for a fraction of a goal — and those have different
+   heights. Grid rows stretch to the tallest, so without this the short
+   ones (the goal meter) left a hole under the meter while the sparklines
+   met the bottom edge. Bottom-aligning puts every tile's graphic on the
+   same baseline and moves the slack above it, where it reads as air. */
+.insight-card-spark,
+.insight-card > .goal-meter { margin-top: auto; }
+/* And with a whole card row to itself, a 4px hairline reads as a
+   leftover rather than the card's chart. */
+.insight-card > .goal-meter { height: 6px; }
+
+/* When something follows the empty day card, the empty state stops being
+   the screen and becomes a caption for it. The 34px dumbbell was the
+   largest element on a screen whose actual point is the two routines
+   below it, so it steps aside rather than competing. */
+.card:has(+ .section-head) .empty-state { padding: var(--space-1) 0 var(--space-2); }
+.card:has(+ .section-head) .empty-state-icon { display: none; }
+.card:has(+ .section-head) .empty-state p { margin-bottom: 0; }
+
+/* A row you read rather than tap: name on the left, figure on the right,
+   both on one line. The tappable .row puts its two texts in a stacked
+   .row-main, which is right when the second line is a subtitle and wrong
+   when it is the row's value. */
+.row--static .row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row--static .row-qty { flex-shrink: 0; }
+
 /* Tiles nested inside a card share one inset between them. */
 .goal-progress-item { padding: var(--tile-pad); }
 
@@ -2063,7 +2123,7 @@ button:focus-visible, input:focus-visible {
   min-width: 0;
 }
 .topbar-eyebrow {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--ink-faint);
@@ -2071,7 +2131,7 @@ button:focus-visible, input:focus-visible {
 /* Resets the day-button styling .day-label carries for the other tabs,
    and sizes it as the screen title it is here. */
 .topbar--stacked .day-label {
-  font-size: 26px;
+  font-size: var(--fs-title);
   font-weight: 800;
   letter-spacing: -0.02em;
   min-width: 0;
@@ -2093,7 +2153,7 @@ button:focus-visible, input:focus-visible {
 .content .card + .section-head,
 .content .insights-grid + .section-head { margin-top: var(--space-6); }
 .section-title {
-  font-size: 17px;
+  font-size: var(--fs-heading);
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -2172,10 +2232,10 @@ button:focus-visible, input:focus-visible {
 }
 .widget-head .segmented { flex: 1 1 auto; }
 .widget-title { flex: 1 0 auto; }
-.widget-title { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.widget-title { font-size: var(--fs-body-lg); font-weight: 800; letter-spacing: -0.01em; }
 .widget-note, .eb-caption {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -2189,12 +2249,12 @@ button:focus-visible, input:focus-visible {
 .stat-cell-pair {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  font-size: 15px;
+  font-size: var(--fs-body-lg);
   letter-spacing: -0.01em;
 }
 .stat-cell-value { font-weight: 800; }
 .stat-cell-target { font-weight: 600; color: var(--ink-faint); }
-.stat-cell-suffix { font-weight: 700; font-size: 11px; color: var(--ink-soft); }
+.stat-cell-suffix { font-weight: 700; font-size: var(--fs-caption); color: var(--ink-soft); }
 .stat-cell-track {
   height: 4px;
   border-radius: 999px;
@@ -2212,7 +2272,7 @@ button:focus-visible, input:focus-visible {
 .stat-cell.is-protein .stat-cell-fill { background: var(--macro-protein); }
 .stat-cell.is-fat .stat-cell-fill { background: var(--macro-fat); }
 .stat-cell.is-carbs .stat-cell-fill { background: var(--macro-carbs); }
-.stat-cell-caption { font-size: 10px; color: var(--ink-faint); }
+.stat-cell-caption { font-size: var(--fs-micro); color: var(--ink-faint); }
 
 /* --- Nutrición y objetivos ------------------------------------------ */
 .ntw-week { display: flex; gap: 4px; }
@@ -2230,7 +2290,12 @@ button:focus-visible, input:focus-visible {
   font: inherit;
   color: inherit;
 }
-.ntw-day.is-focused { border-color: var(--line); background: var(--surface-alt); }
+/* The same selected state as the week strip below it. These two are
+   different components on purpose — this one carries a week of macros,
+   that one is a day navigator — but they answer the same question ("which
+   day am I looking at?"), and they were answering it in two unrelated
+   visual languages: a grey box here, a white slab there. */
+.ntw-day.is-focused { border-color: var(--accent); background: var(--accent-soft); }
 .ntw-day.is-future { opacity: 0.35; }
 /* Four horizontal bars per day, stacked calories/protein/fat/carbs and
    filling left to right - a four-line barcode you read as a shape, which
@@ -2248,7 +2313,7 @@ button:focus-visible, input:focus-visible {
 .ntw-bar.is-protein .ntw-bar-fill { background: var(--macro-protein); }
 .ntw-bar.is-fat .ntw-bar-fill { background: var(--macro-fat); }
 .ntw-bar.is-carbs .ntw-bar-fill { background: var(--macro-carbs); }
-.ntw-letter { font-size: 10px; font-weight: 700; color: var(--ink-soft); text-align: center; }
+.ntw-letter { font-size: var(--fs-micro); font-weight: 700; color: var(--ink-soft); text-align: center; }
 .ntw-day.is-today .ntw-letter { color: var(--accent-ink); }
 
 /* Two by two, matching the reference app's header grid. */
@@ -2290,25 +2355,25 @@ button:focus-visible, input:focus-visible {
 }
 .eb-term { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
 .eb-term-value {
-  font-size: 17px;
+  font-size: var(--fs-heading);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .eb-term-value.is-deficit { color: var(--accent-ink); }
-.eb-term-label { font-size: 10px; color: var(--ink-faint); white-space: nowrap; }
-.eb-op { font-size: 13px; color: var(--ink-faint); }
+.eb-term-label { font-size: var(--fs-micro); color: var(--ink-faint); white-space: nowrap; }
+.eb-op { font-size: var(--fs-body); color: var(--ink-faint); }
 
 /* --- Hoy ------------------------------------------------------------- */
 .dn-hero { display: flex; flex-direction: column; }
 .dn-hero-value {
-  font-size: 44px;
+  font-size: var(--fs-display);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.dn-hero-label { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.dn-hero-label { font-size: var(--fs-label); color: var(--ink-soft); margin-top: 6px; }
 .dn-macros {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2337,14 +2402,14 @@ button:focus-visible, input:focus-visible {
 .ring-item.is-sets .ring-fill { stroke: var(--macro-fat); }
 .ring-item.is-exercises .ring-fill { stroke: var(--macro-carbs); }
 .ring-value {
-  font-size: 18px;
+  font-size: var(--fs-heading);
   font-weight: 800;
   fill: var(--ink);
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
 }
-.ring-label { font-size: 11px; font-weight: 700; }
-.ring-sub { font-size: 10px; color: var(--ink-faint); text-align: center; }
+.ring-label { font-size: var(--fs-caption); font-weight: 700; }
+.ring-sub { font-size: var(--fs-micro); color: var(--ink-faint); text-align: center; }
 
 /* The goal card's progress meter. Thinner than a stat cell's bar: this
    is one span of a long journey, not a daily target being filled. */
@@ -2374,7 +2439,7 @@ button:focus-visible, input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   padding: 4px 9px;
   color: var(--ink-soft);
   background: var(--surface-alt);
@@ -2413,7 +2478,7 @@ button:focus-visible, input:focus-visible {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -2479,7 +2544,7 @@ button:focus-visible, input:focus-visible {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent-ink);
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -2556,14 +2621,14 @@ button:focus-visible, input:focus-visible {
   border: none;
   border-bottom: 2px solid transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink-faint);
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 .period-tab.is-active { color: var(--ink); border-bottom-color: var(--accent); }
 
-.overview-note { margin: 0; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+.overview-note { margin: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--ink-soft); }
 
 .nut-section { display: flex; flex-direction: column; gap: var(--space-3); }
 .nut-section-head {
@@ -2572,20 +2637,20 @@ button:focus-visible, input:focus-visible {
   justify-content: space-between;
   gap: var(--space-2);
 }
-.nut-section-title { font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-soft); }
-.nut-switch { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
+.nut-section-title { font-size: var(--fs-body); font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-soft); }
+.nut-switch { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--ink-soft); }
 
 /* label · value · percent, then the bar - the reference app's row, and
    the same three-rail shape used elsewhere in the app. */
 .nut-row { display: flex; flex-direction: column; gap: 5px; }
 .nut-head { display: flex; align-items: baseline; gap: var(--space-2); }
-.nut-label { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
-.nut-value { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nut-label { flex: 1; min-width: 0; font-size: var(--fs-body); font-weight: 600; }
+.nut-value { font-size: var(--fs-body); font-weight: 700; font-variant-numeric: tabular-nums; }
 .nut-target { color: var(--ink-faint); font-weight: 500; }
 .nut-pct {
   min-width: 42px;
   text-align: right;
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -2606,13 +2671,13 @@ button:focus-visible, input:focus-visible {
   border-left: 2px solid var(--line);
 }
 .nut-contributors-label {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
-.nut-contributor { display: flex; align-items: baseline; gap: var(--space-2); font-size: 12px; }
+.nut-contributor { display: flex; align-items: baseline; gap: var(--space-2); font-size: var(--fs-label); }
 .nut-contributor-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); }
 .nut-contributor-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .nut-contributor-share { min-width: 34px; text-align: right; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
@@ -2631,7 +2696,7 @@ button:focus-visible, input:focus-visible {
   border: none;
   border-top: 1px solid var(--line);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--accent-ink);
   text-align: center;
@@ -2675,7 +2740,7 @@ button:focus-visible, input:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--ink-faint);
 }
 .trend-legend-item { display: inline-flex; align-items: center; gap: 4px; }
@@ -2688,7 +2753,7 @@ button:focus-visible, input:focus-visible {
 }
 .trend-legend-item.is-average { color: var(--ink-soft); font-weight: 600; }
 .trend-legend-days { margin-left: auto; font-variant-numeric: tabular-nums; }
-.trend-empty { margin: var(--space-2) 0 0; font-size: 11px; color: var(--ink-faint); }
+.trend-empty { margin: var(--space-2) 0 0; font-size: var(--fs-caption); color: var(--ink-faint); }
 
 /* ---------------------------------------------------------------------
    Set table. Five columns on one grid so the header and every row share
@@ -2707,7 +2772,7 @@ button:focus-visible, input:focus-visible {
 .set-head {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--line);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2726,7 +2791,7 @@ button:focus-visible, input:focus-visible {
   justify-content: center;
   border-radius: 50%;
   background: var(--surface-alt);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2738,7 +2803,7 @@ button:focus-visible, input:focus-visible {
   border-radius: 999px;
   background: none;
   font: inherit;
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--ink-faint);
   line-height: 1.4;
@@ -2752,7 +2817,7 @@ button:focus-visible, input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -2764,7 +2829,7 @@ button:focus-visible, input:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--surface-alt);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body-lg);
   font-weight: 700;
   text-align: center;
   color: inherit;
@@ -2787,7 +2852,7 @@ button:focus-visible, input:focus-visible {
   border-radius: var(--radius-sm);
   background: none;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--accent-ink);
 }
@@ -2805,15 +2870,15 @@ button:focus-visible, input:focus-visible {
 }
 .ss-total { display: flex; flex-direction: column; gap: 2px; }
 .ss-total-value {
-  font-size: 20px;
+  font-size: var(--fs-title);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.ss-total-label { font-size: 10px; color: var(--ink-faint); }
+.ss-total-label { font-size: var(--fs-micro); color: var(--ink-faint); }
 
 .ss-section-title {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2830,22 +2895,22 @@ button:focus-visible, input:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
 }
-.ss-record-name { font-size: 13px; font-weight: 700; color: var(--accent-ink); min-width: 0; }
-.ss-record-set { font-size: 13px; font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.ss-record-name { font-size: var(--fs-body); font-weight: 700; color: var(--accent-ink); min-width: 0; }
+.ss-record-set { font-size: var(--fs-body); font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 
 .ss-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .ss-row { display: flex; flex-direction: column; gap: 3px; }
 .ss-row + .ss-row { padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .ss-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
-.ss-row-name { font-size: 14px; font-weight: 700; min-width: 0; }
-.ss-row-best { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ss-row-name { font-size: var(--fs-body-lg); font-weight: 700; min-width: 0; }
+.ss-row-best { font-size: var(--fs-body); font-weight: 700; font-variant-numeric: tabular-nums; }
 .ss-badge {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent-ink);
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -2856,12 +2921,12 @@ button:focus-visible, input:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 .ss-sep { color: var(--ink-faint); }
-.ss-row-prev { font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.ss-row-prev { font-size: var(--fs-micro); color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .ss-delta { font-weight: 700; }
 .ss-delta.is-up { color: var(--accent-ink); }
 .ss-delta.is-down { color: var(--ink-faint); }
@@ -2930,7 +2995,7 @@ button:focus-visible, input:focus-visible {
 }
 .lib-chevron.is-collapsed { transform: rotate(-90deg); }
 .lib-title {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2941,14 +3006,14 @@ button:focus-visible, input:focus-visible {
   padding: 0 5px;
   border-radius: 999px;
   background: var(--surface-alt);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--ink-soft);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .lib-actions { display: flex; gap: var(--space-3); flex-shrink: 0; }
-.lib-empty { margin: 0; font-size: 12px; color: var(--ink-faint); }
+.lib-empty { margin: 0; font-size: var(--fs-label); color: var(--ink-faint); }
 
 /* The "HOY" chips — what's already on today's session. Chips are right
    here (they're removable tokens, not library entries), but the
@@ -3005,7 +3070,7 @@ button:focus-visible, input:focus-visible {
   vector-effect: non-scaling-stroke;
 }
 .axis-label {
-  font-size: 8px;
+  font-size: var(--fs-micro);
   fill: var(--ink-faint);
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
@@ -3023,12 +3088,12 @@ button:focus-visible, input:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--ink-soft);
 }
 .axis-legend-item { display: inline-flex; align-items: center; gap: 5px; }
 .axis-legend-dash { width: 12px; height: 2px; border-radius: 1px; }
-.chart-empty { margin: 0; font-size: 12px; color: var(--ink-faint); }
+.chart-empty { margin: 0; font-size: var(--fs-label); color: var(--ink-faint); }
 
 /* An insight card that opens something is a button now, so it needs the
    reset and a pressed state. */
@@ -3075,7 +3140,7 @@ button:focus-visible, input:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -3112,10 +3177,10 @@ button:focus-visible, input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
-.top-exercise-value { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.top-exercise-value { font-size: var(--fs-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .ss-total-value.is-up { color: var(--accent-ink); }
 
 /* ---------------------------------------------------------------------
@@ -3132,7 +3197,7 @@ button:focus-visible, input:focus-visible {
   border-radius: var(--radius-sm);
   background: none;
   font: inherit;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--accent-ink);
 }
@@ -3153,7 +3218,7 @@ button:focus-visible, input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--ink-faint);
 }
 .photo-del { position: absolute; top: 4px; right: 4px; }
@@ -3173,7 +3238,7 @@ button:focus-visible, input:focus-visible {
   display: block;
 }
 .photo-compare-label {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3187,10 +3252,10 @@ button:focus-visible, input:focus-visible {
   justify-content: center;
   border: 1px dashed var(--line);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
 }
-.photo-compare-date { font-size: 10px; color: var(--ink-faint); }
+.photo-compare-date { font-size: var(--fs-micro); color: var(--ink-faint); }
 
 /* The ribbon scrolls: it's a picker, and every photo in it is one tap
    from the comparison, so hiding the overflow costs nothing. */
@@ -3206,7 +3271,7 @@ button:focus-visible, input:focus-visible {
   background: none;
   border: none;
   font: inherit;
-  font-size: 9px;
+  font-size: var(--fs-micro);
   color: var(--ink-faint);
 }
 .photo-ribbon-item img {

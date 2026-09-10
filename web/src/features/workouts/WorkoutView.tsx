@@ -8,10 +8,10 @@ import { todayKey } from "../../shared/lib/date";
 import { capitalizeFirst, formatDateLabel } from "../../shared/lib/format";
 import {
   computeWorkoutDayTotals,
-  countWorkoutSessions,
   formatDuration,
   summarizeExercise
 } from "../../shared/lib/workouts";
+import { computeCurrentWeekProgress } from "../../shared/lib/analytics";
 import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
 import { SwipeToDelete } from "../../shared/components/SwipeToDelete";
@@ -24,6 +24,7 @@ import { ProgressionDetailModal } from "./components/ProgressionDetailModal";
 import { SessionSummaryModal } from "./components/SessionSummaryModal";
 import { collectProgressionGroups } from "./progressions";
 import { AddWorkoutModal } from "./components/AddWorkoutModal";
+import { EmptyDayStarters } from "./components/EmptyDayStarters";
 import { TimerRunModal } from "./components/TimerRunModal";
 import { useTimerRun } from "./useTimerRun";
 import {
@@ -60,6 +61,8 @@ export function WorkoutView() {
   const setClipboard = useUiStore((s) => s.setClipboard);
   const workouts = useAppStore((s) => s.workouts);
   const weightLog = useAppStore((s) => s.weightLog);
+  const workoutGoal = useAppStore((s) => s.workoutGoal);
+  const requestAction = useUiStore((s) => s.requestAction);
 
   // Bodyweight counts as resistance for calisthenics, so the day's volume
   // needs to know what you weigh. Null until the first weigh-in, which
@@ -70,7 +73,12 @@ export function WorkoutView() {
   const exercises = workouts[dayKey]?.exercises ?? [];
   const label = formatDateLabel(dayOffset);
   const totals = computeWorkoutDayTotals(exercises, bodyweightKg);
-  const sessions = countWorkoutSessions(workouts);
+  // The top-right chip is the same slot Comida uses for its calorie
+  // target, so it holds the same kind of thing: what you're aiming at and
+  // where you are against it. It used to show a 30-day session count — a
+  // statistic, not a target — which made one slot mean two things
+  // depending on which tab you were on.
+  const weekProgress = computeCurrentWeekProgress(workouts, workoutGoal.weeklySessions);
 
   const timerLogs = workouts[dayKey]?.timerLogs ?? [];
   const warmupLogs = timerLogs.filter((l) => l.category === "warmup");
@@ -134,9 +142,9 @@ export function WorkoutView() {
             <ChevronRight />
           </button>
         </div>
-        <span className="chip">
-          {sessions} {sessions === 1 ? "sesión" : "sesiones"}
-        </span>
+        <button className="chip" onClick={() => requestAction("workoutGoal")}>
+          {weekProgress.done}/{weekProgress.goal} esta semana
+        </button>
       </header>
 
       <WeekStrip />
@@ -277,6 +285,11 @@ export function WorkoutView() {
             </div>
           )}
         </div>
+
+        {/* A rest day used to end here, leaving most of the screen blank.
+            These are the two things you actually want on a day with
+            nothing logged: a routine to start, and what you did last. */}
+        {isEmpty && <EmptyDayStarters dayKey={dayKey} />}
       </main>
 
 

@@ -13,7 +13,7 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAppStore } from "../../shared/store";
 import { todayKey } from "../../shared/lib/date";
-import { formatEyebrowDate } from "../../shared/lib/format";
+import { formatEyebrowDate, formatShortDate } from "../../shared/lib/format";
 import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { InsightsGrid } from "./InsightsGrid";
@@ -107,7 +107,7 @@ export function AnalyticsView() {
               <span className="streak-label">Nutrición</span>
               <div className="streak-grid">
                 {keys.map((k) => (
-                  <span key={k} className={"streak-cell" + (dayCalorieTotal(days, k) > 0 ? " is-nutrition" : "")} />
+                  <span key={k} className={"streak-cell" + (dayCalorieTotal(days, k) > 0 ? " is-done" : "")} />
                 ))}
               </div>
             </div>
@@ -115,7 +115,7 @@ export function AnalyticsView() {
               <span className="streak-label">Entreno</span>
               <div className="streak-grid">
                 {keys.map((k) => (
-                  <span key={k} className={"streak-cell" + (hasWorkoutSession(workouts, k) ? " is-workout" : "")} />
+                  <span key={k} className={"streak-cell" + (hasWorkoutSession(workouts, k) ? " is-done" : "")} />
                 ))}
               </div>
             </div>
@@ -126,7 +126,6 @@ export function AnalyticsView() {
 
       case "records": {
         const records = computeExerciseRecords(workouts, dateKeys, recordsMode);
-        const max = records[0]?.value ?? 1;
         return (
           <>
             <div className="segmented segmented--compact">
@@ -152,12 +151,7 @@ export function AnalyticsView() {
                 {records.map((r) => (
                   <div className="record-row" key={r.name}>
                     <span className="record-name">{r.name}</span>
-                    <div className="record-bar-track">
-                      <div
-                        className="record-bar-fill"
-                        style={{ width: `${Math.max(6, Math.round((r.value / max) * 100))}%` }}
-                      />
-                    </div>
+                    <span className="record-date">{formatShortDate(r.date)}</span>
                     <span className="record-value">
                       {recordsMode === "hold" ? formatDuration(r.value) : `${r.value} reps`}
                     </span>
