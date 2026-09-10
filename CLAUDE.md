@@ -60,6 +60,16 @@ after midnight or "today" reads empty.
   `.modal-sheet` carry no vertical margin.
 - A block that draws a divider and sits against a card's bottom needs
   `padding-top: var(--card-pad)`, or it rides high in its strip.
+- Type uses eight `--fs-*` steps, one per role. Add a step only for a role
+  that genuinely doesn't exist yet, never to nudge one label — the app got
+  to 13 sizes that way. Two documented exceptions: `--fs-display-xl` (the
+  full-screen rest timer only) and `--fs-input: 16px`, which is functional
+  — iOS zooms the viewport when a focused input is smaller.
+- `--ink`, `--ink-soft`, `--ink-faint` and `--ink-pressed` are text and
+  interaction-state colours. Never fill a shape with them: they invert
+  between themes, so a "dark" fill becomes near-white in dark mode. Both
+  the streak grid and the selected day had this bug. Selection anywhere is
+  `--accent-soft` + `--accent-ink`, the tab bar's language.
 - Entry cloning goes through `cloneEntry`, whose field list is exhaustive at
   compile time. Three separate bugs came from hand-copying entries and
   dropping `basis`.
