@@ -42,12 +42,22 @@ const SHARES: [RegExp, number][] = [
 ];
 
 /** 0 when the movement isn't recognised as bodyweight-loaded. */
-export function bodyweightShare(exerciseName: string): number {
+export function shareFromName(exerciseName: string): number {
   const folded = foldText(exerciseName || "");
   for (const [pattern, share] of SHARES) {
     if (pattern.test(folded)) return share;
   }
   return 0;
+}
+
+/**
+ * The share in force for an exercise: what the user set, else what the
+ * name implies. Stored as null/undefined until someone disagrees with
+ * the heuristic, so improving the name table still reaches every
+ * exercise nobody has corrected.
+ */
+export function exerciseShare(ex: { name: string; bodyweightShare?: number | null }): number {
+  return ex.bodyweightShare ?? shareFromName(ex.name);
 }
 
 /**
@@ -58,18 +68,12 @@ export function bodyweightShare(exerciseName: string): number {
  * same loaded-only volume it always did.
  */
 export function setLoadKg(
-  exerciseName: string,
+  share: number,
   addedKg: number | null | undefined,
   bodyweightKg: number | null
 ): number {
-  const share = bodyweightShare(exerciseName);
   const own = bodyweightKg != null ? bodyweightKg * share : 0;
   return own + (addedKg ?? 0);
-}
-
-/** Whether any of this exercise's load comes from the body. */
-export function isBodyweightMovement(exerciseName: string): boolean {
-  return bodyweightShare(exerciseName) > 0;
 }
 
 /**

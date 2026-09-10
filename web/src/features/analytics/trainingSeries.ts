@@ -7,7 +7,7 @@
 // as resistance, and time only applies to holds.
 import type { AppState } from "../../shared/store/types";
 import { isHoldSet } from "../../shared/lib/workouts";
-import { bodyweightOn, setLoadKg } from "../../shared/lib/bodyweight";
+import { bodyweightOn, exerciseShare, setLoadKg } from "../../shared/lib/bodyweight";
 
 export type TrainingMetric = "sets" | "reps" | "hold" | "volume";
 
@@ -37,11 +37,12 @@ export function trainingSeries(
     const exercises = workouts[date]?.exercises ?? [];
     let value = 0;
     exercises.forEach((ex) => {
+      const share = exerciseShare(ex);
       ex.sets.forEach((s) => {
         if (metric === "sets") value += 1;
         else if (metric === "reps") value += isHoldSet(s) ? 0 : s.reps || 0;
         else if (metric === "hold") value += isHoldSet(s) ? s.holdSeconds || 0 : 0;
-        else if (s.reps) value += setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps;
+        else if (s.reps) value += setLoadKg(share, s.weightKg, bodyweightKg) * s.reps;
       });
     });
     return { date, value, trained: exercises.length > 0 };
@@ -62,7 +63,7 @@ export function bodyweightCoverage(
   dateKeys.forEach((date) => {
     (workouts[date]?.exercises ?? []).forEach((ex) => {
       total += 1;
-      if (setLoadKg(ex.name, 0, 1) > 0) bodyweight += 1;
+      if (exerciseShare(ex) > 0) bodyweight += 1;
     });
   });
   return { bodyweight, total };

@@ -96,7 +96,16 @@ export function SessionSummaryModal({ open, dayKey, onClose }: SessionSummaryMod
                   {e.volume > 0 && (
                     <>
                       <span className="ss-sep">·</span>
-                      <span>{Math.round(e.volume)} kg</span>
+                      {/* Annotated the way the reference app does it -
+                          "6580 lb volume (+279 lb BW)" - so a volume that
+                          includes bodyweight says so instead of reading
+                          as barbell tonnage. */}
+                      <span>
+                        {Math.round(e.volume)} kg
+                        {e.bodyweightVolume > 0 && (
+                          <span className="ss-bw"> (+{Math.round(e.bodyweightVolume)} pc)</span>
+                        )}
+                      </span>
                       <Delta now={e.volume} before={e.previousVolume} unit="kg" />
                     </>
                   )}

@@ -4,7 +4,7 @@
 // used for calisthenics: weighted (weight x reps), plain reps, and timed
 // holds (planks, L-sits). A set is a hold when holdSeconds is present.
 import type { AppState, Exercise, ExerciseSet } from "../store/types";
-import { setLoadKg } from "./bodyweight";
+import { exerciseShare, setLoadKg } from "./bodyweight";
 import { foldText } from "./text";
 
 export function formatDuration(totalSeconds: number): string {
@@ -37,8 +37,9 @@ export function summarizeExercise(ex: Exercise, bodyweightKg: number | null = nu
 
   const hasWeight = ex.sets.some((s) => s.weightKg !== null && s.weightKg !== undefined);
   if (hasWeight) {
+    const share = exerciseShare(ex);
     const volume = ex.sets.reduce(
-      (sum, s) => sum + (s.reps ? setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps : 0),
+      (sum, s) => sum + (s.reps ? setLoadKg(share, s.weightKg, bodyweightKg) * s.reps : 0),
       0
     );
     return `${label} · ${Math.round(volume)} kg vol.`;
@@ -71,11 +72,12 @@ export function computeWorkoutDayTotals(
   let reps = 0;
   let holdSeconds = 0;
   exercises.forEach((ex) => {
+    const share = exerciseShare(ex);
     ex.sets.forEach((s) => {
       sets += 1;
       if (isHoldSet(s)) holdSeconds += s.holdSeconds!;
       else reps += s.reps || 0;
-      if (s.reps) volume += setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps;
+      if (s.reps) volume += setLoadKg(share, s.weightKg, bodyweightKg) * s.reps;
     });
   });
   return { sets, volume, reps, holdSeconds };

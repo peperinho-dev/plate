@@ -10,6 +10,7 @@ import { showToast } from "../../../shared/components/Toast";
 import { useAppStore } from "../../../shared/store";
 import type { Exercise } from "../../../shared/store/types";
 import { renameExercise } from "../actions";
+import { shareFromName } from "../../../shared/lib/bodyweight";
 
 interface ExerciseEditModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
   const workouts = useAppStore((s) => s.workouts);
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
+  const [share, setShare] = useState("");
 
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
@@ -29,6 +31,7 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
     if (open && exercise) {
       setName(exercise.name);
       setGroup(exercise.progressionGroup ?? "");
+      setShare(exercise.bodyweightShare == null ? "" : String(Math.round(exercise.bodyweightShare * 100)));
     }
   }
 
@@ -78,6 +81,33 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
           Agrupa variantes del mismo ejercicio para ver tu progresión entre ellas en Análisis.
         </p>
 
+        {/* The share is normally read off the exercise name, which is a
+            guess and sometimes a wrong one. This is the correction, and
+            leaving it blank keeps tracking the name — so improving the
+            name table still reaches every exercise nobody has touched. */}
+        <label className="field">
+          <span>
+            Peso corporal movido{" "}
+            <span className="field-optional">
+              · automático: {Math.round(shareFromName(name || exercise.name) * 100)} %
+            </span>
+          </span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="5"
+            inputMode="numeric"
+            placeholder="automático"
+            value={share}
+            onChange={(e) => setShare(e.target.value)}
+          />
+        </label>
+        <p className="modal-hint">
+          Qué parte de tu peso mueve este ejercicio. Una dominada mueve el 100 %, una flexión
+          alrededor del 64 %. Cuenta como carga en el volumen.
+        </p>
+
         <button
           type="button"
           className="btn btn--primary btn--block"
@@ -87,7 +117,12 @@ export function ExerciseEditModal({ open, exercise, dayKey, onClose }: ExerciseE
               showToast("Indica un nombre");
               return;
             }
-            renameExercise(dayKey, exercise.id, trimmed, group.trim() || null);
+            const pct = share.trim() === "" ? null : parseFloat(share);
+            if (pct !== null && !(pct >= 0 && pct <= 100)) {
+              showToast("El peso corporal movido va de 0 a 100 %");
+              return;
+            }
+            renameExercise(dayKey, exercise.id, trimmed, group.trim() || null, pct === null ? null : pct / 100);
             showToast("Guardado");
             onClose();
           }}

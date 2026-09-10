@@ -115,6 +115,12 @@ export interface Exercise {
   sets: ExerciseSet[];
   addedAt: number;
   progressionGroup?: string | null;
+  /**
+   * Fraction of bodyweight this movement actually moves, 0–1. Absent
+   * means "derive it from the name" — this only exists to correct the
+   * name heuristic, so an untouched exercise keeps tracking it.
+   */
+  bodyweightShare?: number | null;
 }
 
 // One completed run of a timer preset. Shape matches app.js exactly so

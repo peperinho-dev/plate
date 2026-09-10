@@ -7,7 +7,7 @@
 // completion.
 import type { AppState, Exercise, ExerciseSet } from "../../shared/store/types";
 import { computeWorkoutDayTotals, isBetterSet, isHoldSet } from "../../shared/lib/workouts";
-import { setLoadKg } from "../../shared/lib/bodyweight";
+import { exerciseShare, setLoadKg } from "../../shared/lib/bodyweight";
 
 export interface ExerciseSummary {
   id: string;
@@ -23,6 +23,8 @@ export interface ExerciseSummary {
   previousVolume: number | null;
   /** Today's best beats everything logged before today. */
   isRecord: boolean;
+  /** How much of `volume` came from the body rather than added weight. */
+  bodyweightVolume: number;
 }
 
 export interface SessionSummary {
@@ -34,10 +36,18 @@ export interface SessionSummary {
 }
 
 function exerciseVolume(ex: Exercise, bodyweightKg: number | null): number {
+  const share = exerciseShare(ex);
   return ex.sets.reduce(
-    (sum, s) => sum + (s.reps ? setLoadKg(ex.name, s.weightKg, bodyweightKg) * s.reps : 0),
+    (sum, s) => sum + (s.reps ? setLoadKg(share, s.weightKg, bodyweightKg) * s.reps : 0),
     0
   );
+}
+
+/** The part of an exercise's volume that came from the body, in kg. */
+export function exerciseBodyweightVolume(ex: Exercise, bodyweightKg: number | null): number {
+  const share = exerciseShare(ex);
+  if (!share || bodyweightKg == null) return 0;
+  return ex.sets.reduce((sum, s) => sum + (s.reps ? bodyweightKg * share * s.reps : 0), 0);
 }
 
 function bestOf(sets: ExerciseSet[]): ExerciseSet | null {
@@ -87,6 +97,7 @@ export function summarizeSession(
       name: ex.name,
       sets: ex.sets.length,
       volume: exerciseVolume(ex, bodyweightKg),
+      bodyweightVolume: exerciseBodyweightVolume(ex, bodyweightKg),
       reps: ex.sets.reduce((sum, s) => sum + (isHoldSet(s) ? 0 : s.reps || 0), 0),
       holdSeconds: ex.sets.reduce((sum, s) => sum + (isHoldSet(s) ? s.holdSeconds || 0 : 0), 0),
       best: mine,

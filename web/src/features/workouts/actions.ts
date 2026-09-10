@@ -39,13 +39,19 @@ export function removeExercise(dayKey: string, exerciseId: string) {
   });
 }
 
-export function renameExercise(dayKey: string, exerciseId: string, name: string, progressionGroup: string | null) {
+export function renameExercise(
+  dayKey: string,
+  exerciseId: string,
+  name: string,
+  progressionGroup: string | null,
+  bodyweightShare: number | null = null
+) {
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
     return updateWorkoutDay(
       s,
       dayKey,
-      existing.map((e) => (e.id === exerciseId ? { ...e, name, progressionGroup } : e))
+      existing.map((e) => (e.id === exerciseId ? { ...e, name, progressionGroup, bodyweightShare } : e))
     );
   });
 }
