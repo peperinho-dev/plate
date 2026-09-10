@@ -4,6 +4,7 @@
 // used for calisthenics: weighted (weight x reps), plain reps, and timed
 // holds (planks, L-sits). A set is a hold when holdSeconds is present.
 import type { AppState, Exercise, ExerciseSet } from "../store/types";
+import { foldText } from "./text";
 
 export function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -161,16 +162,6 @@ export interface CatalogEntry {
   lastDayKey: string | null;
   lastSummary: string | null;
   lastAddedAt: number;
-}
-
-// Diacritic-insensitive so "platano" finds "Plátano" and "dominadas"
-// finds "Dominadas" regardless of how the keyboard behaved.
-export function foldText(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
 }
 
 // Every exercise ever logged, most-recently-used first, each with a short

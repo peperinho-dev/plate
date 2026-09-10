@@ -36,9 +36,11 @@ interface UiState {
   // Shared by the nutrition and workout tabs so switching tabs keeps the
   // same day in view, matching the vanilla behaviour.
   dayOffset: number;
-  // Hour groups default to collapsed on every fresh load so the day view
-  // opens tidy; only the ones tapped stay open for this session.
-  expandedHourGroups: Set<string>;
+  // Hour groups are open by default: the day's food is the thing you came
+  // to look at, and hiding it behind a tap per hour made the log feel like
+  // navigation rather than reading. Only the ones tapped shut stay shut,
+  // and only for this session.
+  collapsedHourGroups: Set<string>;
   // Grouped (meal) entries currently expanded to show their ingredients.
   expandedGroups: Set<string>;
   clipboard: DayClipboard | null;
@@ -76,7 +78,7 @@ function toggleInSet(set: Set<string>, key: string): Set<string> {
 export const useUiStore = create<UiState>()((set) => ({
   activeTab: "nutrition",
   dayOffset: 0,
-  expandedHourGroups: new Set(),
+  collapsedHourGroups: new Set(),
   expandedGroups: new Set(),
   clipboard: null,
   activeModal: null,
@@ -87,7 +89,7 @@ export const useUiStore = create<UiState>()((set) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   setDayOffset: (offset) => set({ dayOffset: offset }),
   shiftDay: (delta) => set((s) => ({ dayOffset: s.dayOffset + delta })),
-  toggleHourGroup: (key) => set((s) => ({ expandedHourGroups: toggleInSet(s.expandedHourGroups, key) })),
+  toggleHourGroup: (key) => set((s) => ({ collapsedHourGroups: toggleInSet(s.collapsedHourGroups, key) })),
   toggleGroup: (id) => set((s) => ({ expandedGroups: toggleInSet(s.expandedGroups, id) })),
   setClipboard: (clipboard) => set({ clipboard }),
   openModal: (id) => set({ activeModal: id }),

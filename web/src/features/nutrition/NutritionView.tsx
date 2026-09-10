@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
-import { todayKey } from "../../shared/lib/date";
+import { rebaseTimeToDay, todayKey } from "../../shared/lib/date";
 import { formatDateLabel, capitalizeFirst } from "../../shared/lib/format";
 import { WeekStrip } from "../../shared/components/WeekStrip";
 import { CalendarModal } from "../../shared/components/CalendarModal";
-import { ChevronLeft, ChevronRight, GearIcon, ScanIcon, TargetIcon } from "../../shared/components/Icons";
+import { ChevronLeft, ChevronRight, GearIcon, TargetIcon } from "../../shared/components/Icons";
 import { EntryList } from "./components/EntryList";
 import { DayTotals } from "./components/DayTotals";
 import { PasteTargetSheet } from "./components/PasteTargetSheet";
@@ -22,6 +22,8 @@ import { RecipeModal } from "./components/RecipeModal";
 import { GroupMealModal } from "./components/GroupMealModal";
 import { RenameGroupModal } from "./components/RenameGroupModal";
 import { IngredientGramsModal } from "./components/IngredientGramsModal";
+import { AddFoodModal } from "./components/AddFoodModal";
+import { plateItemToEntry, type PlateItem } from "./plate";
 import { entryFromRecipe } from "./recipeActions";
 import { sumFoodItems } from "../../shared/lib/foodItems";
 import { QuickAddRows } from "./components/QuickAddRows";
@@ -29,6 +31,7 @@ import { computeHourlyGoTos, computeRecentItems, favoriteToQuickItem, type Quick
 import {
   addEntry,
   addFavorite,
+  commitPlate,
   groupEntries,
   renameGroupEntry,
   setGroupItemGrams,
@@ -101,6 +104,9 @@ export function NutritionView() {
   const [groupOpen, setGroupOpen] = useState(false);
   const [renameEntry, setRenameEntry] = useState<Entry | null>(null);
   // Which ingredient of which logged meal the grams sheet is editing.
+  const [addFoodOpen, setAddFoodOpen] = useState(false);
+  // A scan resolves here and is handed to the sheet to stage.
+  const [pendingHit, setPendingHit] = useState<import("../../shared/lib/foodLookup").SearchHit | null>(null);
   const [gramsTarget, setGramsTarget] = useState<{ entryId: string; index: number } | null>(null);
   const gramsItem = gramsTarget
     ? (entries.find((e) => e.id === gramsTarget.entryId)?.items?.[gramsTarget.index] ?? null)
@@ -131,14 +137,17 @@ export function NutritionView() {
     showToast("Añadido");
   };
 
-  const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
-
-  const openManualAdd = () => {
-    setForm(emptyEntryForm());
-    setPendingBarcode(null);
-    setEditingEntryId(null);
-    setEntryOpen(true);
+  const handlePlateCommit = (items: PlateItem[], groupName: string | null) => {
+    // Stamped on the day being viewed rather than "now", so logging to an
+    // earlier day files the entry under that day's clock time instead of
+    // today's. The +i keeps the staged order stable within the same second.
+    const base = rebaseTimeToDay(Date.now(), dayKey);
+    commitPlate(dayKey, items.map((it, i) => plateItemToEntry(it, base + i)), groupName);
+    setAddFoodOpen(false);
+    showToast(groupName ? `${groupName} registrada` : items.length === 1 ? "Añadido" : `${items.length} añadidos`);
   };
+
+  const patchForm = (patch: Partial<EntryFormState>) => setForm((f) => ({ ...f, ...patch }));
 
   const openEntryForEdit = (entry: Entry) => {
     setForm(formFromEntry(entry));
@@ -153,15 +162,19 @@ export function NutritionView() {
     showToast(`Buscando ${barcode}…`);
     const result = await lookupBarcode(useAppStore.getState(), barcode);
     if (result) {
-      setForm(formFromLookup(result));
-      showToast(result.source === "cache" ? "Producto guardado en este dispositivo" : "Producto encontrado");
+      // Straight onto the plate, so scanning three things in a shop is
+      // three scans rather than three trips through the form.
+      const { source, ...rest } = result;
+      setPendingHit({ ...rest, id: barcode });
+      showToast(source === "cache" ? "Producto guardado en este dispositivo" : "Producto encontrado");
+      setAddFoodOpen(true);
     } else {
       // Nothing known anywhere — the user fills it in once, and the cache
       // makes every future scan of this barcode instant.
       setForm({ ...emptyEntryForm(), name: "" });
       showToast("No encontrado. Añádelo y lo recordaré.");
+      setEntryOpen(true);
     }
-    setEntryOpen(true);
   };
 
   const handleEntrySubmit = () => {
@@ -329,17 +342,9 @@ export function NutritionView() {
             Agrupar ({selectedCount})
           </button>
         ) : (
-          <>
-            <button className="btn btn--primary btn--block" onClick={() => setScanOpen(true)}>
-              <span className="btn-icon">
-                <ScanIcon />
-              </span>{" "}
-              Escanear
-            </button>
-            <button className="btn btn--secondary btn--block" onClick={openManualAdd}>
-              <span className="btn-icon">+</span> Añadir a mano
-            </button>
-          </>
+          <button className="btn btn--primary btn--block" onClick={() => setAddFoodOpen(true)}>
+            <span className="btn-icon">+</span> Añadir
+          </button>
         )}
       </div>
 
@@ -443,6 +448,22 @@ export function NutritionView() {
           setPendingBarcode(null);
           setForm(formFromLookup({ ...hit, source: "openfoodfacts" }));
         }}
+      />
+      <AddFoodModal
+        open={addFoodOpen}
+        hour={new Date().getHours()}
+        onClose={() => setAddFoodOpen(false)}
+        onScanClick={() => setScanOpen(true)}
+        onCreateManual={(name) => {
+          setAddFoodOpen(false);
+          setForm({ ...emptyEntryForm(), name });
+          setPendingBarcode(null);
+          setEditingEntryId(null);
+          setEntryOpen(true);
+        }}
+        onCommit={handlePlateCommit}
+        pendingHit={pendingHit}
+        onPendingHitConsumed={() => setPendingHit(null)}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
       <ProfileModal

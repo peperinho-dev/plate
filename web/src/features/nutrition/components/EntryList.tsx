@@ -17,7 +17,7 @@ interface EntryListProps {
 }
 
 export function EntryList({ entries, dayKey, onEdit, onEditGroup, onEditItem }: EntryListProps) {
-  const expandedHourGroups = useUiStore((s) => s.expandedHourGroups);
+  const collapsedHourGroups = useUiStore((s) => s.collapsedHourGroups);
   const toggleHourGroup = useUiStore((s) => s.toggleHourGroup);
   const groups = groupEntriesByHour(entries);
 
@@ -25,7 +25,7 @@ export function EntryList({ entries, dayKey, onEdit, onEditGroup, onEditItem }: 
     <div className="log-list">
       {groups.map(({ hour, entries: groupEntries, total }) => {
         const groupKey = `${dayKey}-${hour}`;
-        const collapsed = !expandedHourGroups.has(groupKey);
+        const collapsed = collapsedHourGroups.has(groupKey);
         return (
           <div className="hour-group" key={groupKey}>
             <button type="button" className="hour-header" onClick={() => toggleHourGroup(groupKey)}>

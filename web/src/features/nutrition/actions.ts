@@ -300,3 +300,46 @@ export function setGroupItemGrams(dayKey: string, entryId: string, itemIndex: nu
     );
   });
 }
+
+// Commits a staged plate in one write.
+//
+// Grouping happens here rather than by adding the entries and then calling
+// groupEntries on them: that would need the new ids threaded back out, and
+// would render the day twice — once with loose rows, once collapsed.
+export function commitPlate(
+  dayKey: string,
+  staged: Omit<Entry, "id">[],
+  groupName: string | null
+) {
+  if (staged.length === 0) return;
+  useAppStore.setState((s) => {
+    const existing = s.days[dayKey]?.entries ?? [];
+
+    if (!groupName || staged.length < 2) {
+      return updateDay(s, dayKey, [...existing, ...staged.map((e) => ({ ...e, id: newId() }))]);
+    }
+
+    // An item logged from a recipe already carries its own ingredients, so
+    // it contributes those rather than becoming one opaque line — same
+    // rule groupEntries follows, so grouping never nests.
+    const items = staged.flatMap((e) =>
+      e.items ? e.items.map((i) => ({ ...i })) : [entryToFoodItem({ ...e, id: "" })]
+    );
+    const totals = sumFoodItems(items);
+    const grouped: Entry = {
+      id: newId(),
+      name: groupName,
+      calories: totals.calories,
+      qtyLabel: `${items.length} ingr.`,
+      protein: totals.protein,
+      fat: totals.fat,
+      carbs: totals.carbs,
+      fiber: staged.reduce((sum, e) => sum + (e.fiber || 0), 0),
+      sugar: staged.reduce((sum, e) => sum + (e.sugar || 0), 0),
+      sodium: staged.reduce((sum, e) => sum + (e.sodium || 0), 0),
+      items,
+      addedAt: Math.min(...staged.map((e) => e.addedAt))
+    };
+    return updateDay(s, dayKey, [...existing, grouped]);
+  });
+}

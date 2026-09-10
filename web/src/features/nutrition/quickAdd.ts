@@ -2,7 +2,7 @@
 // app.js. Deduplicated by lowercased name, always carrying the *most
 // recent* version of an item's numbers — if you corrected a food's macros
 // last time, the quick-add should reflect the correction.
-import type { AppState, Entry, Favorite } from "../../shared/store/types";
+import type { AppState, Entry, Favorite, FoodItemBasis } from "../../shared/store/types";
 
 export interface QuickItem {
   key: string;
@@ -17,6 +17,8 @@ export interface QuickItem {
   sodium: number;
   count: number;
   lastAddedAt: number;
+  /** Carried through so re-logging restores the exact quantity. */
+  basis?: FoodItemBasis;
 }
 
 function tallyEntries(days: AppState["days"], matches: (e: Entry) => boolean): Map<string, QuickItem> {
@@ -40,7 +42,8 @@ function tallyEntries(days: AppState["days"], matches: (e: Entry) => boolean): M
             carbs: e.carbs,
             fiber: e.fiber,
             sugar: e.sugar,
-            sodium: e.sodium
+            sodium: e.sodium,
+            basis: e.basis
           });
         }
       } else {
@@ -56,7 +59,8 @@ function tallyEntries(days: AppState["days"], matches: (e: Entry) => boolean): M
           sugar: e.sugar || 0,
           sodium: e.sodium || 0,
           count: 1,
-          lastAddedAt: e.addedAt
+          lastAddedAt: e.addedAt,
+          basis: e.basis
         });
       }
     });
