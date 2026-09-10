@@ -51,6 +51,8 @@ export interface Profile {
   activityLevel: "sedentary" | "light" | "moderate" | "active" | "very_active" | null;
   goalType: "gain" | "lose" | "maintain" | null;
   rateKgPerWeek: number | null;
+  /** The weight being aimed at, in kg. Null means only a rate was set. */
+  targetWeightKg: number | null;
   updatedAt: number | null;
 }
 

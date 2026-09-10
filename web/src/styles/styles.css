@@ -2340,3 +2340,37 @@ button:focus-visible, input:focus-visible {
 }
 .ring-label { font-size: 11px; font-weight: 700; }
 .ring-sub { font-size: 10px; color: var(--ink-faint); text-align: center; }
+
+/* The goal card's progress meter. Thinner than a stat cell's bar: this
+   is one span of a long journey, not a daily target being filled. */
+.goal-meter {
+  display: block;
+  height: 4px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+.goal-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.field-optional { color: var(--ink-faint); font-weight: 500; }
+
+/* The progression tag on an exercise row. Quiet by default — it labels
+   the movement rather than competing with its name — and only present
+   when the exercise actually belongs to a group. */
+.chip--tag {
+  flex: 0 0 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 4px 9px;
+  color: var(--ink-soft);
+  background: var(--surface-alt);
+}

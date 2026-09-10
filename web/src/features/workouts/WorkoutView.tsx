@@ -19,6 +19,8 @@ import { ChevronLeft, ChevronRight, DumbbellIcon, XIcon } from "../../shared/com
 import type { TimerLog } from "../../shared/store/types";
 import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
+import { ProgressionDetailModal } from "./components/ProgressionDetailModal";
+import { collectProgressionGroups } from "./progressions";
 import { AddWorkoutModal } from "./components/AddWorkoutModal";
 import { TimerRunModal } from "./components/TimerRunModal";
 import { useTimerRun } from "./useTimerRun";
@@ -68,6 +70,10 @@ export function WorkoutView() {
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  // Progressions live here rather than on the dashboard: a progression is
+  // a property of a movement, so it belongs beside the movement you just
+  // logged, not in a chart three tabs away.
+  const [progressionGroup, setProgressionGroup] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const detailExercise = exercises.find((e) => e.id === detailId) ?? null;
@@ -199,6 +205,15 @@ export function WorkoutView() {
                             <span className="row-name">{ex.name}</span>
                             <span className="row-qty">{summarizeExercise(ex)}</span>
                           </button>
+                          {ex.progressionGroup && (
+                            <button
+                              type="button"
+                              className="chip chip--tag"
+                              onClick={() => setProgressionGroup(ex.progressionGroup!)}
+                            >
+                              {ex.progressionGroup}
+                            </button>
+                          )}
                           <button
                             className="row-del"
                             aria-label="Quitar"
@@ -255,6 +270,14 @@ export function WorkoutView() {
         dayKey={dayKey}
         onClose={() => setDetailId(null)}
         onEditExercise={() => setEditOpen(true)}
+      />
+      <ProgressionDetailModal
+        open={progressionGroup !== null}
+        groupName={progressionGroup}
+        variants={
+          progressionGroup ? (collectProgressionGroups(workouts).get(progressionGroup) ?? []) : []
+        }
+        onClose={() => setProgressionGroup(null)}
       />
       <ExerciseEditModal
         open={editOpen}

@@ -8,6 +8,8 @@
 import { useAppStore } from "../../shared/store";
 import { smoothPath, type Point } from "../../shared/lib/svgPath";
 import { expenditureSeries, trendRatePerWeek } from "./expenditure";
+import { readGoal, MAINTAIN_BAND_KG } from "./goal";
+import { computeEma } from "../profile/adaptive";
 import type { EmaPoint } from "../profile/adaptive";
 
 const SPARK_W = 100;
@@ -74,18 +76,54 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     );
   }
 
+  // Goal Progress when there's a destination to progress toward, and the
+  // rate on its own when there isn't — a rate goal is complete without a
+  // target weight, so the card degrades rather than disappearing.
+  //
+  // Deliberately reads the whole weight history rather than the period
+  // the rest of this screen is filtered to. Progress toward a goal is not
+  // a property of the last seven days, and letting the period toggle
+  // change it made the same goal read 1% or 60% depending on a control
+  // that has nothing to do with it.
+  const fullEma = computeEma([...weightLog].sort((a, b) => (a.date < b.date ? -1 : 1)));
+  const goal = readGoal(profile, fullEma);
   const actualRate = trendRatePerWeek(weightWithEma);
-  const goalRate = profile.rateKgPerWeek;
-  if (actualRate != null) {
-    // A goal of losing is a negative rate; the profile stores the
-    // magnitude and the direction separately, so they're recombined here
-    // before comparing signs.
+
+  if (goal) {
+    const pct = Math.round(goal.fraction * 100);
+    cards.push(
+      <div className="insight-card" key="goal">
+        <span className="insight-card-label">Progreso</span>
+        <span className="insight-card-value">
+          {goal.kind === "maintain"
+            ? `${goal.remaining > 0 ? "+" : ""}${goal.remaining.toFixed(1)} kg`
+            : goal.done
+              ? "Conseguido"
+              : `${Math.abs(goal.remaining).toFixed(1)} kg`}
+        </span>
+        <span className="insight-card-sub">
+          {goal.kind === "maintain"
+            ? goal.done
+              ? `dentro de ±${MAINTAIN_BAND_KG} kg`
+              : `fuera del margen · meta ${goal.target.toFixed(1)} kg`
+            : goal.done
+              ? `meta ${goal.target.toFixed(1)} kg`
+              : `para ${goal.target.toFixed(1)} kg · ${pct}%`}
+        </span>
+        {goal.kind === "directional" && (
+          <span className="goal-meter">
+            <span className="goal-meter-fill" style={{ width: `${pct}%` }} />
+          </span>
+        )}
+      </div>
+    );
+  } else if (actualRate != null) {
     const signedGoal =
-      goalRate == null || profile.goalType == null || profile.goalType === "maintain"
+      profile.rateKgPerWeek == null || profile.goalType == null || profile.goalType === "maintain"
         ? null
         : profile.goalType === "lose"
-          ? -Math.abs(goalRate)
-          : Math.abs(goalRate);
+          ? -Math.abs(profile.rateKgPerWeek)
+          : Math.abs(profile.rateKgPerWeek);
     cards.push(
       <div className="insight-card" key="rate">
         <span className="insight-card-label">Ritmo</span>

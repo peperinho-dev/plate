@@ -17,7 +17,7 @@ export const SCHEMA_VERSION = 9;
 const MIGRATION_BAND_HALF_WIDTH = 75; // kcal, ± around the old single goalCalories number
 
 export function defaultProfile(): Profile {
-  return { sex: null, age: null, heightCm: null, activityLevel: null, goalType: null, rateKgPerWeek: null, updatedAt: null };
+  return { sex: null, age: null, heightCm: null, activityLevel: null, goalType: null, rateKgPerWeek: null, targetWeightKg: null, updatedAt: null };
 }
 
 export function defaultCalorieTarget(): CalorieTarget {
@@ -86,6 +86,9 @@ export function migrateData(parsed: unknown): AppState {
   data.schemaVersion = SCHEMA_VERSION;
   if (!data.days) data.days = {};
   if (!data.profile) data.profile = defaultProfile();
+  // Additive: profiles written before the goal weight existed carry a
+  // rate but no destination, which is a valid state and stays null.
+  if (typeof data.profile.targetWeightKg !== "number") data.profile.targetWeightKg = null;
   if (!data.weightLog) data.weightLog = [];
   if (!data.calorieTarget) data.calorieTarget = defaultCalorieTarget();
   if (!data.macroTargets) data.macroTargets = defaultMacroTargets();

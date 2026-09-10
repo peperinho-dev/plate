@@ -151,6 +151,31 @@ export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps)
           </label>
         )}
 
+        {/* Optional on purpose: a rate alone is a complete goal, and the
+            app worked that way before this field existed. Giving it a
+            destination is what turns the rate into progress you can be
+            finished with. */}
+        {draft.goalType && (
+          <label className="field">
+            <span>
+              Peso objetivo{" "}
+              <span className="field-optional">
+                {draft.goalType === "maintain" ? "· peso a mantener" : "· opcional"}
+              </span>
+            </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min="30"
+              max="300"
+              placeholder="kg"
+              value={draft.targetWeightKg ?? ""}
+              onChange={(e) => patch({ targetWeightKg: num(e.target.value) })}
+            />
+          </label>
+        )}
+
         <button type="button" className="btn btn--primary btn--block" onClick={handleSave}>
           Guardar perfil
         </button>
