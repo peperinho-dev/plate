@@ -1,6 +1,11 @@
-// Quick-glance summary cards above the full charts — ported from
-// renderInsightsCarousel() in app.js. Deliberately a small card + sparkline
-// rather than a second copy of the detailed charts' axes and labels.
+// The summary layer at the top of Resumen: one small card per thing the
+// app tracks, each a value plus a sparkline. Deliberately not a second
+// copy of the detailed charts' axes and labels.
+//
+// Laid out as a two-column grid rather than the horizontal scroller this
+// started as. A scroller hid however many cards didn't fit and made the
+// visible ones ragged widths; the whole point of a summary is that you
+// take it in at a glance, which you can't do if part of it is offscreen.
 import { useAppStore } from "../../shared/store";
 import { smoothPath, type Point } from "../../shared/lib/svgPath";
 import { hasWorkoutSession } from "../../shared/lib/nutrition";
@@ -58,12 +63,12 @@ function MiniBarSparkline({ values }: { values: number[] }) {
   );
 }
 
-interface InsightsCarouselProps {
+interface InsightsGridProps {
   periodDays: DayStat[];
   weightWithEma: EmaPoint[];
 }
 
-export function InsightsCarousel({ periodDays, weightWithEma }: InsightsCarouselProps) {
+export function InsightsGrid({ periodDays, weightWithEma }: InsightsGridProps) {
   const workouts = useAppStore((s) => s.workouts);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
 
@@ -130,5 +135,5 @@ export function InsightsCarousel({ periodDays, weightWithEma }: InsightsCarousel
   }
 
   if (cards.length === 0) return null;
-  return <div className="insights-carousel">{cards}</div>;
+  return <div className="insights-grid">{cards}</div>;
 }

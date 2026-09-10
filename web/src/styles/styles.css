@@ -1957,11 +1957,6 @@ button:focus-visible, input:focus-visible {
 }
 .today-row-trend { color: var(--ink-soft); font-weight: 600; }
 
-/* The carousel isn't a .card, so the `.card + .card` gap doesn't reach
-   it — without this it collides with whatever card precedes it, which is
-   now Hoy at the top of Resumen. */
-.content .card + .insights-carousel { margin-top: 16px; }
-
 /* ---------------------------------------------------------------------
    Structural pass: one spacing scale, and rails that mean something.
 
@@ -2021,8 +2016,6 @@ button:focus-visible, input:focus-visible {
 .today-rows { margin-top: var(--space-4); padding-top: var(--space-3); }
 .goal-progress-row { margin-top: var(--space-4); padding-top: var(--space-4); }
 .chart-legend { gap: var(--space-4); margin-bottom: var(--space-3); }
-.insights-carousel { gap: var(--space-3); margin-bottom: var(--space-4); }
-.content .card + .insights-carousel { margin-top: var(--space-4); }
 .quick-section { margin-bottom: var(--space-4); }
 .quick-label { margin-bottom: var(--space-2); }
 .row { padding: var(--space-3) 0; gap: var(--space-3); }
@@ -2040,3 +2033,68 @@ button:focus-visible, input:focus-visible {
 .sub-row-qty {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------
+   Dashboard skeleton for Resumen: eyebrow over title, a summary grid,
+   then sections whose own controls sit on their own headers.
+   --------------------------------------------------------------------- */
+
+/* The stacked variant: heading block left, one action right. The default
+   .topbar centres a date button between two arrows, which is right for
+   the day-based tabs and wrong for a screen title. */
+.topbar--stacked { align-items: flex-start; }
+.topbar-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.topbar-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+/* Resets the day-button styling .day-label carries for the other tabs,
+   and sizes it as the screen title it is here. */
+.topbar--stacked .day-label {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  cursor: default;
+}
+
+/* A section's own header: title at the rail, its controls on the right,
+   so a control sits next to what it changes instead of in the screen
+   header where it looks like it governs everything. */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.content .card + .section-head,
+.content .insights-grid + .section-head { margin-top: var(--space-6); }
+.section-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Two-up summary grid. A lone trailing card spans the full width rather
+   than sitting next to a hole. */
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+/* A trailing odd card stays one column wide. Spanning it looked tidier
+   in the abstract, but these cards carry sparklines: stretched to full
+   width a seven-day bar strip becomes seven blocks, and the shape you
+   were meant to read at a glance is gone. An empty half reads as a grid;
+   an inflated chart reads as a bug. */

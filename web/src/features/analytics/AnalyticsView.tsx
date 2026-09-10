@@ -13,14 +13,14 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAppStore } from "../../shared/store";
 import { todayKey } from "../../shared/lib/date";
+import { formatEyebrowDate } from "../../shared/lib/format";
 import { formatDuration } from "../../shared/lib/workouts";
 import { computeEma } from "../profile/adaptive";
 import { collectProgressionGroups } from "./progressions";
 import { LineChart } from "./LineChart";
 import { CalorieChart } from "./CalorieChart";
 import { SessionsChart } from "./SessionsChart";
-import { InsightsCarousel } from "./InsightsCarousel";
-import { TodaySummary } from "./TodaySummary";
+import { InsightsGrid } from "./InsightsGrid";
 import { ProgressionDetailModal } from "./ProgressionDetailModal";
 import { estimateCurrentTdee } from "../../shared/lib/targets";
 import {
@@ -366,9 +366,32 @@ export function AnalyticsView() {
 
   return (
     <div className="view">
-      <header className="topbar">
-        <span className="day-label">Resumen</span>
-        <div className="topbar-actions">
+      {/* Date eyebrow over the title, rather than the title alone: this
+          is the screen you open to ask "how is it going", and the answer
+          is only meaningful against a date. */}
+      <header className="topbar topbar--stacked">
+        <span className="topbar-heading">
+          <span className="topbar-eyebrow">{formatEyebrowDate()}</span>
+          <span className="day-label">Resumen</span>
+        </span>
+        <button type="button" className="link-btn" onClick={() => setEditing((v) => !v)}>
+          {editing ? "Listo" : "Editar"}
+        </button>
+      </header>
+
+      <main className="content">
+        {/* Today's calories and macros used to lead this screen, but that
+            was the same DayTotals card Comida already opens with. Resumen
+            answers the other question — how the last weeks have gone — so
+            it now leads with the summary layer and nothing is stated
+            twice across the two tabs. */}
+        <InsightsGrid periodDays={periodDays} weightWithEma={periodEma} />
+
+        {/* The period toggle belongs to the history below, not to the
+            screen, so it sits on that section's header where what it
+            changes is visible. */}
+        <div className="section-head">
+          <span className="section-title">Historial</span>
           <div className="segmented segmented--compact">
             {([7, 30, "all"] as const).map((p) => (
               <button
@@ -381,18 +404,7 @@ export function AnalyticsView() {
               </button>
             ))}
           </div>
-          <button type="button" className="link-btn" onClick={() => setEditing((v) => !v)}>
-            {editing ? "Listo" : "Editar"}
-          </button>
         </div>
-      </header>
-
-      <main className="content">
-        <TodaySummary />
-
-        {/* Everything below is history, which is what the period toggle
-            in the header applies to. Today above never changes with it. */}
-        <InsightsCarousel periodDays={periodDays} weightWithEma={periodEma} />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visible.map((v) => v.id)} strategy={verticalListSortingStrategy}>

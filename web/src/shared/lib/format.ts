@@ -58,3 +58,11 @@ export function relativeDayLabel(dateStr: string, todayStr: string): string {
   if (diff < 28) return `hace ${Math.floor(diff / 7)} sem`;
   return formatShortDate(dateStr);
 }
+
+// "JUEVES, 10 DE SEPTIEMBRE" — the eyebrow above a screen title.
+// Upper-cased here rather than with text-transform so the string is the
+// same in the DOM as on screen, which keeps it greppable and lets a
+// screen reader announce it as written.
+export function formatEyebrowDate(d = new Date()): string {
+  return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} de ${MONTHS_FULL[d.getMonth()]}`.toUpperCase();
+}
