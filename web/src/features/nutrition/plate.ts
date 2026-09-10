@@ -7,6 +7,7 @@
 // rather than repair afterwards with Agrupar.
 import type { Entry, FoodItemBasis } from "../../shared/store/types";
 import { scaleFoodItem } from "../../shared/lib/foodItems";
+import { formatQuantity } from "../../shared/lib/quantity";
 import { newId } from "../../shared/lib/id";
 import type { FoodCandidate } from "./foodCandidates";
 import type { SearchHit } from "../../shared/lib/foodLookup";
@@ -79,7 +80,7 @@ export function plateItemFromSearchHit(hit: SearchHit): PlateItem {
   return {
     id: newId(),
     name: hit.name,
-    qtyLabel: `${DEFAULT_GRAMS} g`,
+    qtyLabel: formatQuantity(basis),
     calories: scaled.calories,
     protein: scaled.protein,
     fat: scaled.fat,
@@ -105,7 +106,9 @@ export function rescalePlateItem(item: PlateItem, grams: number): PlateItem {
   return {
     ...item,
     basis,
-    qtyLabel: `${Math.round(grams)} g`,
+    // Keeps reading in units when the food has one: adjusting "2 huevos"
+    // to 3 should say 3 huevos, not 165 g.
+    qtyLabel: formatQuantity(basis),
     calories: scaled.calories,
     protein: scaled.protein,
     fat: scaled.fat,

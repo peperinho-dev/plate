@@ -14,6 +14,7 @@ import { Modal } from "../../../shared/components/Modal";
 import { ScanIcon, XIcon } from "../../../shared/components/Icons";
 import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
 import { foldText } from "../../../shared/lib/text";
+import { gramsFromUnits, hasUnit, pluralize, unitsFromGrams } from "../../../shared/lib/quantity";
 import { useAppStore } from "../../../shared/store";
 import { buildFoodCandidates, searchFoodCandidates } from "../foodCandidates";
 import {
@@ -66,7 +67,10 @@ export function AddFoodModal({
   const [grouping, setGrouping] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editGrams, setEditGrams] = useState("");
+  const [editValue, setEditValue] = useState("");
+  // Which measure the field is currently in. Defaults to the food's own
+  // unit when it has one: someone logging eggs thinks in eggs, not grams.
+  const [editMode, setEditMode] = useState<"g" | "unit">("g");
   // Guards against a slow earlier request landing after a newer one.
   const requestSeq = useRef(0);
 
@@ -124,14 +128,41 @@ export function AddFoodModal({
     setOffResults(null);
   };
 
+  const editingItem = plate.find((it) => it.id === editingId) ?? null;
+  const editingUnit = hasUnit(editingItem?.basis);
+
   const startEditing = (item: PlateItem) => {
     if (!item.basis) return; // nothing to re-scale against
     setEditingId(item.id);
-    setEditGrams(String(Math.round(item.basis.grams)));
+    const useUnit = hasUnit(item.basis);
+    setEditMode(useUnit ? "unit" : "g");
+    setEditValue(
+      useUnit
+        ? String(Math.round(unitsFromGrams(item.basis.grams, item.basis) * 10) / 10)
+        : String(Math.round(item.basis.grams))
+    );
+  };
+
+  // Switching measure converts what's already typed rather than clearing
+  // it, so "2 huevos" becomes "110 g" instead of an empty box.
+  const switchMode = (mode: "g" | "unit") => {
+    if (mode === editMode || !editingItem?.basis) return;
+    const n = parseFloat(editValue);
+    if (Number.isFinite(n)) {
+      const grams = editMode === "unit" ? gramsFromUnits(n, editingItem.basis) : n;
+      setEditValue(
+        mode === "unit"
+          ? String(Math.round(unitsFromGrams(grams, editingItem.basis) * 10) / 10)
+          : String(Math.round(grams))
+      );
+    }
+    setEditMode(mode);
   };
 
   const commitEdit = () => {
-    const grams = parseFloat(editGrams);
+    const n = parseFloat(editValue);
+    const grams =
+      editMode === "unit" && editingItem?.basis ? gramsFromUnits(n, editingItem.basis) : n;
     if (grams > 0) {
       setPlate((p) => p.map((it) => (it.id === editingId ? rescalePlateItem(it, grams) : it)));
     }
@@ -205,29 +236,53 @@ export function AddFoodModal({
             ))}
           </div>
           {editingId && (
-            <div className="field-row" style={{ marginTop: 10 }}>
-              <label className="field" style={{ flex: 1 }}>
-                <span>Cantidad (g)</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="any"
-                  inputMode="decimal"
-                  value={editGrams}
-                  onChange={(e) => setEditGrams(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      commitEdit();
-                    }
-                  }}
-                  autoFocus
-                />
-              </label>
-              <button type="button" className="btn btn--secondary" onClick={commitEdit}>
-                Listo
-              </button>
-            </div>
+            <>
+              {editingUnit && editingItem?.basis && (
+                <div className="segmented segmented--compact" style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className={"segmented-btn" + (editMode === "unit" ? " active" : "")}
+                    onClick={() => switchMode("unit")}
+                  >
+                    {pluralize(editingItem.basis.unitName!, 2)}
+                  </button>
+                  <button
+                    type="button"
+                    className={"segmented-btn" + (editMode === "g" ? " active" : "")}
+                    onClick={() => switchMode("g")}
+                  >
+                    Gramos
+                  </button>
+                </div>
+              )}
+              <div className="field-row" style={{ marginTop: 10 }}>
+                <label className="field" style={{ flex: 1 }}>
+                  <span>
+                    {editMode === "unit" && editingItem?.basis
+                      ? `Cantidad (${pluralize(editingItem.basis.unitName!, 2)})`
+                      : "Cantidad (g)"}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitEdit();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </label>
+                <button type="button" className="btn btn--secondary" onClick={commitEdit}>
+                  Listo
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}

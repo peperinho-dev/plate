@@ -182,6 +182,27 @@ export function EntryModal({
           </label>
         </div>
 
+        {/* Optional, and grams stay the underlying measure — leaving these
+            empty changes nothing. Filling them in lets this food be logged
+            and read as "2 huevos" from then on. */}
+        <div className="field-row">
+          <label className="field">
+            <span>Unidad (opcional)</span>
+            <input type="text" placeholder="p. ej. huevo" {...field("unitName")} />
+          </label>
+          <label className="field">
+            <span>g por unidad</span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder="55"
+              {...field("gramsPerUnit")}
+            />
+          </label>
+        </div>
+
         {showPreview && derived && (
           <p className="live-preview">
             {Math.round(derived.calories)} kcal · {Math.round(derived.protein)}P ·{" "}

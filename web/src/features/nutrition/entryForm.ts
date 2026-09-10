@@ -1,7 +1,8 @@
 // Entry-form state and the value derivation ported from
 // readEntryFormValues() in app.js. Fields are kept as strings because
 // they're controlled inputs; parsing happens once, on submit.
-import type { Entry } from "../../shared/store/types";
+import type { Entry, FoodItemBasis } from "../../shared/store/types";
+import { formatQuantity } from "../../shared/lib/quantity";
 import type { LookupResult } from "../../shared/lib/foodLookup";
 
 export interface EntryFormState {
@@ -16,6 +17,9 @@ export interface EntryFormState {
   fiberPer100: string;
   sugarPer100: string;
   sodiumPer100: string;
+  /** Optional named unit, e.g. "huevo" weighing 55 g. */
+  unitName: string;
+  gramsPerUnit: string;
 }
 
 export function emptyEntryForm(): EntryFormState {
@@ -30,7 +34,9 @@ export function emptyEntryForm(): EntryFormState {
     carbsPer100: "",
     fiberPer100: "",
     sugarPer100: "",
-    sodiumPer100: ""
+    sodiumPer100: "",
+    unitName: "",
+    gramsPerUnit: ""
   };
 }
 
@@ -81,7 +87,9 @@ export function formFromEntry(entry: Entry): EntryFormState {
     carbsPer100: str(entry.basis?.carbsPer100 ?? ((entry.carbs || 0) * 100) / basisGrams),
     fiberPer100: per100(entry.fiber || 0),
     sugarPer100: per100(entry.sugar || 0),
-    sodiumPer100: per100(entry.sodium || 0)
+    sodiumPer100: per100(entry.sodium || 0),
+    unitName: entry.basis?.unitName ?? "",
+    gramsPerUnit: entry.basis?.gramsPerUnit ? String(entry.basis.gramsPerUnit) : ""
   };
 }
 
@@ -96,11 +104,13 @@ export interface DerivedEntry {
   sugar: number;
   sodium: number;
   /** Per-100g basis, kept so the item stays proportionally re-scalable. */
-  grams: number;
-  kcalPer100: number;
-  proteinPer100: number;
-  fatPer100: number;
-  carbsPer100: number;
+  /**
+   * The assembled basis, ready to store. Exposed as one object rather than
+   * loose fields precisely because a caller rebuilding it by hand silently
+   * drops whatever was added last — which is exactly how the unit went
+   * missing, and how the basis itself went missing before that.
+   */
+  basis: FoodItemBasis;
 }
 
 // Returns null when the form can't produce a valid entry (no name, or no
@@ -113,19 +123,25 @@ export function deriveEntry(form: EntryFormState): DerivedEntry | null {
   const kcalPer100Raw = parseFloat(form.kcalPer100);
   const grams = parseFloat(form.grams) || 100;
 
+  const gramsPerUnitRaw = parseFloat(form.gramsPerUnit);
+  const unitName = form.unitName.trim();
+  // A unit needs both halves to mean anything: a name with no weight can't
+  // be converted, and a weight with no name has nothing to call itself.
+  const hasUnitDef = !!unitName && !isNaN(gramsPerUnitRaw) && gramsPerUnitRaw > 0;
+
   let calories: number;
-  let qtyLabel: string;
+  let isDirectTotal: boolean;
   let kcalPer100Basis: number;
 
   if (!isNaN(kcalTotal) && kcalTotal >= 0) {
     calories = kcalTotal;
-    qtyLabel = "";
+    isDirectTotal = true;
     // Direct-total entry ignores grams for the calorie figure itself, but
     // still derives a per-100g basis so the item can be re-scaled later.
     kcalPer100Basis = grams > 0 ? (kcalTotal * 100) / grams : kcalTotal;
   } else if (!isNaN(kcalPer100Raw) && kcalPer100Raw >= 0) {
     calories = (kcalPer100Raw * grams) / 100;
-    qtyLabel = `${grams} g`;
+    isDirectTotal = false;
     kcalPer100Basis = kcalPer100Raw;
   } else {
     return null;
@@ -138,20 +154,28 @@ export function deriveEntry(form: EntryFormState): DerivedEntry | null {
   const fatPer100Raw = parseFloat(form.fatPer100);
   const carbsPer100Raw = parseFloat(form.carbsPer100);
 
+  const itemBasis: FoodItemBasis = {
+    name,
+    grams,
+    kcalPer100: kcalPer100Basis,
+    proteinPer100: basis(proteinPer100Raw),
+    fatPer100: basis(fatPer100Raw),
+    carbsPer100: basis(carbsPer100Raw),
+    ...(hasUnitDef ? { unitName, gramsPerUnit: gramsPerUnitRaw } : {})
+  };
+
   return {
     name,
     calories,
-    qtyLabel,
+    // A direct calorie total says nothing about how much it was, so it
+    // gets no quantity label — same as before units existed.
+    qtyLabel: isDirectTotal ? "" : formatQuantity(itemBasis),
     protein: scale(proteinPer100Raw),
     fat: scale(fatPer100Raw),
     carbs: scale(carbsPer100Raw),
     fiber: scale(parseFloat(form.fiberPer100)),
     sugar: scale(parseFloat(form.sugarPer100)),
     sodium: scale(parseFloat(form.sodiumPer100)),
-    grams,
-    kcalPer100: kcalPer100Basis,
-    proteinPer100: basis(proteinPer100Raw),
-    fatPer100: basis(fatPer100Raw),
-    carbsPer100: basis(carbsPer100Raw)
+    basis: itemBasis
   };
 }

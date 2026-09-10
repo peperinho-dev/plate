@@ -10,6 +10,11 @@ export interface FoodItemBasis {
   proteinPer100: number;
   fatPer100: number;
   carbsPer100: number;
+  // An optional named multiplier over grams — "huevo", 55 — so a quantity
+  // can be entered and read as "2 huevos". Grams stay authoritative, so a
+  // food without these behaves exactly as it always did.
+  unitName?: string;
+  gramsPerUnit?: number;
 }
 
 export interface Entry {

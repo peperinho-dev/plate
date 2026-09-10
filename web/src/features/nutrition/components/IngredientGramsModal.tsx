@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { showToast } from "../../../shared/components/Toast";
 import { scaleFoodItem } from "../../../shared/lib/foodItems";
+import { hasUnit, pluralize, unitsFromGrams } from "../../../shared/lib/quantity";
 import type { FoodItemBasis } from "../../../shared/store/types";
 
 interface IngredientGramsModalProps {
@@ -54,6 +55,15 @@ export function IngredientGramsModal({ open, item, onClose, onSave }: Ingredient
             autoFocus
           />
         </label>
+        {/* An ingredient measured in units still edits in grams here —
+            the recipe's own weights are what its totals are built from —
+            but the equivalent is shown so the number means something. */}
+        {hasUnit(item) && parsed > 0 && (
+          <p className="modal-hint">
+            ≈ {Math.round(unitsFromGrams(parsed, item!) * 10) / 10}{" "}
+            {pluralize(item!.unitName!, unitsFromGrams(parsed, item!))}
+          </p>
+        )}
         {preview && (
           <p className="live-preview">
             {Math.round(preview.calories)} kcal · {Math.round(preview.protein)}P ·{" "}

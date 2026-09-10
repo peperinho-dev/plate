@@ -5,6 +5,7 @@ import { useAppStore } from "../../../shared/store";
 import type { Entry } from "../../../shared/store/types";
 import { formatTime } from "../../../shared/lib/format";
 import { scaleFoodItem } from "../../../shared/lib/foodItems";
+import { formatQuantity } from "../../../shared/lib/quantity";
 import { ChevronDown, XIcon } from "../../../shared/components/Icons";
 import { SwipeToDelete } from "../../../shared/components/SwipeToDelete";
 import { showToast } from "../../../shared/components/Toast";
@@ -164,7 +165,7 @@ export function EntryRow({ entry, dayKey, onEdit, onEditGroup, onEditItem }: Ent
                   onClick={() => onEditItem(entry, i)}
                 >
                   <span className="sub-row-name">{item.name}</span>
-                  <span className="sub-row-qty">{Math.round(item.grams)} g</span>
+                  <span className="sub-row-qty">{formatQuantity(item)}</span>
                 </button>
                 <span className="sub-row-amount">{Math.round(scaled.calories)} kcal</span>
                 <button
