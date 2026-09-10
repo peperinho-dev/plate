@@ -1,11 +1,16 @@
-// Profile + goal settings, plus the export/import section vanilla also
-// kept inline here. Weight logging and calorie-range editing are their
-// own modals (WeightModal / TargetModal) — vanilla never bundled those
-// into the profile sheet, and doing so just made this one modal several
-// screens long for no reason.
-import { useRef, useState } from "react";
+// Profile + goal settings.
+//
+// Export/import used to live at the bottom of this sheet, which is why
+// the Ajustes index sent "Copia de seguridad" here. It has its own sheet
+// now (BackupModal) and this one is only about who you are and what
+// you're aiming at.
+//
+// Weight logging and calorie-range editing are their own modals
+// (WeightModal / TargetModal) — vanilla never bundled those into the
+// profile sheet, and doing so just made this one modal several screens
+// long for no reason.
+import { useState } from "react";
 import { Modal } from "../../shared/components/Modal";
-import { exportData, importData } from "./dataTransfer";
 import { showToast } from "../../shared/components/Toast";
 import { useAppStore } from "../../shared/store";
 import type { Profile } from "../../shared/store/types";
@@ -33,8 +38,6 @@ const GOAL_LABELS: { value: NonNullable<Profile["goalType"]>; label: string }[] 
 
 export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps) {
   const profile = useAppStore((s) => s.profile);
-  const lastExportedAt = useAppStore((s) => s.lastExportedAt);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [draft, setDraft] = useState<Profile>(profile);
 
@@ -184,46 +187,6 @@ export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps)
         </button>
       </div>
 
-      <span className="field-group-label">Datos</span>
-      <div className="field-row">
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => void exportData()}>
-          Exportar datos
-        </button>
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          Importar datos
-        </button>
-      </div>
-      <p className="modal-hint">
-        Tus datos viven solo en este dispositivo. Si borras la app de la pantalla de inicio, se
-        borran con ella — exporta de vez en cuando.
-        {lastExportedAt
-          ? ` Última copia: ${new Date(lastExportedAt).toLocaleDateString("es-ES")}.`
-          : " Todavía no has hecho ninguna."}
-      </p>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            // Destructive and irreversible, so it is always confirmed
-            // explicitly rather than on the strength of picking a file.
-            if (window.confirm("Esto reemplazará todos tus datos actuales con los del archivo. ¿Continuar?")) {
-              if (importData(String(reader.result))) onClose();
-            }
-            if (fileInputRef.current) fileInputRef.current.value = "";
-          };
-          reader.readAsText(file);
-        }}
-      />
     </Modal>
   );
 }

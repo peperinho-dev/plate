@@ -2963,3 +2963,15 @@ button:focus-visible, input:focus-visible {
 /* "(+1860 pc)" — the share of an exercise's volume that came from
    bodyweight rather than added load. Quieter than the total it qualifies. */
 .ss-bw { color: var(--ink-faint); font-weight: 600; }
+
+/* A row that opens something says so. The Ajustes index rows all lead
+   somewhere, and without this they read as static text. */
+.row-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--ink-faint);
+}
+/* Section headers stack down the settings index, so each needs the same
+   air above it that the first one gets from the topbar. */
+.content > div + div > .section-head { margin-top: var(--space-6); }
