@@ -53,8 +53,13 @@ after midnight or "today" reads empty.
 
 ## Invariants worth knowing
 
-- `web/src/styles/styles.css` is byte-identical to the vanilla stylesheet up
-  to a marked banner; React-only rules go below it.
+- `web/src/styles/styles.css` and the vanilla `styles.css` at the repo root
+  on `main` are **separate files**; editing one never affects the other.
+  New React-only *rules* still go below the marked banner, but the file is
+  no longer byte-identical above it — the type scale and the selection
+  colours are cross-cutting and had to change declarations in place. To see
+  the divergence, diff against `git show main:styles.css`; don't trust the
+  banner to mean byte-identity.
 - Spacing uses a 4px scale with three rails: screen (18px), card (+16),
   tile (+12). Sheets own their own vertical rhythm — direct children of
   `.modal-sheet` carry no vertical margin.

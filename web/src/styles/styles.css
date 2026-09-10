@@ -1798,8 +1798,18 @@ button:focus-visible, input:focus-visible {
 
 /* ---------------------------------------------------------------------
    React-app additions — deliberate divergences from the ported vanilla
-   stylesheet. Everything above this line is byte-identical to app.js's
-   styles.css; keep new rules down here so that stays easy to verify.
+   stylesheet.
+
+   This used to say everything above was byte-identical to the vanilla
+   styles.css, so React-only changes could be read as an append. That
+   stopped being true with the type scale: tokenising font sizes touches
+   the declaration wherever it sits, and the same goes for the selection
+   colours, so ~270 lines above this point now differ. Both changes were
+   cross-cutting by nature and could not have lived down here.
+
+   The vanilla app is unaffected — it has its own styles.css at the repo
+   root on `main`, a separate file. Diff against it to see the divergence
+   rather than trusting a line number.
    --------------------------------------------------------------------- */
 
 /* The day's totals now lead the Nutrición tab rather than closing it, so
@@ -1950,50 +1960,7 @@ button:focus-visible, input:focus-visible {
 
 .quick-action-icon { color: var(--ink-soft); display: flex; align-items: center; }
 
-/* "Añadir varios" — staging is opt-in, so this sits quietly under the
-   search rather than presenting itself as the main way to add. */
-.multi-toggle {
-  display: block;
-  margin: 10px 0 2px;
-  font-size: var(--fs-label);
-}
-.multi-toggle.is-on { color: var(--accent-ink); font-weight: 700; }
 
-/* Today's block on Resumen. */
-.today-label {
-  display: block;
-  font-size: var(--fs-caption);
-  font-weight: 700;
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 12px;
-}
-.today-rows {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.today-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.today-row-label {
-  font-size: var(--fs-label);
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.today-row-value {
-  font-size: var(--fs-body);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.today-row-trend { color: var(--ink-soft); font-weight: 600; }
 
 /* ---------------------------------------------------------------------
    Structural pass: one spacing scale, and rails that mean something.
@@ -2165,16 +2132,10 @@ button:focus-visible, input:focus-visible {
 .row--static .row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row--static .row-qty { flex-shrink: 0; }
 
-/* Tiles nested inside a card share one inset between them. */
-.goal-progress-item { padding: var(--tile-pad); }
-
 /* Vertical rhythm: separators between blocks in a card were 14px in one
    place, 16px in another, 10px in a third. All on the scale now. */
 .topbar { margin-bottom: var(--space-5); }
 .totals { margin-top: var(--space-4); padding-top: var(--space-4); }
-.today-rows { margin-top: var(--space-4); padding-top: var(--space-3); }
-.goal-progress-row { margin-top: var(--space-4); padding-top: var(--space-4); }
-.chart-legend { gap: var(--space-4); margin-bottom: var(--space-3); }
 .quick-section { margin-bottom: var(--space-4); }
 .quick-label { margin-bottom: var(--space-2); }
 .row { padding: var(--space-3) 0; gap: var(--space-3); }
@@ -2186,9 +2147,6 @@ button:focus-visible, input:focus-visible {
 .totals-value,
 .macro-value,
 .insight-card-value,
-.hour-summary,
-.today-row-value,
-.goal-progress-value,
 .sub-row-qty {
   font-variant-numeric: tabular-nums;
 }
@@ -3234,39 +3192,6 @@ button:focus-visible, input:focus-visible {
 .axis-readout-x { color: var(--ink-soft); }
 .axis-readout-item { display: inline-flex; align-items: center; gap: 5px; }
 
-/* Top exercises under the training chart. Rows, chevrons, same idiom as
-   every other list that leads somewhere. */
-.top-exercises {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-}
-.top-exercise {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-}
-.top-exercise + .top-exercise { border-top: 1px solid var(--line); }
-.top-exercise svg { color: var(--ink-faint); flex: 0 0 auto; }
-.top-exercise-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--fs-body);
-  font-weight: 600;
-}
-.top-exercise-value { font-size: var(--fs-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .ss-total-value.is-up { color: var(--accent-ink); }
 
 /* ---------------------------------------------------------------------
