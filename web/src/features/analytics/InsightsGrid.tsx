@@ -1,21 +1,19 @@
-// The summary layer at the top of Resumen: one small card per thing the
-// app tracks, each a value plus a sparkline. Deliberately not a second
-// copy of the detailed charts' axes and labels.
+// "Insights & Analytics" — the interpreted layer of the dashboard.
 //
-// Laid out as a two-column grid rather than the horizontal scroller this
-// started as. A scroller hid however many cards didn't fit and made the
-// visible ones ragged widths; the whole point of a summary is that you
-// take it in at a glance, which you can't do if part of it is offscreen.
+// MacroFactor's three are Expenditure, Weight Trend and Goal Progress:
+// not raw logs but readings of them. Goal Progress is the one adaptation
+// — theirs charts progress toward a goal weight, which this app never
+// asks for. What it does ask for is a rate, so the third card compares
+// the rate you're actually moving at against the one you chose.
 import { useAppStore } from "../../shared/store";
 import { smoothPath, type Point } from "../../shared/lib/svgPath";
-import { hasWorkoutSession } from "../../shared/lib/nutrition";
-import type { DayStat } from "../../shared/lib/analytics";
+import { expenditureSeries, trendRatePerWeek } from "./expenditure";
 import type { EmaPoint } from "../profile/adaptive";
 
 const SPARK_W = 100;
 const SPARK_H = 32;
 
-function MiniLineSparkline({ values }: { values: number[] }) {
+function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) return <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} />;
   const minV = Math.min(...values);
   const maxV = Math.max(...values);
@@ -26,109 +24,79 @@ function MiniLineSparkline({ values }: { values: number[] }) {
   }));
   return (
     <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
-      <path
-        d={smoothPath(pts)}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MiniBarSparkline({ values }: { values: number[] }) {
-  if (values.length === 0) return <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} />;
-  const maxV = Math.max(...values, 1);
-  const gap = 2;
-  const barW = SPARK_W / values.length - gap;
-  return (
-    <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
-      {values.map((v, i) => {
-        const barH = Math.max(2, (v / maxV) * (SPARK_H - 4));
-        return (
-          <rect
-            key={i}
-            x={i * (barW + gap)}
-            y={SPARK_H - barH}
-            width={barW}
-            height={barH}
-            rx={1.5}
-            fill="var(--accent)"
-          />
-        );
-      })}
+      <path d={smoothPath(pts)} fill="none" stroke="var(--accent)" strokeWidth={2}
+            strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 interface InsightsGridProps {
-  periodDays: DayStat[];
   weightWithEma: EmaPoint[];
 }
 
-export function InsightsGrid({ periodDays, weightWithEma }: InsightsGridProps) {
-  const workouts = useAppStore((s) => s.workouts);
-  const calorieTarget = useAppStore((s) => s.calorieTarget);
+export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
+  const days = useAppStore((s) => s.days);
+  const weightLog = useAppStore((s) => s.weightLog);
+  const profile = useAppStore((s) => s.profile);
 
   const cards: React.ReactNode[] = [];
 
+  const expenditure = expenditureSeries(days, weightLog);
+  if (expenditure.length >= 2) {
+    const latest = expenditure[expenditure.length - 1].kcal;
+    cards.push(
+      <div className="insight-card" key="expenditure">
+        <span className="insight-card-label">Gasto energético</span>
+        <span className="insight-card-value">{Math.round(latest)} kcal</span>
+        <span className="insight-card-sub">estimado, 14 días</span>
+        <span className="insight-card-spark">
+          <Sparkline values={expenditure.map((p) => p.kcal)} />
+        </span>
+      </div>
+    );
+  }
+
   if (weightWithEma.length >= 2) {
-    const last = weightWithEma[weightWithEma.length - 1].raw;
-    // Uses the same EMA-smoothed delta as the Weight chart's stat line
-    // below, rather than raw first/last — otherwise the two "weight change"
-    // figures on this screen can disagree.
-    const diff = weightWithEma[weightWithEma.length - 1].ema - weightWithEma[0].ema;
+    const last = weightWithEma[weightWithEma.length - 1];
+    const diff = last.ema - weightWithEma[0].ema;
     cards.push(
       <div className="insight-card" key="weight">
-        <span className="insight-card-label">Peso</span>
-        <span className="insight-card-value">{last.toFixed(1)} kg</span>
+        <span className="insight-card-label">Tendencia de peso</span>
+        <span className="insight-card-value">{last.ema.toFixed(1)} kg</span>
         <span className="insight-card-sub">
           {diff > 0 ? "+" : ""}
-          {diff.toFixed(1)} kg (tendencia)
+          {diff.toFixed(1)} kg en el periodo
         </span>
         <span className="insight-card-spark">
-          <MiniLineSparkline values={weightWithEma.map((p) => p.raw)} />
-        </span>
-      </div>
-    );
-  }
-
-  const loggedDays = periodDays.filter((d) => d.total > 0);
-  if (loggedDays.length >= 2) {
-    const avgKcal = loggedDays.reduce((sum, d) => sum + d.total, 0) / loggedDays.length;
-    const { min, max } = calorieTarget;
-    const targetMid = min && max ? (min + max) / 2 : null;
-    // Averages only days that were actually logged (skips 0-kcal gaps), so
-    // it's spelled out here — otherwise it silently disagrees with the bar
-    // chart below, which shows every day including unlogged ones.
-    const sub = targetMid
-      ? `${loggedDays.length}/${periodDays.length} días · objetivo ${Math.round(targetMid)}`
-      : `media de ${loggedDays.length} días registrados`;
-    cards.push(
-      <div className="insight-card" key="calories">
-        <span className="insight-card-label">Calorías</span>
-        <span className="insight-card-value">{Math.round(avgKcal)} kcal</span>
-        <span className="insight-card-sub">{sub}</span>
-        <span className="insight-card-spark">
-          <MiniLineSparkline values={periodDays.map((d) => d.total)} />
+          <Sparkline values={weightWithEma.map((p) => p.raw)} />
         </span>
       </div>
     );
   }
 
-  if (periodDays.length >= 2) {
-    const totalSessions = periodDays.filter((d) => hasWorkoutSession(workouts, d.date)).length;
+  const actualRate = trendRatePerWeek(weightWithEma);
+  const goalRate = profile.rateKgPerWeek;
+  if (actualRate != null) {
+    // A goal of losing is a negative rate; the profile stores the
+    // magnitude and the direction separately, so they're recombined here
+    // before comparing signs.
+    const signedGoal =
+      goalRate == null || profile.goalType == null || profile.goalType === "maintain"
+        ? null
+        : profile.goalType === "lose"
+          ? -Math.abs(goalRate)
+          : Math.abs(goalRate);
     cards.push(
-      <div className="insight-card" key="workouts">
-        <span className="insight-card-label">Entrenos</span>
-        <span className="insight-card-value">{totalSessions}</span>
-        <span className="insight-card-sub">sesiones en el periodo</span>
-        <span className="insight-card-spark">
-          <MiniBarSparkline
-            values={periodDays.map((d) => (hasWorkoutSession(workouts, d.date) ? 1 : 0))}
-          />
+      <div className="insight-card" key="rate">
+        <span className="insight-card-label">Ritmo</span>
+        <span className="insight-card-value">
+          {actualRate > 0 ? "+" : ""}
+          {actualRate.toFixed(2)} kg/sem
+        </span>
+        <span className="insight-card-sub">
+          {signedGoal == null
+            ? "sin objetivo de ritmo"
+            : `objetivo ${signedGoal > 0 ? "+" : ""}${signedGoal.toFixed(2)}`}
         </span>
       </div>
     );

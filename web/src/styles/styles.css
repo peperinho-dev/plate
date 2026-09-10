@@ -2098,3 +2098,230 @@ button:focus-visible, input:focus-visible {
    width a seven-day bar strip becomes seven blocks, and the shape you
    were meant to read at a glance is gone. An empty half reads as a grid;
    an inflated chart reads as a bug. */
+
+/* ---------------------------------------------------------------------
+   Dashboard widgets, following MacroFactor's set: a swipeable deck of
+   whole-widget pages, then the interpreted "Análisis" cards.
+   --------------------------------------------------------------------- */
+
+/* The deck. Scroll-snap does the paging; each page is exactly the track's
+   width so a snap always lands on one widget. */
+.widget-deck { margin-bottom: var(--space-4); }
+.widget-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* The pages carry the gap themselves, so a snapped page sits flush at
+     the rail rather than a gap-width off it. */
+  gap: 0;
+}
+.widget-track::-webkit-scrollbar { display: none; }
+.widget-page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  min-width: 0;
+  /* The track is as tall as its tallest page, so a short widget would
+     otherwise float above a band of dead space. Every page stretches to
+     the full height and distributes its own content instead, which reads
+     as one deck of equal cards rather than a ragged stack. */
+  display: flex;
+}
+.widget-page > .card { flex: 1; }
+.widget-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: var(--space-3);
+}
+.widget-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  opacity: 0.45;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.widget-dot.is-active { opacity: 1; transform: scale(1.25); background: var(--accent); }
+
+.widget { display: flex; flex-direction: column; gap: var(--space-3); }
+.widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* A title plus a two-option toggle overruns 325px of card. Rather than
+     shrink either, the toggle drops to its own full-width line — which is
+     also where a thumb expects to find it. */
+  flex-wrap: wrap;
+}
+.widget-head .segmented { flex: 1 1 auto; }
+.widget-title { flex: 1 0 auto; }
+.widget-title { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.widget-note, .eb-caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.eb-caption { text-align: right; }
+
+/* --- Nutrición y objetivos ------------------------------------------ */
+.ntw-body { display: flex; gap: var(--space-4); align-items: stretch; flex: 1; }
+.ntw-week {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+}
+.ntw-day {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 2px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: inherit;
+}
+.ntw-day.is-focused { border-color: var(--line); background: var(--surface-alt); }
+.ntw-day.is-future { opacity: 0.4; }
+/* Four bars per day, filling upward: calories, protein, fat, carbs. */
+.ntw-bars { display: flex; gap: 2px; height: 62px; align-items: flex-end; }
+.ntw-bar {
+  position: relative;
+  width: 5px;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.ntw-day.is-focused .ntw-bar { background: var(--line); }
+.ntw-bar-fill {
+  width: 100%;
+  border-radius: 999px;
+  background: var(--ink-faint);
+  transition: height 0.3s ease;
+}
+.ntw-bar.is-kcal .ntw-bar-fill { background: var(--ink-faint); }
+.ntw-bar.is-protein .ntw-bar-fill { background: var(--accent); }
+.ntw-bar.is-fat .ntw-bar-fill { background: var(--macro-fat); }
+.ntw-bar.is-carbs .ntw-bar-fill { background: var(--macro-carbs); }
+/* Reaching the target is the one state worth calling out, so it darkens
+   to full ink the way the reference app does. */
+.ntw-bar.is-kcal.is-met .ntw-bar-fill { background: var(--ink); }
+.ntw-letter { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+.ntw-day.is-today .ntw-letter { color: var(--accent-ink); }
+
+.ntw-stats {
+  flex: 0 0 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2px;
+}
+.ntw-stat { display: flex; flex-direction: column; }
+.ntw-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.ntw-stat-unit { font-size: 10px; font-weight: 700; color: var(--ink-soft); margin-left: 2px; }
+.ntw-stat-target { font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.ntw-stat.is-protein .ntw-stat-unit { color: var(--accent); }
+.ntw-stat.is-fat .ntw-stat-unit { color: var(--macro-fat); }
+.ntw-stat.is-carbs .ntw-stat-unit { color: var(--macro-carbs); }
+
+/* --- Balance energético --------------------------------------------- */
+.eb-chart { width: 100%; height: 90px; display: block; }
+.eb-bar { fill: var(--accent); opacity: 0.75; }
+/* vector-effect keeps the dashes even, which a non-uniform preserveAspect
+   scale would otherwise stretch into a solid line. */
+.eb-ref {
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.eb-ref.is-target { stroke: var(--macro-fat); }
+.eb-ref.is-expenditure { stroke: var(--macro-carbs); }
+.eb-equation {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.eb-term { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.eb-term-value {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.eb-term-value.is-deficit { color: var(--accent-ink); }
+.eb-term-label { font-size: 10px; color: var(--ink-faint); white-space: nowrap; }
+.eb-op { font-size: 13px; color: var(--ink-faint); }
+
+/* --- Hoy ------------------------------------------------------------- */
+.dn-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
+.dn-hero-main { display: flex; flex-direction: column; min-width: 0; }
+.dn-hero-value { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.dn-hero-label { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+.dn-hero-side { display: flex; gap: var(--space-4); }
+.dn-side-item { display: flex; flex-direction: column; align-items: flex-end; }
+.dn-side-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dn-side-label { font-size: 10px; color: var(--ink-faint); }
+.dn-macros { display: flex; flex-direction: column; gap: var(--space-2); margin-top: auto; }
+.dn-macro { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-2); }
+.dn-macro-label { font-size: 12px; color: var(--ink-soft); }
+.dn-macro-value { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dn-macro-target { color: var(--ink-faint); font-weight: 500; }
+.dn-macro-track {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+.dn-macro-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.35s ease; }
+.dn-macro.is-protein .dn-macro-fill { background: var(--accent); }
+.dn-macro.is-fat .dn-macro-fill { background: var(--macro-fat); }
+.dn-macro.is-carbs .dn-macro-fill { background: var(--macro-carbs); }
+
+/* --- Entreno semanal (rings) ---------------------------------------- */
+.ring-row { display: flex; gap: var(--space-3); flex: 1; align-items: center; }
+.ring-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ring { width: 100%; max-width: 76px; height: auto; display: block; }
+.ring-track { fill: none; stroke: var(--surface-alt); stroke-width: 6; }
+.ring-fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  /* Starts at twelve o'clock rather than three, which is where a ring
+     that reads as progress is expected to begin. */
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.5s cubic-bezier(.2,.8,.2,1);
+}
+.ring-item.is-sessions .ring-fill { stroke: var(--accent); }
+.ring-item.is-sets .ring-fill { stroke: var(--macro-fat); }
+.ring-item.is-exercises .ring-fill { stroke: var(--macro-carbs); }
+.ring-value {
+  font-size: 18px;
+  font-weight: 800;
+  fill: var(--ink);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.ring-label { font-size: 11px; font-weight: 700; }
+.ring-sub { font-size: 10px; color: var(--ink-faint); text-align: center; }
