@@ -2986,3 +2986,47 @@ button:focus-visible, input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------------------------------------------------------------------
+   Axis chart — the detail-screen chart, as opposed to the sparklines in
+   the cards. Ticks and gridlines exist here because you open a detail
+   screen to read values off it.
+   --------------------------------------------------------------------- */
+.axis-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.axis-grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.axis-label {
+  font-size: 8px;
+  fill: var(--ink-faint);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.axis-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+/* The raw series sits behind the trend rather than competing with it. */
+.axis-line.is-faint { stroke-width: 1.5; opacity: 0.45; }
+.axis-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+.axis-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.axis-legend-dash { width: 12px; height: 2px; border-radius: 1px; }
+.chart-empty { margin: 0; font-size: 12px; color: var(--ink-faint); }
+
+/* An insight card that opens something is a button now, so it needs the
+   reset and a pressed state. */
+.insight-card.is-tappable {
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.insight-card.is-tappable:active { transform: scale(0.98); }

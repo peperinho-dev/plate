@@ -5,7 +5,10 @@
 // — theirs charts progress toward a goal weight, which this app never
 // asks for. What it does ask for is a rate, so the third card compares
 // the rate you're actually moving at against the one you chose.
+import { useState } from "react";
 import { useAppStore } from "../../shared/store";
+import { WeightTrendModal } from "./WeightTrendModal";
+import { ExpenditureModal } from "./ExpenditureModal";
 import { smoothPath, type Point } from "../../shared/lib/svgPath";
 import { expenditureSeries, trendRatePerWeek } from "./expenditure";
 import { readGoal, MAINTAIN_BAND_KG } from "./goal";
@@ -37,6 +40,10 @@ interface InsightsGridProps {
 }
 
 export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
+  // The cards state a figure; tapping one opens the series behind it, with
+  // numbers on both axes. Goal has no detail of its own yet — its story is
+  // the weight trend, so it opens that.
+  const [detail, setDetail] = useState<"weight" | "expenditure" | null>(null);
   const days = useAppStore((s) => s.days);
   const weightLog = useAppStore((s) => s.weightLog);
   const profile = useAppStore((s) => s.profile);
@@ -47,14 +54,15 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   if (expenditure.length >= 2) {
     const latest = expenditure[expenditure.length - 1].kcal;
     cards.push(
-      <div className="insight-card" key="expenditure">
+      <button type="button" className="insight-card is-tappable" key="expenditure"
+              onClick={() => setDetail("expenditure")}>
         <span className="insight-card-label">Gasto energético</span>
         <span className="insight-card-value">{Math.round(latest)} kcal</span>
         <span className="insight-card-sub">estimado, 14 días</span>
         <span className="insight-card-spark">
           <Sparkline values={expenditure.map((p) => p.kcal)} />
         </span>
-      </div>
+      </button>
     );
   }
 
@@ -62,7 +70,8 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     const last = weightWithEma[weightWithEma.length - 1];
     const diff = last.ema - weightWithEma[0].ema;
     cards.push(
-      <div className="insight-card" key="weight">
+      <button type="button" className="insight-card is-tappable" key="weight"
+              onClick={() => setDetail("weight")}>
         <span className="insight-card-label">Tendencia de peso</span>
         <span className="insight-card-value">{last.ema.toFixed(1)} kg</span>
         <span className="insight-card-sub">
@@ -72,7 +81,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
         <span className="insight-card-spark">
           <Sparkline values={weightWithEma.map((p) => p.raw)} />
         </span>
-      </div>
+      </button>
     );
   }
 
@@ -92,7 +101,8 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   if (goal) {
     const pct = Math.round(goal.fraction * 100);
     cards.push(
-      <div className="insight-card" key="goal">
+      <button type="button" className="insight-card is-tappable" key="goal"
+              onClick={() => setDetail("weight")}>
         <span className="insight-card-label">Progreso</span>
         <span className="insight-card-value">
           {goal.kind === "maintain"
@@ -115,7 +125,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
             <span className="goal-meter-fill" style={{ width: `${pct}%` }} />
           </span>
         )}
-      </div>
+      </button>
     );
   } else if (actualRate != null) {
     const signedGoal =
@@ -141,5 +151,11 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   }
 
   if (cards.length === 0) return null;
-  return <div className="insights-grid">{cards}</div>;
+  return (
+    <>
+      <div className="insights-grid">{cards}</div>
+      <WeightTrendModal open={detail === "weight"} onClose={() => setDetail(null)} />
+      <ExpenditureModal open={detail === "expenditure"} onClose={() => setDetail(null)} />
+    </>
+  );
 }
