@@ -1883,13 +1883,14 @@ button:focus-visible, input:focus-visible {
      lifted, its top edge sat on the bar's boundary and read as spilling
      out. It sits in the row now, aligned with the icons, distinguished by
      being filled rather than by being oversized. */
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   margin: 0 10px;
-  /* Top-aligned with no extra offset so its centre lands on the tab
-     icons' centre. The tabs carry a label underneath and this doesn't, so
-     centring it in the bar instead would sit it visibly lower than them. */
-  align-self: flex-start;
+  /* Centred on the tab column's full height. Matching the icon row alone
+     was the earlier mistake: a tab is icon plus label, so its visual mass
+     sits lower than its icon, and a circle aligned to the icon reads as
+     riding high above the row. */
+  align-self: center;
   border: none;
   border-radius: 50%;
   background: var(--ink);
