@@ -1,14 +1,15 @@
 // Warmup / stretch timer presets inside the "Añadir" sheet: tap one to
-// run it, "+ Nueva" to build one. Chips show total duration and step
-// count, so a three-step mobility routine reads differently from a single
-// ten-minute jog.
+// run it, "+ Nueva" to build one. Each row shows total duration and step
+// count, so a three-step mobility routine reads differently from a
+// single ten-minute jog.
 import { useState } from "react";
 import { useAppStore } from "../../../shared/store";
-import { ChevronDown, XIcon } from "../../../shared/components/Icons";
+import { XIcon } from "../../../shared/components/Icons";
 import { formatDuration } from "../../../shared/lib/workouts";
 import type { TimerCategory, TimerPreset } from "../../../shared/store/types";
 import { removeTimerPreset, timerTotalSeconds } from "../actions";
 import { TimerBuilderModal } from "./TimerBuilderModal";
+import { LibrarySection } from "./LibrarySection";
 
 interface TimerSectionProps {
   category: TimerCategory;
@@ -28,16 +29,15 @@ export function TimerSection({ category, label, expanded, onToggle, onRun }: Tim
   const [builderOpen, setBuilderOpen] = useState(false);
 
   return (
-    <div className={"quick-section" + (expanded ? "" : " quick-section--collapsed")}>
-      <div className="quick-label-row">
-        <button type="button" className="quick-label-toggle" onClick={onToggle}>
-          <span className="quick-label">{label}</span>
-          <span className={"quick-label-chevron" + (expanded ? "" : " is-collapsed")}>
-            <ChevronDown />
-          </span>
-        </button>
-        {expanded && (
-          <div className="quick-label-actions">
+    <>
+      <LibrarySection
+        title={label}
+        count={timers.length}
+        expanded={expanded}
+        onToggle={onToggle}
+        emptyHint="Ninguno todavía."
+        actions={
+          <>
             <button type="button" className="link-btn" onClick={() => setBuilderOpen(true)}>
               + Nueva
             </button>
@@ -50,39 +50,37 @@ export function TimerSection({ category, label, expanded, onToggle, onRun }: Tim
                 {editing ? "Listo" : "Editar"}
               </button>
             )}
-          </div>
-        )}
-      </div>
-
-      {expanded && timers.length > 0 && (
-        <div className="quick-row">
-          {timers.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className="quick-chip"
-              onClick={() => (editing ? removeTimerPreset(t.id) : onRun(t))}
-            >
-              <span className="quick-chip-name">{t.name}</span>
-              <span className="quick-chip-kcal">
+          </>
+        }
+      >
+        {timers.map((t) => (
+          <div className="row" key={t.id}>
+            <button type="button" className="row-main" onClick={() => onRun(t)}>
+              <span className="row-name">{t.name}</span>
+              <span className="row-qty">
                 {formatDuration(timerTotalSeconds(t))}
                 {t.intervals.length > 1 ? ` · ${t.intervals.length} pasos` : ""}
               </span>
-              {editing && (
-                <span className="quick-chip-del" aria-label="Quitar">
-                  <XIcon />
-                </span>
-              )}
             </button>
-          ))}
-        </div>
-      )}
+            {editing && (
+              <button
+                type="button"
+                className="row-del"
+                aria-label={`Quitar ${t.name}`}
+                onClick={() => removeTimerPreset(t.id)}
+              >
+                <XIcon />
+              </button>
+            )}
+          </div>
+        ))}
+      </LibrarySection>
 
       <TimerBuilderModal
         open={builderOpen}
         category={category}
         onClose={() => setBuilderOpen(false)}
       />
-    </div>
+    </>
   );
 }

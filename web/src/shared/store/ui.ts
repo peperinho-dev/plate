@@ -2,7 +2,7 @@
 // module-level variables the vanilla app kept in memory. Split from the
 // data store so persist() never writes view state into localStorage.
 import { create } from "zustand";
-import type { Entry, Exercise } from "./types";
+import type { Entry, Exercise, TimerLog } from "./types";
 
 export type TabId = "dashboard" | "nutrition" | "workout" | "settings";
 
@@ -27,6 +27,8 @@ export interface NutritionClipboard {
 export interface WorkoutClipboard {
   type: "workout";
   exercises: Exercise[];
+  /** The day's warm-ups and stretches travel with the session. */
+  timerLogs: TimerLog[];
 }
 
 export type DayClipboard = NutritionClipboard | WorkoutClipboard;

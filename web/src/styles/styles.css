@@ -2887,3 +2887,71 @@ button:focus-visible, input:focus-visible {
   margin-top: 0;
   margin-bottom: 0;
 }
+
+/* ---------------------------------------------------------------------
+   Workout library sections — warm-ups, routines, stretches.
+
+   Replaces three hand-rolled copies that each rendered a horizontal row
+   of 220px-capped pill chips: names were cut off ("Estiramiento p…") and
+   anything past the fold was scrolled out of sight.
+   --------------------------------------------------------------------- */
+.lib-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.lib-section + .lib-section { margin-top: var(--space-4); }
+
+.lib-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.lib-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+}
+/* An empty section has nothing to disclose, so its header isn't pretending
+   to be a control — but "+ Nueva" beside it still is. */
+.lib-toggle:disabled { opacity: 1; }
+.lib-toggle:disabled .lib-chevron { visibility: hidden; }
+.lib-chevron {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1);
+}
+.lib-chevron.is-collapsed { transform: rotate(-90deg); }
+.lib-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.lib-count {
+  min-width: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.lib-actions { display: flex; gap: var(--space-3); flex-shrink: 0; }
+.lib-empty { margin: 0; font-size: 12px; color: var(--ink-faint); }
+
+/* The "HOY" chips — what's already on today's session. Chips are right
+   here (they're removable tokens, not library entries), but the
+   horizontal scroll they inherited clipped the last one against the
+   screen edge. They're short; wrapping shows all of them. */
+.quick-row {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}

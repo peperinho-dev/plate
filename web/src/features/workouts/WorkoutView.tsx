@@ -153,14 +153,15 @@ export function WorkoutView() {
               >
                 <PlusIcon />
               </button>
-              {exercises.length > 0 && (
+              {!isEmpty && (
                 <button
                   type="button"
                   className="link-btn link-btn--muted"
                   onClick={() => {
                     setClipboard({
                       type: "workout",
-                      exercises: exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s })) }))
+                      exercises: exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s })) })),
+                      timerLogs: timerLogs.map((l) => ({ ...l }))
                     });
                     showToast("Entreno copiado. Ve a otro día y pulsa Pegar.");
                   }}
@@ -173,7 +174,7 @@ export function WorkoutView() {
                   type="button"
                   className="link-btn"
                   onClick={() => {
-                    copyWorkoutToDay(clipboard.exercises, dayKey);
+                    copyWorkoutToDay(clipboard.exercises, dayKey, clipboard.timerLogs);
                     showToast("Pegado");
                   }}
                 >

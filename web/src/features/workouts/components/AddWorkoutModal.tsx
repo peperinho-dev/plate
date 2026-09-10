@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { showToast } from "../../../shared/components/Toast";
-import { ChevronDown, XIcon } from "../../../shared/components/Icons";
+import {XIcon} from "../../../shared/components/Icons";
 import { useAppStore } from "../../../shared/store";
 import { computeExerciseCatalog, searchCatalog } from "../../../shared/lib/workouts";
 import { foldText } from "../../../shared/lib/text";
@@ -20,6 +20,7 @@ import { relativeDayLabel } from "../../../shared/lib/format";
 import type { Exercise, TimerPreset } from "../../../shared/store/types";
 import { removeExercise, removeRoutine, startRoutine } from "../actions";
 import { TimerSection } from "./TimerSection";
+import { LibrarySection } from "./LibrarySection";
 import { RoutineModal } from "./RoutineModal";
 import { useSectionCollapse } from "../useSectionCollapse";
 
@@ -151,56 +152,58 @@ export function AddWorkoutModal({
             onRun={onRunTimer}
           />
 
-          <div
-            className={"quick-section" + (isExpanded("routines") ? "" : " quick-section--collapsed")}
-          >
-            <div className="quick-label-row">
-              <button type="button" className="quick-label-toggle" onClick={() => toggle("routines")}>
-                <span className="quick-label">Rutinas</span>
-                <span className={"quick-label-chevron" + (isExpanded("routines") ? "" : " is-collapsed")}>
-                  <ChevronDown />
-                </span>
-              </button>
-              {isExpanded("routines") && (
-                <div className="quick-label-actions">
-                  <button type="button" className="link-btn" onClick={() => setRoutineOpen(true)}>
-                    + Nueva
-                  </button>
-                  {routines.length > 0 && (
-                    <button
-                      type="button"
-                      className="link-btn link-btn--muted"
-                      onClick={() => setRoutinesEditing((v) => !v)}
-                    >
-                      {routinesEditing ? "Listo" : "Editar"}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            {isExpanded("routines") && routines.length > 0 && (
-              <div className="quick-row">
-                {routines.map((r) => (
+          <LibrarySection
+            title="Rutinas"
+            count={routines.length}
+            expanded={isExpanded("routines")}
+            onToggle={() => toggle("routines")}
+            emptyHint="Ninguna todavía."
+            actions={
+              <>
+                <button type="button" className="link-btn" onClick={() => setRoutineOpen(true)}>
+                  + Nueva
+                </button>
+                {routines.length > 0 && (
                   <button
-                    key={r.id}
                     type="button"
-                    className="quick-chip"
-                    onClick={() => {
-                      if (routinesEditing) {
-                        removeRoutine(r.id);
-                        return;
-                      }
-                      startRoutine(dayKey, r.exerciseNames);
-                      showToast(`${r.name} añadida`);
-                    }}
+                    className="link-btn link-btn--muted"
+                    onClick={() => setRoutinesEditing((v) => !v)}
                   >
-                    <span className="quick-chip-name">{r.name}</span>
-                    <span className="quick-chip-kcal">{r.exerciseNames.length} ej.</span>
+                    {routinesEditing ? "Listo" : "Editar"}
                   </button>
-                ))}
+                )}
+              </>
+            }
+          >
+            {routines.map((r) => (
+              <div className="row" key={r.id}>
+                <button
+                  type="button"
+                  className="row-main"
+                  onClick={() => {
+                    startRoutine(dayKey, r.exerciseNames);
+                    showToast(`${r.name} añadida`);
+                  }}
+                >
+                  <span className="row-name">{r.name}</span>
+                  <span className="row-qty">
+                    {r.exerciseNames.length} {r.exerciseNames.length === 1 ? "ejercicio" : "ejercicios"}
+                    {r.exerciseNames.length > 0 ? ` · ${r.exerciseNames.join(", ")}` : ""}
+                  </span>
+                </button>
+                {routinesEditing && (
+                  <button
+                    type="button"
+                    className="row-del"
+                    aria-label={`Quitar ${r.name}`}
+                    onClick={() => removeRoutine(r.id)}
+                  >
+                    <XIcon />
+                  </button>
+                )}
               </div>
-            )}
-          </div>
+            ))}
+          </LibrarySection>
 
           <TimerSection
             category="stretch"

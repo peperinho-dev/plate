@@ -8,6 +8,7 @@ import type {
   SetType,
   TimerCategory,
   TimerInterval,
+  TimerLog,
   TimerPreset
 } from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
@@ -138,7 +139,16 @@ export function restoreSet(dayKey: string, exerciseId: string, set: ExerciseSet,
 
 // Copies a whole session onto another day, rebasing timestamps so the
 // pasted session reads as happening at the same times.
-export function copyWorkoutToDay(exercises: Exercise[], targetDayKey: string) {
+//
+// "Whole" includes the timer logs. Entreno organises a day as
+// Calentamiento / Series / Estiramientos, and this used to carry only the
+// middle third — you copied a session and silently lost the warm-up and
+// the stretches that were part of it.
+export function copyWorkoutToDay(
+  exercises: Exercise[],
+  targetDayKey: string,
+  timerLogs: TimerLog[] = []
+) {
   useAppStore.setState((s) => {
     const existing = s.workouts[targetDayKey]?.exercises ?? [];
     const copies = exercises.map((ex) => {
@@ -158,7 +168,26 @@ export function copyWorkoutToDay(exercises: Exercise[], targetDayKey: string) {
         }))
       };
     });
-    return updateWorkoutDay(s, targetDayKey, [...existing, ...copies]);
+
+    const existingLogs = s.workouts[targetDayKey]?.timerLogs ?? [];
+    const logCopies: TimerLog[] = timerLogs.map((log) => ({
+      id: newId(),
+      name: log.name,
+      category: log.category,
+      totalSeconds: log.totalSeconds,
+      completedAt: rebaseTimeToDay(log.completedAt, targetDayKey)
+    }));
+
+    const next = updateWorkoutDay(s, targetDayKey, [...existing, ...copies]);
+    // updateWorkoutDay only knows about exercises, so the logs are merged
+    // back onto the day it produced.
+    const day = next.workouts![targetDayKey];
+    return {
+      workouts: {
+        ...next.workouts,
+        [targetDayKey]: { ...day, timerLogs: [...existingLogs, ...logCopies] }
+      }
+    };
   });
 }
 
