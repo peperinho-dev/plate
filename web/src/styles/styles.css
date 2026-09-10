@@ -2632,3 +2632,56 @@ button:focus-visible, input:focus-visible {
   color: var(--accent-ink);
   text-align: center;
 }
+
+/* The nutrient head is a control now, so it needs the button reset the
+   plain div never did. */
+.nut-head {
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.nut-chevron {
+  display: flex;
+  color: var(--ink-faint);
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1);
+  transform: rotate(-90deg);
+}
+.nut-chevron.is-expanded { transform: rotate(0deg); }
+.nut-row.is-expanded .nut-label { color: var(--accent-ink); }
+
+/* One nutrient over time. */
+.trend { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-2); }
+.trend-chart { width: 100%; height: 64px; display: block; }
+.trend-bar { opacity: 0.8; }
+.trend-bar.is-kcal { fill: var(--accent); }
+.trend-bar.is-protein { fill: var(--macro-protein); }
+.trend-bar.is-fat { fill: var(--macro-fat); }
+.trend-bar.is-carbs { fill: var(--macro-carbs); }
+.trend-bar.is-other { fill: var(--ink-faint); }
+/* Non-scaling so the dashes stay even under the chart's uneven scale. */
+.trend-ref { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.trend-ref.is-target { stroke: var(--ink-faint); stroke-dasharray: 3 3; }
+.trend-ref.is-average { stroke: var(--ink-soft); }
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.trend-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.trend-legend-item::before {
+  content: "";
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.trend-legend-item.is-average { color: var(--ink-soft); font-weight: 600; }
+.trend-legend-days { margin-left: auto; font-variant-numeric: tabular-nums; }
+.trend-empty { margin: var(--space-2) 0 0; font-size: 11px; color: var(--ink-faint); }

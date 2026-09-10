@@ -9,6 +9,7 @@ import { ChevronDown, XIcon } from "../../../shared/components/Icons";
 import { SwipeToDelete } from "../../../shared/components/SwipeToDelete";
 import { showToast } from "../../../shared/components/Toast";
 import { useLongPress } from "../../../shared/hooks/useLongPress";
+import { formatTime } from "../../../shared/lib/format";
 import { useUiStore } from "../../../shared/store/ui";
 import { deleteEntry, deleteGroupItem, restoreEntry } from "../actions";
 import { commitGroupToRecipe, recipeItemsDiffer } from "../recipeActions";
@@ -23,14 +24,16 @@ interface EntryRowProps {
   onEditItem: (entry: Entry, itemIndex: number) => void;
 }
 
-// Quantity and macros on one line, the way the row reads out loud:
-// "2 huevos, 14 protein, 12 fat, 1 carb". They used to be two stacked
-// lines, which made every row three lines tall and the day a long scroll
-// for very little extra information.
+// Quantity, macros and time on one line, the way the row reads out loud:
+// "2 huevos, 14 protein, 12 fat, 1 carb, at 08:15". These used to be two
+// stacked lines, which made every row three lines tall and the day a long
+// scroll for very little extra information.
 //
-// The logged time is deliberately absent: every row sits under an hour
-// header that already states the hour, so repeating "08:15" on each row
-// spent a whole line restating its own heading.
+// The time was dropped entirely at that point, on the grounds that the
+// hour header above already says the hour. The reference app shows it by
+// default — the minute is the part the header can't tell you, and it's
+// what distinguishes two entries in the same hour — so it's back, at the
+// end where it reads as a footnote rather than a heading.
 function DetailLine({ entry }: { entry: Entry }) {
   const parts: string[] = [];
   if (entry.qtyLabel) parts.push(entry.qtyLabel);
@@ -39,7 +42,7 @@ function DetailLine({ entry }: { entry: Entry }) {
       `${Math.round(entry.protein || 0)}P · ${Math.round(entry.fat || 0)}F · ${Math.round(entry.carbs || 0)}C`
     );
   }
-  if (!parts.length) return null;
+  parts.push(formatTime(entry.addedAt));
   return <span className="row-qty">{parts.join(" · ")}</span>;
 }
 

@@ -113,3 +113,41 @@ export function readOverview(
 
   return { loggedDays, windowDays: periodDays, averaged, nutrients };
 }
+
+export interface SeriesPoint {
+  date: string;
+  value: number;
+  logged: boolean;
+}
+
+/**
+ * Daily values for one nutrient, ending at `endDayKey`.
+ *
+ * The window is at least a fortnight — a trend drawn from one day is not a
+ * trend — and capped at 90 days, past which daily bars stop being legible
+ * on a phone. The caller shows the real window so a year-long selection
+ * doesn't silently claim to be charting a year.
+ */
+export const TREND_MIN_DAYS = 14;
+export const TREND_MAX_DAYS = 90;
+
+export function trendWindow(periodDays: number): number {
+  return Math.min(TREND_MAX_DAYS, Math.max(TREND_MIN_DAYS, periodDays));
+}
+
+export function nutrientSeries(
+  days: AppState["days"],
+  endDayKey: string,
+  windowDays: number,
+  nutrient: NutrientId
+): SeriesPoint[] {
+  const pick = NUTRIENT_PICKERS[nutrient];
+  return periodKeys(endDayKey, windowDays).map((date) => {
+    const entries = days[date]?.entries ?? [];
+    return {
+      date,
+      value: entries.reduce((sum, e) => sum + pick(e), 0),
+      logged: entries.length > 0
+    };
+  });
+}

@@ -9,6 +9,8 @@
 // what you opened this for.
 import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
+import { ChevronDown } from "../../../shared/components/Icons";
+import { NutrientTrend } from "./NutrientTrend";
 import { useAppStore } from "../../../shared/store";
 import {
   OVERVIEW_PERIODS,
@@ -35,11 +37,19 @@ interface RowSpec {
 function NutrientRow({
   spec,
   reading,
-  showContributors
+  showContributors,
+  dayKey,
+  periodDays,
+  expanded,
+  onToggle
 }: {
   spec: RowSpec;
   reading: OverviewReading;
   showContributors: boolean;
+  dayKey: string;
+  periodDays: number;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   const n = reading.nutrients[spec.id];
   const pct = spec.target && spec.target > 0 ? Math.round((n.value / spec.target) * 100) : null;
@@ -47,18 +57,34 @@ function NutrientRow({
   const round = (v: number) => (spec.unit === "kcal" || spec.unit === "mg" ? Math.round(v) : Math.round(v * 10) / 10);
 
   return (
-    <div className="nut-row">
-      <div className="nut-head">
+    <div className={"nut-row" + (expanded ? " is-expanded" : "")}>
+      {/* The whole head opens the trend — the row is the control, so the
+          chevron is an affordance rather than the only target. */}
+      <button type="button" className="nut-head" onClick={onToggle} aria-expanded={expanded}>
         <span className="nut-label">{spec.label}</span>
         <span className="nut-value">
           {round(n.value)}
           {spec.target != null && <span className="nut-target"> / {Math.round(spec.target)}</span>} {spec.unit}
         </span>
         <span className="nut-pct">{pct == null ? "—" : `${pct} %`}</span>
-      </div>
+        <span className={"nut-chevron" + (expanded ? " is-expanded" : "")}>
+          <ChevronDown />
+        </span>
+      </button>
       <span className="nut-track">
         <span className={"nut-fill is-" + spec.kind} style={{ width: `${width}%` }} />
       </span>
+
+      {expanded && (
+        <NutrientTrend
+          nutrient={spec.id}
+          dayKey={dayKey}
+          periodDays={periodDays}
+          target={spec.target}
+          unit={spec.unit}
+          kind={spec.kind}
+        />
+      )}
 
       {showContributors && n.contributors.length > 0 && (
         <div className="nut-contributors">
@@ -85,6 +111,9 @@ export function NutritionOverviewModal({ open, dayKey, onClose }: NutritionOverv
 
   const [period, setPeriod] = useState<PeriodId>("day");
   const [contributors, setContributors] = useState(false);
+  // One open at a time: the trends are tall, and two of them push the
+  // third off the screen you opened this to read.
+  const [openNutrient, setOpenNutrient] = useState<NutrientId | null>(null);
 
   const spec = OVERVIEW_PERIODS.find((p) => p.id === period) ?? OVERVIEW_PERIODS[0];
   const reading = readOverview(days, dayKey, spec.days);
@@ -143,7 +172,16 @@ export function NutritionOverviewModal({ open, dayKey, onClose }: NutritionOverv
           </label>
         </div>
         {calorieRows.map((r) => (
-          <NutrientRow key={r.id} spec={r} reading={reading} showContributors={contributors} />
+          <NutrientRow
+            key={r.id}
+            spec={r}
+            reading={reading}
+            showContributors={contributors}
+            dayKey={dayKey}
+            periodDays={spec.days}
+            expanded={openNutrient === r.id}
+            onToggle={() => setOpenNutrient(openNutrient === r.id ? null : r.id)}
+          />
         ))}
       </div>
 
@@ -152,7 +190,16 @@ export function NutritionOverviewModal({ open, dayKey, onClose }: NutritionOverv
           <span className="nut-section-title">Macros</span>
         </div>
         {macroRows.map((r) => (
-          <NutrientRow key={r.id} spec={r} reading={reading} showContributors={contributors} />
+          <NutrientRow
+            key={r.id}
+            spec={r}
+            reading={reading}
+            showContributors={contributors}
+            dayKey={dayKey}
+            periodDays={spec.days}
+            expanded={openNutrient === r.id}
+            onToggle={() => setOpenNutrient(openNutrient === r.id ? null : r.id)}
+          />
         ))}
       </div>
 
@@ -161,7 +208,16 @@ export function NutritionOverviewModal({ open, dayKey, onClose }: NutritionOverv
           <span className="nut-section-title">Otros nutrientes</span>
         </div>
         {otherRows.map((r) => (
-          <NutrientRow key={r.id} spec={r} reading={reading} showContributors={contributors} />
+          <NutrientRow
+            key={r.id}
+            spec={r}
+            reading={reading}
+            showContributors={contributors}
+            dayKey={dayKey}
+            periodDays={spec.days}
+            expanded={openNutrient === r.id}
+            onToggle={() => setOpenNutrient(openNutrient === r.id ? null : r.id)}
+          />
         ))}
       </div>
     </Modal>
