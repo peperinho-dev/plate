@@ -177,7 +177,18 @@ export function NutritionView() {
       carbs: derived.carbs,
       fiber: derived.fiber,
       sugar: derived.sugar,
-      sodium: derived.sodium
+      sodium: derived.sodium,
+      // deriveEntry works this out so the item can be re-scaled later; it
+      // used to be dropped here, which is why grouping had nothing to go
+      // on and every ingredient expanded as "100 g".
+      basis: {
+        name: derived.name,
+        grams: derived.grams,
+        kcalPer100: derived.kcalPer100,
+        proteinPer100: derived.proteinPer100,
+        fatPer100: derived.fatPer100,
+        carbsPer100: derived.carbsPer100
+      }
     };
 
     if (editingEntryId) {

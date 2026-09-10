@@ -54,8 +54,19 @@ export function formFromLookup(result: LookupResult): EntryFormState {
 // Rebuilds the per-100g basis from a stored entry's absolute totals so an
 // already-logged item can be edited on the same terms it was created.
 export function formFromEntry(entry: Entry): EntryFormState {
-  const grams = entry.qtyLabel?.endsWith(" g") ? parseFloat(entry.qtyLabel) : NaN;
-  const basisGrams = Number.isFinite(grams) && grams > 0 ? grams : 100;
+  // The recorded basis is authoritative when there is one. Falling back to
+  // parsing qtyLabel only works for entries labelled "250 g" — a direct
+  // calorie total has no label to read, so it used to reopen as 100 g and
+  // saving would then write that wrong basis back.
+  const labelled = entry.qtyLabel?.endsWith(" g") ? parseFloat(entry.qtyLabel) : NaN;
+  const basisGrams =
+    entry.basis && entry.basis.grams > 0
+      ? entry.basis.grams
+      : Number.isFinite(labelled) && labelled > 0
+        ? labelled
+        : 100;
+  // Micros have no per-100g basis of their own, so they're always derived
+  // from the totals against whichever gram figure won above.
   const per100 = (total: number) => str((total * 100) / basisGrams);
   const d = new Date(entry.addedAt);
 
@@ -63,11 +74,11 @@ export function formFromEntry(entry: Entry): EntryFormState {
     name: entry.name,
     time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
     grams: String(basisGrams),
-    kcalPer100: per100(entry.calories),
+    kcalPer100: str(entry.basis?.kcalPer100 ?? (entry.calories * 100) / basisGrams),
     kcalTotal: "",
-    proteinPer100: per100(entry.protein || 0),
-    fatPer100: per100(entry.fat || 0),
-    carbsPer100: per100(entry.carbs || 0),
+    proteinPer100: str(entry.basis?.proteinPer100 ?? ((entry.protein || 0) * 100) / basisGrams),
+    fatPer100: str(entry.basis?.fatPer100 ?? ((entry.fat || 0) * 100) / basisGrams),
+    carbsPer100: str(entry.basis?.carbsPer100 ?? ((entry.carbs || 0) * 100) / basisGrams),
     fiberPer100: per100(entry.fiber || 0),
     sugarPer100: per100(entry.sugar || 0),
     sodiumPer100: per100(entry.sodium || 0)

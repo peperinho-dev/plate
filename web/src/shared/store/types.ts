@@ -27,6 +27,12 @@ export interface Entry {
   items?: FoodItemBasis[];
   recipeIngredients?: string[];
   sourceRecipeId?: string;
+  // What this entry was measured as, kept so it stays proportionally
+  // re-scalable after the fact — grouping a meal reads it to show the
+  // real weight instead of falling back to "treat the logged amount as
+  // 100 g". Optional because app.js never wrote it and older entries
+  // predate it; absent means "basis unknown", not "zero".
+  basis?: FoodItemBasis;
 }
 
 export interface DayData {

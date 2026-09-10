@@ -183,10 +183,19 @@ export function updateGroupItem(dayKey: string, entryId: string, itemIndex: numb
 
 // --- Grouping ---------------------------------------------------------
 
-// Converts an already-logged flat entry into a re-scalable food item,
-// using the same "treat the logged amount as the 100g reference" fallback
-// applied everywhere else an item lacks an explicit basis.
+// Converts an already-logged flat entry into a re-scalable food item.
+//
+// Prefers the basis recorded when the entry was logged, so a 250 g bowl
+// expands as 250 g and re-scaling it means something. Entries without one
+// — anything logged before the basis was persisted, and anything app.js
+// wrote — fall back to treating the logged amount as the 100 g reference:
+// the arithmetic still holds (100 g of a 390 kcal/100 g item is 390 kcal,
+// and doubling it doubles the calories), but the gram figure is a unit,
+// not a weight.
 function entryToFoodItem(entry: Entry): FoodItemBasis {
+  if (entry.basis && entry.basis.grams > 0) {
+    return { ...entry.basis, name: entry.name };
+  }
   return {
     name: entry.name,
     grams: 100,
