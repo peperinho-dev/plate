@@ -249,7 +249,18 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     );
   }
 
-  if (cards.length === 0) return null;
+  // Not null: the "Análisis" heading is printed unconditionally above
+  // this, so returning nothing left an orphaned header on a fresh install
+  // with no way to tell whether the section was broken or just empty.
+  if (cards.length === 0) {
+    return (
+      <p className="empty-state">
+        Aparecerán aquí en cuanto haya con qué: dos pesajes para la tendencia,
+        un peso objetivo en tu perfil para el progreso, y un par de semanas de
+        comidas registradas para el gasto.
+      </p>
+    );
+  }
   return (
     <>
       <div className="insights-grid">{cards}</div>

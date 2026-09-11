@@ -297,6 +297,39 @@ button {
   transition: background 0.15s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
 }
 .week-strip-day:active { transform: scale(0.94); }
+
+/* The day chip becomes the track for its own progress ring, so the chip
+   needs to be a positioning context and the ring has to sit under the
+   text rather than over it. */
+.week-strip-day { position: relative; }
+.week-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.week-ring-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  /* The svg is stretched to the chip, which would otherwise squash the
+     vertical strokes thinner than the horizontal ones. */
+  vector-effect: non-scaling-stroke;
+  /* Starts at the top-left corner and runs clockwise. */
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.45s cubic-bezier(.2,.8,.2,1);
+}
+/* Over the top of the range, the ring is full but says so in the fat
+   colour — a closed accent ring would read as "done" on a day you
+   overshot. */
+.week-ring-path.is-over { stroke: var(--macro-fat); }
+/* On the selected day the chip already carries an accent ring of its own;
+   the progress ring sits inside it so the two don't sit on the same line. */
+.week-strip-day.is-selected .week-ring { inset: 2.5px; }
 .week-strip-letter {
   font-size: var(--fs-micro);
   font-weight: 700;

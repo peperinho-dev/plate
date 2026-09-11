@@ -5,7 +5,7 @@ import { useAppStore } from "../store";
 import { useUiStore } from "../store/ui";
 import { DAY_MS, formatDateKey } from "../lib/date";
 import { WEEKDAY_LETTERS_MON } from "../lib/format";
-import { dayHitCalorieGoal, hasWorkoutSession } from "../lib/nutrition";
+import { dayCalorieTotal, hasWorkoutSession } from "../lib/nutrition";
 
 interface StripDay {
   date: Date;
@@ -36,6 +36,37 @@ function getWeekStripDays(offset: number): StripDay[] {
   return days;
 }
 
+/**
+ * The outline that fills around a day as its calories climb.
+ *
+ * Drawn as a rounded rect at 0–100 in both axes and stretched to the chip
+ * with preserveAspectRatio="none", so it always traces the real border
+ * radius whatever width the strip happens to give each day. The stroke is
+ * non-scaling, or that same stretch would make the vertical edges thinner
+ * than the horizontal ones.
+ *
+ * Progress runs to the *bottom* of the calorie range, not the middle:
+ * reaching the range is the thing being aimed at, so that is where the
+ * ring closes. Past the top of the range it re-draws in the fat/over
+ * colour — a closed ring reading "done" would be the wrong signal for a
+ * day you overshot.
+ */
+function DayRing({ progress, over }: { progress: number; over: boolean }) {
+  // Perimeter of the rounded rect below, near enough for a dash pattern.
+  const LEN = 400;
+  return (
+    <svg className="week-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <rect
+        className={"week-ring-path" + (over ? " is-over" : "")}
+        x="1.5" y="1.5" width="97" height="97" rx="14" ry="14"
+        pathLength={LEN}
+        strokeDasharray={LEN}
+        strokeDashoffset={LEN * (1 - Math.min(1, Math.max(0, progress)))}
+      />
+    </svg>
+  );
+}
+
 export function WeekStrip() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const setDayOffset = useUiStore((s) => s.setDayOffset);
@@ -50,16 +81,24 @@ export function WeekStrip() {
       {days.map((d) => {
         const key = formatDateKey(d.date);
         const exercised = hasWorkoutSession(workouts, key);
-        const goalHit = dayHitCalorieGoal(loggedDays, calorieTarget, key);
+        const total = dayCalorieTotal(loggedDays, key);
+        const floor = calorieTarget.min || 0;
+        // A day with nothing logged draws no ring at all, rather than an
+        // empty one — a future Saturday shouldn't look like a failure.
+        const progress = floor > 0 && total > 0 ? total / floor : 0;
+        const over = !!(calorieTarget.max && total > calorieTarget.max);
         const className =
           "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
         return (
           <button key={key} type="button" className={className} onClick={() => setDayOffset(d.offset)}>
+            {progress > 0 && <DayRing progress={progress} over={over} />}
             <span className="week-strip-letter">{WEEKDAY_LETTERS_MON[(d.date.getDay() + 6) % 7]}</span>
             <span className="week-strip-num">{d.date.getDate()}</span>
             <span className="week-strip-dots">
+              {/* The calorie dot is gone: the ring says the same thing with
+                  more resolution. The training dot stays — it is a
+                  different fact and the ring cannot carry it. */}
               {exercised && <span className="week-strip-dot week-strip-dot--workout" />}
-              {goalHit && <span className="week-strip-dot week-strip-dot--goal" />}
             </span>
           </button>
         );
