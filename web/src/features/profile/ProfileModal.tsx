@@ -15,6 +15,8 @@ import { showToast } from "../../shared/components/Toast";
 import { useAppStore } from "../../shared/store";
 import type { Profile } from "../../shared/store/types";
 import { saveProfile } from "./actions";
+import { computeEma } from "./adaptive";
+import { formatGoalDate } from "../../shared/lib/format";
 
 interface ProfileModalProps {
   open: boolean;
@@ -48,6 +50,34 @@ export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps)
     setWasOpen(open);
     if (open) setDraft(profile);
   }
+
+  // "If you start today at this rate, you arrive on…" — recomputed from
+  // the draft on every keystroke and slider move, so the rate you pick has
+  // a visible consequence while you are picking it rather than only after
+  // you save. Deliberately measured from today rather than from the goal's
+  // recorded start: while you are editing, you *are* starting over.
+  const weightLog = useAppStore((s) => s.weightLog);
+  const trendNow = (() => {
+    const ema = computeEma([...weightLog].sort((a, b) => (a.date < b.date ? -1 : 1)));
+    return ema.length ? ema[ema.length - 1].ema : null;
+  })();
+  const draftEta = (() => {
+    const target = draft.targetWeightKg;
+    const rate = draft.rateKgPerWeek;
+    if (draft.goalType == null || draft.goalType === "maintain") return null;
+    if (target == null || rate == null || rate <= 0 || trendNow == null) return null;
+    const remaining = target - trendNow;
+    // A target on the wrong side of where you are is not a goal this rate
+    // can reach — say so rather than projecting a date in the past.
+    const signed = draft.goalType === "lose" ? -rate : rate;
+    if (Math.sign(remaining) !== Math.sign(signed) || Math.abs(remaining) < 0.05) return null;
+    const weeks = remaining / signed;
+    return {
+      weeks,
+      date: new Date(Date.now() + weeks * 7 * 24 * 60 * 60 * 1000),
+      kg: Math.abs(remaining)
+    };
+  })();
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
   const num = (v: string) => {
@@ -177,6 +207,16 @@ export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps)
               onChange={(e) => patch({ targetWeightKg: num(e.target.value) })}
             />
           </label>
+        )}
+
+        {draftEta && (
+          <p className="goal-eta">
+            <span className="goal-eta-date">{formatGoalDate(draftEta.date)}</span>
+            <span className="goal-eta-note">
+              {draftEta.kg.toFixed(1)} kg en {Math.round(draftEta.weeks)}{" "}
+              {Math.round(draftEta.weeks) === 1 ? "semana" : "semanas"}, si mantienes este ritmo
+            </span>
+          </p>
         )}
 
         <button type="button" className="btn btn--primary btn--block" onClick={handleSave}>

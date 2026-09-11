@@ -35,6 +35,19 @@ export function formatShortDate(dateStr: string): string {
   return `${d} ${MONTHS[m - 1]}`;
 }
 
+/**
+ * "18 de enero", or "18 de enero de 2027" once it leaves the current year
+ * — a projected date months out is meaningless without the year, and
+ * cluttered with it when the year is obvious.
+ */
+export function formatGoalDate(d: Date): string {
+  const day = d.getDate();
+  const month = MONTHS_FULL[d.getMonth()];
+  const year = d.getFullYear();
+  const suffix = year === new Date().getFullYear() ? "" : ` de ${year}`;
+  return `${day} de ${month}${suffix}`;
+}
+
 export function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }

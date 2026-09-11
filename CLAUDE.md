@@ -91,6 +91,11 @@ after midnight or "today" reads empty.
   between themes, so a "dark" fill becomes near-white in dark mode. Both
   the streak grid and the selected day had this bug. Selection anywhere is
   `--accent-soft` + `--accent-ink`, the tab bar's language.
+- A goal records where it started (`profile.goalStartedAt` /
+  `goalStartWeightKg`, stamped in `saveProfile` only when goalType, rate or
+  target actually change). Without a fixed origin there is nothing to be
+  behind or ahead *of*. Both are null on older profiles, where the code
+  falls back to the first trend point and says so in the UI.
 - Entry cloning goes through `cloneEntry`, whose field list is exhaustive at
   compile time. Three separate bugs came from hand-copying entries and
   dropping `basis`.

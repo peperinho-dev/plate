@@ -2189,6 +2189,43 @@ button:focus-visible, input:focus-visible {
 .gp-legend-item.is-off::before { background: var(--ink-faint); }
 
 
+/* Planned date against projected date. Two rows and a verdict, because
+   the two dates only mean something next to each other. */
+.gp-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--tile-pad);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+.gp-sched-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.gp-sched-k { font-size: var(--fs-label); color: var(--ink-soft); }
+.gp-sched-v {
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.gp-verdict {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+/* Behind is stated, not scolded — the same reasoning as the missed weeks
+   in the chart. Amber, not red: a fortnight behind is a thing to know,
+   not an alarm. */
+.gp-verdict.is-behind { color: var(--macro-fat); }
+.gp-verdict.is-ahead { color: var(--accent-ink); }
+.gp-verdict.is-on { color: var(--accent-ink); }
+.gp-sched-note {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  line-height: 1.45;
+}
+
 .gp-track { display: flex; flex-direction: column; gap: var(--space-2); }
 .gp-track-bar {
   height: 8px;

@@ -127,3 +127,66 @@ export function targetWeeklyRate(profile: Profile): number | null {
     ? -Math.abs(profile.rateKgPerWeek)
     : Math.abs(profile.rateKgPerWeek);
 }
+
+/**
+ * When the goal was meant to land, when it now looks like landing, and
+ * the gap between them.
+ *
+ * Two different questions, and the app only answered the second one. The
+ * *planned* date is fixed at the moment the goal was set: the distance
+ * you signed up for, divided by the rate you chose. The *projected* date
+ * moves with you — what is left, divided by how fast you are actually
+ * going lately. Neither alone tells you whether you are behind; the gap
+ * between them is the whole answer.
+ */
+export interface GoalTimeline {
+  /** When the chosen rate said you would arrive. */
+  plannedDate: Date;
+  /** When your recent rate says you will, or null if you aren't moving. */
+  projectedDate: Date | null;
+  /** Positive = behind schedule, negative = ahead. Null if unprojectable. */
+  deltaDays: number | null;
+  /** True when the origin was inferred rather than recorded. */
+  originInferred: boolean;
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function goalTimeline(
+  profile: Profile,
+  ema: EmaPoint[],
+  /** Rate actually achieved lately, kg/week, signed. */
+  recentRate: number | null
+): GoalTimeline | null {
+  const target = profile.targetWeightKg;
+  const planned = targetWeeklyRate(profile);
+  if (target == null || planned == null || ema.length === 0) return null;
+
+  // Where the goal started. Recorded when the goal was set; otherwise the
+  // first trend point we have, which is the same approximation readGoal
+  // makes and is flagged to the caller so the UI can hedge.
+  const originInferred = profile.goalStartedAt == null || profile.goalStartWeightKg == null;
+  const startWeight = profile.goalStartWeightKg ?? ema[0].ema;
+  const startedAt = profile.goalStartedAt ?? parseDateKey(ema[0].date).getTime();
+
+  const plannedWeeks = Math.abs(target - startWeight) / Math.abs(planned);
+  const plannedDate = new Date(startedAt + plannedWeeks * WEEK_MS);
+
+  const current = ema[ema.length - 1].ema;
+  const remaining = target - current;
+
+  let projectedDate: Date | null = null;
+  // Only projectable while actually moving toward the target. A rate at or
+  // near zero divides into forever, and one pointing the wrong way would
+  // produce a confident date in the past.
+  if (recentRate != null && Math.abs(recentRate) > 0.02 && Math.sign(recentRate) === Math.sign(remaining)) {
+    projectedDate = new Date(Date.now() + (remaining / recentRate) * WEEK_MS);
+  }
+
+  const deltaDays =
+    projectedDate == null
+      ? null
+      : Math.round((projectedDate.getTime() - plannedDate.getTime()) / (24 * 60 * 60 * 1000));
+
+  return { plannedDate, projectedDate, deltaDays, originInferred };
+}

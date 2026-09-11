@@ -17,7 +17,7 @@ export const SCHEMA_VERSION = 9;
 const MIGRATION_BAND_HALF_WIDTH = 75; // kcal, ± around the old single goalCalories number
 
 export function defaultProfile(): Profile {
-  return { sex: null, age: null, heightCm: null, activityLevel: null, goalType: null, rateKgPerWeek: null, targetWeightKg: null, updatedAt: null };
+  return { sex: null, age: null, heightCm: null, activityLevel: null, goalType: null, rateKgPerWeek: null, targetWeightKg: null, goalStartedAt: null, goalStartWeightKg: null, updatedAt: null };
 }
 
 export function defaultCalorieTarget(): CalorieTarget {
@@ -89,6 +89,11 @@ export function migrateData(parsed: unknown): AppState {
   // Additive: profiles written before the goal weight existed carry a
   // rate but no destination, which is a valid state and stays null.
   if (typeof data.profile.targetWeightKg !== "number") data.profile.targetWeightKg = null;
+  // Also additive. An older profile has a goal but no record of when it
+  // started; null means "infer the origin from the trend", which is what
+  // the app did before this existed.
+  if (typeof data.profile.goalStartedAt !== "number") data.profile.goalStartedAt = null;
+  if (typeof data.profile.goalStartWeightKg !== "number") data.profile.goalStartWeightKg = null;
   if (!data.weightLog) data.weightLog = [];
   if (!data.calorieTarget) data.calorieTarget = defaultCalorieTarget();
   if (!data.macroTargets) data.macroTargets = defaultMacroTargets();

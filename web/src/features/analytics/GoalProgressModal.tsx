@@ -10,8 +10,15 @@
 import { Modal } from "../../shared/components/Modal";
 import { useAppStore } from "../../shared/store";
 import { computeEma } from "../profile/adaptive";
-import { readGoal, goalWeeks, targetWeeklyRate, MAINTAIN_BAND_KG, type GoalWeek } from "./goal";
-import { formatShortDate } from "../../shared/lib/format";
+import {
+  readGoal,
+  goalWeeks,
+  targetWeeklyRate,
+  goalTimeline,
+  MAINTAIN_BAND_KG,
+  type GoalWeek
+} from "./goal";
+import { formatShortDate, formatGoalDate } from "../../shared/lib/format";
 import { niceTicks } from "../../shared/lib/chart";
 
 interface GoalProgressModalProps {
@@ -140,6 +147,8 @@ export function GoalProgressModal({ open, onClose }: GoalProgressModalProps) {
   const recentRate =
     recent.length > 0 ? recent.reduce((sum, w) => sum + w.change, 0) / recent.length : null;
 
+  const timeline = goalTimeline(profile, ema, recentRate);
+
   // Only meaningful when you're actually moving toward the target — a
   // rate pointing the wrong way would produce a confident negative ETA.
   const weeksLeft =
@@ -175,6 +184,39 @@ export function GoalProgressModal({ open, onClose }: GoalProgressModalProps) {
               <span className="ss-total-label">semanas al ritmo actual</span>
             </div>
           </div>
+
+          {goal.kind === "directional" && timeline && (
+            <div className="gp-schedule">
+              <div className="gp-sched-row">
+                <span className="gp-sched-k">Objetivo</span>
+                <span className="gp-sched-v">{formatGoalDate(timeline.plannedDate)}</span>
+              </div>
+              <div className="gp-sched-row">
+                <span className="gp-sched-k">A tu ritmo</span>
+                <span className="gp-sched-v">
+                  {timeline.projectedDate ? formatGoalDate(timeline.projectedDate) : "—"}
+                </span>
+              </div>
+              {timeline.deltaDays != null && (
+                <div
+                  className={
+                    "gp-verdict" +
+                    (timeline.deltaDays > 3 ? " is-behind" : timeline.deltaDays < -3 ? " is-ahead" : " is-on")
+                  }
+                >
+                  {Math.abs(timeline.deltaDays) <= 3
+                    ? "En hora"
+                    : `${Math.abs(timeline.deltaDays)} días ${timeline.deltaDays > 0 ? "por detrás" : "por delante"}`}
+                </div>
+              )}
+              {timeline.originInferred && (
+                <p className="gp-sched-note">
+                  Calculado desde tu primer pesaje: este objetivo es anterior a que la app
+                  guardara cuándo empezaste.
+                </p>
+              )}
+            </div>
+          )}
 
           {goal.kind === "directional" && (
             <div className="gp-track">

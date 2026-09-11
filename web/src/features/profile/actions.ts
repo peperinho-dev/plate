@@ -5,6 +5,7 @@ import { useAppStore } from "../../shared/store";
 import type { AppState, Profile } from "../../shared/store/types";
 import { recalculatedTargets } from "../../shared/lib/targets";
 import { todayKey } from "../../shared/lib/date";
+import { computeEma } from "./adaptive";
 
 function withRecalculatedTargets(patch: Partial<AppState>) {
   useAppStore.setState((s) => {
@@ -13,8 +14,35 @@ function withRecalculatedTargets(patch: Partial<AppState>) {
   });
 }
 
+/**
+ * Saves the profile, re-stamping the goal's origin if the goal itself
+ * changed.
+ *
+ * Only the three fields that define a goal count: editing your height is
+ * not starting a new goal, and re-stamping on every save would reset the
+ * timeline every time you touched the sheet. The origin weight is read
+ * off the smoothed trend rather than the last scale reading, for the same
+ * reason everything else about the goal is — one salty dinner should not
+ * decide where your goal started from.
+ */
 export function saveProfile(profile: Profile) {
-  withRecalculatedTargets({ profile: { ...profile, updatedAt: Date.now() } });
+  const state = useAppStore.getState();
+  const prev = state.profile;
+  const goalChanged =
+    prev.goalType !== profile.goalType ||
+    prev.rateKgPerWeek !== profile.rateKgPerWeek ||
+    prev.targetWeightKg !== profile.targetWeightKg;
+
+  let { goalStartedAt, goalStartWeightKg } = profile;
+  if (goalChanged) {
+    const ema = computeEma([...state.weightLog].sort((a, b) => (a.date < b.date ? -1 : 1)));
+    goalStartedAt = Date.now();
+    goalStartWeightKg = ema.length ? ema[ema.length - 1].ema : null;
+  }
+
+  withRecalculatedTargets({
+    profile: { ...profile, goalStartedAt, goalStartWeightKg, updatedAt: Date.now() }
+  });
 }
 
 // One weight per calendar day: re-weighing replaces that day's entry

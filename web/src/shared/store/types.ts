@@ -53,6 +53,18 @@ export interface Profile {
   rateKgPerWeek: number | null;
   /** The weight being aimed at, in kg. Null means only a rate was set. */
   targetWeightKg: number | null;
+  /**
+   * When the current goal was set, and what the trend read at the time.
+   *
+   * Without a fixed origin there is nothing to be behind or ahead *of* —
+   * progress can only be measured from the earliest weigh-in on record,
+   * which keeps measuring from a goal you already abandoned. Both are
+   * re-stamped whenever the goal itself changes (type, rate or target),
+   * and null on profiles written before they existed, where the code
+   * falls back to the first trend point.
+   */
+  goalStartedAt: number | null;
+  goalStartWeightKg: number | null;
   updatedAt: number | null;
 }
 
