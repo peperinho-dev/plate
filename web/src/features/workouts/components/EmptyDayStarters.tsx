@@ -8,24 +8,27 @@
 //
 // So the empty day answers the two questions you actually have when you
 // open the tab: what am I doing today, and what did I do last time.
+import { useState } from "react";
 import { useAppStore } from "../../../shared/store";
+import { RoutineStartSheet } from "./RoutineStartSheet";
 import { showToast } from "../../../shared/components/Toast";
 import { capitalizeFirst, formatDateLabel } from "../../../shared/lib/format";
 import { parseDateKey, dateOffsetFromToday } from "../../../shared/lib/date";
 import { ChevronRight } from "../../../shared/components/Icons";
 import { startRoutine, copyWorkoutToDay } from "../actions";
-import type { Exercise, TimerLog } from "../../../shared/store/types";
+import type { Exercise, Routine, TimerLog } from "../../../shared/store/types";
 
 interface LastSession {
   dayKey: string;
   exercises: Exercise[];
   timerLogs: TimerLog[];
   sets: number;
+  routineName?: string;
 }
 
 /** The most recent day before `beforeDayKey` that has any exercise on it. */
 function findLastSession(
-  workouts: Record<string, { exercises: Exercise[]; timerLogs?: TimerLog[] }>,
+  workouts: Record<string, { exercises: Exercise[]; timerLogs?: TimerLog[]; routineName?: string }>,
   beforeDayKey: string
 ): LastSession | null {
   const candidates = Object.keys(workouts)
@@ -38,12 +41,14 @@ function findLastSession(
     dayKey,
     exercises: day.exercises,
     timerLogs: day.timerLogs ?? [],
+    routineName: day.routineName,
     sets: day.exercises.reduce((n, ex) => n + ex.sets.length, 0)
   };
 }
 
 export function EmptyDayStarters({ dayKey }: { dayKey: string }) {
   const routines = useAppStore((s) => s.routines);
+  const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
   const workouts = useAppStore((s) => s.workouts);
   const last = findLastSession(workouts, dayKey);
 
@@ -51,6 +56,16 @@ export function EmptyDayStarters({ dayKey }: { dayKey: string }) {
 
   return (
     <>
+      <RoutineStartSheet
+        routine={pendingRoutine}
+        onClose={() => setPendingRoutine(null)}
+        onStart={(restSeconds) => {
+          if (!pendingRoutine) return;
+          startRoutine(dayKey, pendingRoutine.exerciseNames, pendingRoutine.name, restSeconds);
+          showToast(`${pendingRoutine.name} empezada`);
+          setPendingRoutine(null);
+        }}
+      />
       {routines.length > 0 && (
         <>
           <div className="section-head">
@@ -63,10 +78,7 @@ export function EmptyDayStarters({ dayKey }: { dayKey: string }) {
                   <button
                     type="button"
                     className="row-main"
-                    onClick={() => {
-                      startRoutine(dayKey, r.exerciseNames);
-                      showToast(`${r.name} empezada`);
-                    }}
+                    onClick={() => setPendingRoutine(r)}
                   >
                     <span className="row-name">{r.name}</span>
                     <span className="row-qty">{r.exerciseNames.join(" · ")}</span>
@@ -97,7 +109,7 @@ export function EmptyDayStarters({ dayKey }: { dayKey: string }) {
                   type="button"
                   className="link-btn"
                   onClick={() => {
-                    copyWorkoutToDay(last.exercises, dayKey, last.timerLogs);
+                    copyWorkoutToDay(last.exercises, dayKey, last.timerLogs, last.routineName);
                     showToast("Sesión copiada a este día");
                   }}
                 >

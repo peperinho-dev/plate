@@ -27,7 +27,10 @@ export function addExercise(dayKey: string, name: string): string {
   const id = newId();
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
-    return updateWorkoutDay(s, dayKey, [...existing, { id, name, sets: [], addedAt: Date.now() }]);
+    return updateWorkoutDay(s, dayKey, [
+      ...existing,
+      { id, name, sets: [], restSeconds: s.workouts[dayKey]?.restSeconds, addedAt: Date.now() }
+    ]);
   });
   return id;
 }
@@ -153,7 +156,9 @@ export function restoreSet(dayKey: string, exerciseId: string, set: ExerciseSet,
 export function copyWorkoutToDay(
   exercises: Exercise[],
   targetDayKey: string,
-  timerLogs: TimerLog[] = []
+  timerLogs: TimerLog[] = [],
+  /** Carried with the session — a copied "Empuje" is still Empuje. */
+  routineName?: string
 ) {
   useAppStore.setState((s) => {
     const existing = s.workouts[targetDayKey]?.exercises ?? [];
@@ -191,7 +196,11 @@ export function copyWorkoutToDay(
     return {
       workouts: {
         ...next.workouts,
-        [targetDayKey]: { ...day, timerLogs: [...existingLogs, ...logCopies] }
+        [targetDayKey]: {
+          ...day,
+          timerLogs: [...existingLogs, ...logCopies],
+          routineName: day.routineName ?? routineName
+        }
       }
     };
   });
@@ -211,16 +220,34 @@ export function removeRoutine(id: string) {
   useAppStore.setState((s) => ({ routines: s.routines.filter((r) => r.id !== id) }));
 }
 
-export function startRoutine(dayKey: string, exerciseNames: string[]) {
+export function startRoutine(
+  dayKey: string,
+  exerciseNames: string[],
+  routineName?: string,
+  restSeconds?: number
+) {
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
     const added = exerciseNames.map((name, i) => ({
       id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       sets: [],
+      // Every exercise starts from the routine's choice and can diverge
+      // from it later.
+      restSeconds,
       addedAt: Date.now() + i // keeps the routine's order stable
     }));
-    return updateWorkoutDay(s, dayKey, [...existing, ...added]);
+    const next = updateWorkoutDay(s, dayKey, [...existing, ...added]);
+    // Only the first routine of the day names it. Adding a second on top
+    // would make the label a lie about the rest of the session.
+    if (!routineName || s.workouts[dayKey]?.routineName) return next;
+    const day = next.workouts![dayKey];
+    return {
+      workouts: {
+        ...next.workouts,
+        [dayKey]: { ...day, routineName, restSeconds: restSeconds ?? day.restSeconds }
+      }
+    };
   });
 }
 
@@ -288,4 +315,16 @@ export function setWeeklySessionGoal(weeklySessions: number) {
 
 export function setRestSeconds(restSeconds: number) {
   useAppStore.setState((s) => ({ workoutGoal: { ...s.workoutGoal, restSeconds } }));
+}
+
+/** Changes the rest for one exercise, leaving the rest of the day alone. */
+export function setExerciseRest(dayKey: string, exerciseId: string, restSeconds: number) {
+  useAppStore.setState((s) => {
+    const existing = s.workouts[dayKey]?.exercises ?? [];
+    return updateWorkoutDay(
+      s,
+      dayKey,
+      existing.map((e) => (e.id === exerciseId ? { ...e, restSeconds } : e))
+    );
+  });
 }

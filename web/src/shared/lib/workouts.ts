@@ -235,3 +235,10 @@ export function searchCatalog(catalog: CatalogEntry[], query: string): CatalogEn
       return aStarts - bStarts || b.lastAddedAt - a.lastAddedAt;
     });
 }
+
+/**
+ * The rest intervals offered when starting a routine or adjusting one
+ * exercise. Lives here rather than next to either component because both
+ * offer the same ladder and neither owns it.
+ */
+export const REST_CHOICES = [45, 60, 90, 120, 180];

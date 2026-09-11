@@ -12,7 +12,15 @@ import { playBeep, unlockBeep } from "./beep";
 export const TIMER_COUNTDOWN_SECONDS = 5;
 export const TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * 90;
 
-export type RunPhase = "idle" | "countdown" | "active" | "done";
+/**
+ * "ready" is the timer on screen but not yet counting.
+ *
+ * Tapping a warm-up used to start it immediately, so choosing which one to
+ * do and committing to doing it were the same gesture — and the 5s lead-in
+ * was the only thing standing between a mis-tap and a running clock. Now
+ * the tap shows what you picked and waits for "Empezar".
+ */
+export type RunPhase = "idle" | "ready" | "countdown" | "active" | "done";
 
 interface WakeLockSentinelLike {
   release: () => Promise<void>;
@@ -114,15 +122,27 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
     tickRef.current = setInterval(tick, 1000);
   }, [stopTicking, tick]);
 
+  /** Puts a timer on screen without running it. */
+  const arm = useCallback((preset: TimerPreset) => {
+    if (preset.intervals.length === 0) return;
+    timerRef.current = preset;
+    setTimer(preset);
+    setPaused(false);
+    setPhaseBoth("ready");
+    setIndexBoth(0);
+    setRemainingBoth(preset.intervals[0].seconds);
+  }, []);
+
   const start = useCallback(
-    (preset: TimerPreset) => {
-      if (preset.intervals.length === 0) return;
+    (preset?: TimerPreset) => {
+      const chosen = preset ?? timerRef.current;
+      if (!chosen || chosen.intervals.length === 0) return;
       // Must happen synchronously inside the triggering tap: iOS only
       // allows playback that traces back to a gesture, and every beep that
       // matters fires later from a timer callback. Also confirms the tap.
       unlockBeep();
-      timerRef.current = preset;
-      setTimer(preset);
+      timerRef.current = chosen;
+      setTimer(chosen);
       setPaused(false);
       setPhaseBoth("countdown");
       setIndexBoth(0);
@@ -180,6 +200,7 @@ export function useTimerRun(onFinished: (timer: TimerPreset) => void) {
     currentInterval,
     nextInterval,
     ringSeconds,
+    arm,
     start,
     stop,
     togglePause,

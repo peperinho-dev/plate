@@ -17,11 +17,12 @@ import { useAppStore } from "../../../shared/store";
 import { computeExerciseCatalog, searchCatalog } from "../../../shared/lib/workouts";
 import { foldText } from "../../../shared/lib/text";
 import { relativeDayLabel } from "../../../shared/lib/format";
-import type { Exercise, TimerPreset } from "../../../shared/store/types";
+import type { Exercise, Routine, TimerPreset } from "../../../shared/store/types";
 import { removeExercise, removeRoutine, startRoutine } from "../actions";
 import { TimerSection } from "./TimerSection";
 import { LibrarySection } from "./LibrarySection";
 import { RoutineModal } from "./RoutineModal";
+import { RoutineStartSheet } from "./RoutineStartSheet";
 import { useSectionCollapse } from "../useSectionCollapse";
 
 interface AddWorkoutModalProps {
@@ -50,6 +51,8 @@ export function AddWorkoutModal({
   const [query, setQuery] = useState("");
   const [routinesEditing, setRoutinesEditing] = useState(false);
   const [routineOpen, setRoutineOpen] = useState(false);
+  // Which routine is waiting on its start sheet.
+  const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
 
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
@@ -89,7 +92,6 @@ export function AddWorkoutModal({
               if (results.length > 0) add(results[0].name);
               else if (trimmed) add(trimmed);
             }}
-            autoFocus
           />
         </label>
 
@@ -143,18 +145,15 @@ export function AddWorkoutModal({
           )}
         </div>
 
-        {/* Order follows how a session actually runs: warm up, do the
-            work, stretch. The day card lists them back in the same order. */}
+        {/* Routines sit with the exercises, not with the timers. Starting
+            one is how a session usually begins — it adds several exercises
+            at once — and it was buried between Calentamiento and
+            Estiramientos, 685px down a 751px sheet, on the reasoning that
+            the sheet mirrors the order a session runs in. But the work
+            itself is the search field at the top, so that ordering was
+            never really holding: a routine belongs next to the other way
+            of adding exercises. */}
         <div className="workout-pickers">
-          <TimerSection
-            category="warmup"
-            label="Calentamiento"
-            expanded={isExpanded("warmup")}
-            onToggle={() => toggle("warmup")}
-            onRun={onRunTimer}
-            onLog={onLogTimer}
-          />
-
           <LibrarySection
             title="Rutinas"
             count={routines.length}
@@ -183,10 +182,7 @@ export function AddWorkoutModal({
                 <button
                   type="button"
                   className="row-main"
-                  onClick={() => {
-                    startRoutine(dayKey, r.exerciseNames);
-                    showToast(`${r.name} añadida`);
-                  }}
+                  onClick={() => setPendingRoutine(r)}
                 >
                   <span className="row-name">{r.name}</span>
                   <span className="row-qty">
@@ -208,6 +204,21 @@ export function AddWorkoutModal({
             ))}
           </LibrarySection>
 
+        </div>
+
+        {/* Warm-up and stretches: the two timer sections, kept together
+            and last, since they bracket the session rather than being it. */}
+        <div className="workout-pickers">
+          <TimerSection
+            category="warmup"
+            label="Calentamiento"
+            expanded={isExpanded("warmup")}
+            onToggle={() => toggle("warmup")}
+            onRun={onRunTimer}
+            onLog={onLogTimer}
+          />
+
+
           <TimerSection
             category="stretch"
             label="Estiramientos"
@@ -218,6 +229,18 @@ export function AddWorkoutModal({
           />
         </div>
       </Modal>
+
+      <RoutineStartSheet
+        routine={pendingRoutine}
+        onClose={() => setPendingRoutine(null)}
+        onStart={(restSeconds) => {
+          if (!pendingRoutine) return;
+          startRoutine(dayKey, pendingRoutine.exerciseNames, pendingRoutine.name, restSeconds);
+          showToast(`${pendingRoutine.name} empezada`);
+          setPendingRoutine(null);
+          onClose();
+        }}
+      />
 
       <RoutineModal
         open={routineOpen}

@@ -14,9 +14,8 @@ import {
   findLastExerciseSets,
   formatDuration,
   formatSet,
-  isHoldSet
-} from "../../../shared/lib/workouts";
-import { addSet } from "../actions";
+  isHoldSet, REST_CHOICES } from "../../../shared/lib/workouts";
+import { addSet, setExerciseRest } from "../actions";
 import { SetTable } from "./SetTable";
 import { useRestTimer } from "../useRestTimer";
 
@@ -28,11 +27,6 @@ interface ExerciseDetailModalProps {
   onEditExercise: () => void;
 }
 
-// 15-second steps, as article 303 describes, rather than three fixed
-// buttons — rest that has to be 45, 60 or 90 is rest you round to fit the
-// app.
-const REST_PRESETS = [30, 45, 60, 90, 120, 180];
-
 export function ExerciseDetailModal({
   open,
   exercise,
@@ -41,11 +35,22 @@ export function ExerciseDetailModal({
   onEditExercise
 }: ExerciseDetailModalProps) {
   const workouts = useAppStore((s) => s.workouts);
-  const restSeconds = useAppStore((s) => s.workoutGoal.restSeconds);
+  // This exercise's own rest, seeded from the routine when the session
+  // started. Falls back to the day's seed, then to the global default.
+  const daySeed = useAppStore((s) => s.workouts[dayKey]?.restSeconds);
+  const globalRest = useAppStore((s) => s.workoutGoal.restSeconds);
+  const restFor = exercise?.restSeconds ?? daySeed ?? globalRest ?? 90;
+  const [editingRest, setEditingRest] = useState(false);
 
   const [mode, setMode] = useState<"reps" | "hold">("reps");
 
-  const rest = useRestTimer();
+  const rest = useRestTimer(() => setRestArmed(false));
+  // The rest bar used to exist only while counting, so the durations sat
+  // on top of a clock that had already started and tapping one restarted
+  // it. Adding a set now *offers* a rest: the bar appears with a duration
+  // selected and waits for Empezar, which makes picking and committing two
+  // separate actions instead of one.
+  const [restArmed, setRestArmed] = useState(false);
 
   // Re-seed on open: default the mode to whatever the last set used, so
   // logging a second plank doesn't need the toggle flipped every time.
@@ -79,7 +84,7 @@ export function ExerciseDetailModal({
       holdSeconds: hold ? (seed?.holdSeconds ?? null) : null,
       type: "normal"
     });
-    rest.start(restSeconds || 90);
+    setRestArmed(true);
   };
 
   return (
@@ -118,13 +123,64 @@ export function ExerciseDetailModal({
         onAddSet={handleAddSet}
       />
 
-      {rest.isRunning && (
+      {(rest.isRunning || restArmed) && (
         <div className="rest-timer">
           <div className="rest-timer-info">
             <span className="rest-timer-label">Descanso</span>
-            <span className="rest-timer-time">{formatDuration(rest.remaining ?? 0)}</span>
+            <span className="rest-timer-time">
+              {formatDuration(rest.isRunning ? (rest.remaining ?? 0) : restFor)}
+            </span>
           </div>
           <div className="rest-timer-actions">
+            {!rest.isRunning && (
+              <>
+                {editingRest ? (
+                  // Changing it changes *this exercise*, not the session:
+                  // the gap after a heavy set is not the one after a plank.
+                  REST_CHOICES.map((secs) => (
+                    <button
+                      key={secs}
+                      type="button"
+                      className={"rest-timer-preset" + (secs === restFor ? " active" : "")}
+                      onClick={() => {
+                        setExerciseRest(dayKey, exercise.id, secs);
+                        setEditingRest(false);
+                      }}
+                    >
+                      {formatDuration(secs)}
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    {/* One button, not six. The duration came from the
+                        routine; this only decides whether to run it now. */}
+                    <button
+                      type="button"
+                      className="rest-timer-go"
+                      onClick={() => rest.start(restFor)}
+                    >
+                      Descanso {formatDuration(restFor)}
+                    </button>
+                    <button
+                      type="button"
+                      className="rest-timer-preset"
+                      onClick={() => setEditingRest(true)}
+                    >
+                      Cambiar
+                    </button>
+                    <button
+                      type="button"
+                      className="rest-timer-skip"
+                      onClick={() => setRestArmed(false)}
+                    >
+                      Ahora no
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+            {rest.isRunning && (
+              <>
             {/* Nudging the running timer, from article 310 — adjusting rest
                 mid-set shouldn't mean restarting it. */}
             <button
@@ -143,19 +199,15 @@ export function ExerciseDetailModal({
             >
               +10
             </button>
-            {REST_PRESETS.map((secs) => (
-              <button
-                key={secs}
-                type="button"
-                className={"rest-timer-preset" + (secs === restSeconds ? " active" : "")}
-                onClick={() => rest.start(secs)}
-              >
-                {secs}s
-              </button>
-            ))}
-            <button type="button" className="rest-timer-skip" onClick={rest.stop}>
+            <button
+              type="button"
+              className="rest-timer-skip"
+              onClick={() => { rest.stop(); setRestArmed(false); }}
+            >
               Saltar
             </button>
+              </>
+            )}
           </div>
         </div>
       )}

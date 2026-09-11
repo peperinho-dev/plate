@@ -81,6 +81,9 @@ export function WorkoutView() {
   const weekProgress = computeCurrentWeekProgress(workouts, workoutGoal.weeklySessions);
 
   const timerLogs = workouts[dayKey]?.timerLogs ?? [];
+  // A day started from a routine is called by its name; a day put together
+  // by hand keeps the generic label.
+  const routineName = workouts[dayKey]?.routineName;
   const warmupLogs = timerLogs.filter((l) => l.category === "warmup");
   const stretchLogs = timerLogs.filter((l) => l.category === "stretch");
 
@@ -176,7 +179,8 @@ export function WorkoutView() {
                     setClipboard({
                       type: "workout",
                       exercises: exercises.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s })) })),
-                      timerLogs: timerLogs.map((l) => ({ ...l }))
+                      timerLogs: timerLogs.map((l) => ({ ...l })),
+                      routineName
                     });
                     showToast("Entreno copiado. Ve a otro día y pulsa Pegar.");
                   }}
@@ -189,7 +193,7 @@ export function WorkoutView() {
                   type="button"
                   className="link-btn"
                   onClick={() => {
-                    copyWorkoutToDay(clipboard.exercises, dayKey, clipboard.timerLogs);
+                    copyWorkoutToDay(clipboard.exercises, dayKey, clipboard.timerLogs, clipboard.routineName);
                     showToast("Pegado");
                   }}
                 >
@@ -220,7 +224,7 @@ export function WorkoutView() {
 
               {exercises.length > 0 && (
                 <div className="workout-block">
-                  <span className="workout-block-label">Series</span>
+                  <span className="workout-block-label">{routineName || "Series"}</span>
                   <div className="log-list">
                     {exercises.map((ex) => (
                       <SwipeToDelete
@@ -301,7 +305,7 @@ export function WorkoutView() {
         onAddExercise={createExercise}
         onRunTimer={(timer) => {
           setAddOpen(false);
-          run.start(timer);
+          run.arm(timer);
         }}
         onLogTimer={(timer) => {
           logTimerRun(dayKey, timer);

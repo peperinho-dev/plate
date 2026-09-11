@@ -24,19 +24,28 @@ export function TimerRunModal({ run }: { run: Run }) {
   if (!timer) return null;
 
   const done = phase === "done";
+  // Armed but not counting: the timer is on screen so you can see what you
+  // picked, and it waits for an explicit Empezar.
+  const ready = phase === "ready";
   const stepLabel = done
     ? `${timer.intervals.length} de ${timer.intervals.length}`
+    : ready
+      ? `${timer.intervals.length} ${timer.intervals.length === 1 ? "paso" : "pasos"} · ${formatDuration(timer.intervals.reduce((sum, iv) => sum + iv.seconds, 0))}`
     : phase === "countdown"
       ? "Preparando"
       : `Paso ${index + 1} de ${timer.intervals.length}`;
 
-  const centreName = done ? "¡Hecho!" : phase === "countdown" ? timer.intervals[0].name : (currentInterval?.name ?? "—");
+  const centreName = done
+    ? "¡Hecho!"
+    : ready || phase === "countdown"
+      ? timer.intervals[0].name
+      : (currentInterval?.name ?? "—");
 
   const ringStyle: RingStyle = {
     "--ring-circumference": `${TIMER_RING_CIRCUMFERENCE}px`,
     strokeDasharray: TIMER_RING_CIRCUMFERENCE,
-    ...(done
-      ? { strokeDashoffset: 0 }
+    ...(done || ready
+      ? { strokeDashoffset: ready ? TIMER_RING_CIRCUMFERENCE : 0 }
       : {
           animationDuration: `${ringSeconds}s`,
           animationPlayState: paused ? "paused" : "running"
@@ -45,6 +54,10 @@ export function TimerRunModal({ run }: { run: Run }) {
 
   const nextLine = done
     ? `Total: ${formatDuration(timer.intervals.reduce((sum, iv) => sum + iv.seconds, 0))}`
+    : ready
+      ? timer.intervals.length > 1
+        ? timer.intervals.map((iv) => iv.name).join(" · ")
+        : "Cuando quieras"
     : phase === "countdown"
       ? "Prepárate…"
       : nextInterval
@@ -66,7 +79,7 @@ export function TimerRunModal({ run }: { run: Run }) {
               key={`${phase}-${index}`}
               className={
                 "timer-run-ring-progress" +
-                (done ? "" : " timer-run-ring-progress--animated") +
+                (done || ready ? "" : " timer-run-ring-progress--animated") +
                 (timer.category === "stretch" ? " timer-run-ring-progress--stretch" : "")
               }
               cx="100"
@@ -81,6 +94,24 @@ export function TimerRunModal({ run }: { run: Run }) {
           </div>
         </div>
         <p className="timer-run-next">{nextLine}</p>
+        {ready ? (
+          <div className="timer-run-controls is-ready">
+            <button
+              type="button"
+              className="timer-run-btn timer-run-btn--secondary"
+              onClick={run.stop}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="timer-run-btn timer-run-btn--primary"
+              onClick={() => run.start()}
+            >
+              Empezar
+            </button>
+          </div>
+        ) : (
         <div className={"timer-run-controls" + (done ? " is-complete" : "")}>
           <button
             type="button"
@@ -104,6 +135,7 @@ export function TimerRunModal({ run }: { run: Run }) {
             Saltar
           </button>
         </div>
+        )}
       </div>
     </Modal>
   );

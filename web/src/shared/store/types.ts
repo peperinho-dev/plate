@@ -128,6 +128,13 @@ export interface Exercise {
   addedAt: number;
   progressionGroup?: string | null;
   /**
+   * Rest after a set of *this* exercise. Seeded from the routine when the
+   * session starts and adjustable per exercise afterwards, because the
+   * gap you want after a heavy set is not the one you want after a plank.
+   * Absent falls back to the day's seed, then to the global default.
+   */
+  restSeconds?: number;
+  /**
    * Fraction of bodyweight this movement actually moves, 0–1. Absent
    * means "derive it from the name" — this only exists to correct the
    * name heuristic, so an untouched exercise keeps tracking it.
@@ -148,6 +155,20 @@ export interface TimerLog {
 export interface WorkoutDay {
   exercises: Exercise[];
   timerLogs?: TimerLog[];
+  /**
+   * The routine this day was started from, if any. Kept so the session
+   * can be labelled with what it actually is — "Empuje" rather than the
+   * generic "Series" every day used to carry. Absent on days built by
+   * hand, which then keep the generic label.
+   */
+  routineName?: string;
+  /**
+   * What new exercises on this day default their rest to — set when a
+   * routine is started. Not the rest itself: that belongs to each
+   * exercise, since a set of pull-ups and a plank do not want the same
+   * gap. This is only the seed for exercises added afterwards.
+   */
+  restSeconds?: number;
 }
 
 export interface RecipeItem extends FoodItemBasis {

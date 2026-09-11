@@ -29,6 +29,8 @@ export interface WorkoutClipboard {
   exercises: Exercise[];
   /** The day's warm-ups and stretches travel with the session. */
   timerLogs: TimerLog[];
+  /** As does what the session is called, if it came from a routine. */
+  routineName?: string;
 }
 
 export type DayClipboard = NutritionClipboard | WorkoutClipboard;
