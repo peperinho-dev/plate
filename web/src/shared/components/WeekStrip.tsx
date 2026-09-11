@@ -36,42 +36,6 @@ function getWeekStripDays(offset: number): StripDay[] {
   return days;
 }
 
-/**
- * The outline that fills around a day as its calories climb.
- *
- * Drawn as a rounded rect at 0–100 in both axes and stretched to the chip
- * with preserveAspectRatio="none", so it always traces the real border
- * radius whatever width the strip happens to give each day. The stroke is
- * non-scaling, or that same stretch would make the vertical edges thinner
- * than the horizontal ones.
- *
- * Progress runs to the *bottom* of the calorie range, not the middle:
- * reaching the range is the thing being aimed at, so that is where the
- * ring closes. Past the top of the range it re-draws in the fat/over
- * colour — a closed ring reading "done" would be the wrong signal for a
- * day you overshot.
- */
-function DayRing({ progress, over }: { progress: number; over: boolean }) {
-  // Perimeter of the rounded rect below, near enough for a dash pattern.
-  const LEN = 400;
-  return (
-    <svg className="week-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      {/* The empty track is always drawn. The reference app does this and
-          it is the better call: it shows where the fill is going, and a
-          faint outline reads as a lane rather than as a failed day — which
-          was the worry that had me drawing nothing at all. */}
-      <rect className="week-ring-track" x="1.5" y="1.5" width="97" height="97" rx="30" ry="30" />
-      <rect
-        className={"week-ring-path" + (over ? " is-over" : "")}
-        x="1.5" y="1.5" width="97" height="97" rx="30" ry="30"
-        pathLength={LEN}
-        strokeDasharray={LEN}
-        strokeDashoffset={LEN * (1 - Math.min(1, Math.max(0, progress)))}
-      />
-    </svg>
-  );
-}
-
 export function WeekStrip() {
   const dayOffset = useUiStore((s) => s.dayOffset);
   const setDayOffset = useUiStore((s) => s.setDayOffset);
@@ -95,8 +59,13 @@ export function WeekStrip() {
         const className =
           "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
         return (
-          <button key={key} type="button" className={className} onClick={() => setDayOffset(d.offset)}>
-            <DayRing progress={progress} over={over} />
+          <button
+            key={key}
+            type="button"
+            className={className + (over ? " is-over" : "")}
+            style={{ "--day-progress": Math.min(1, Math.max(0, progress)) } as React.CSSProperties}
+            onClick={() => setDayOffset(d.offset)}
+          >
             <span className="week-strip-letter">{WEEKDAY_LETTERS_MON[(d.date.getDay() + 6) % 7]}</span>
             <span className="week-strip-num">{d.date.getDate()}</span>
             <span className="week-strip-dots">

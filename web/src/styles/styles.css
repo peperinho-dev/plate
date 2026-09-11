@@ -291,53 +291,58 @@ button {
   align-items: center;
   gap: 4px;
   padding: 8px 0;
-  /* Much rounder than the 14px it was: the reference draws these as pills,
-     and the progress ring reads as a ring rather than as a box outline. */
-  border-radius: 999px;
+  /* The squircle the app already used. The reference draws pills, but the
+     ring follows whatever shape the chip has — the ::before takes
+     `border-radius: inherit` — so the shape stays a free choice instead of
+     something the ring dictates. */
+  border-radius: 14px;
   background: var(--surface);
-  box-shadow: var(--shadow);
+  /* No --shadow here: in dark mode that token is an inset hairline, which
+     drew a third edge a pixel inside the ring. The ring is this chip's
+     border now. */
   transition: background 0.15s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
 }
 .week-strip-day:active { transform: scale(0.94); }
 
-/* The day chip becomes the track for its own progress ring, so the chip
-   needs to be a positioning context and the ring has to sit under the
-   text rather than over it. */
-.week-strip-day { position: relative; }
-.week-ring {
+/* The day's progress IS the chip's border, not a shape drawn on top of it.
+   Two earlier attempts put an SVG over the chip and both looked broken: a
+   normalised viewBox stretched the corner radii unevenly, and even at real
+   pixel sizes the stroke never landed exactly on a border-radius the
+   browser had already rounded its own way — so the chip showed two or
+   three outlines that almost, but never quite, agreed.
+
+   This is the standard gradient-border trick: a conic sweep painted into
+   the padding box, with the content box masked out, leaving a 2px ring.
+   `border-radius: inherit` means it follows the chip's real shape exactly,
+   whatever that shape is, because it is the same shape.
+
+   The one honest cost: a conic gradient sweeps by angle, not by arc
+   length, so on a tall pill the fill runs slightly fast down the sides and
+   slow across the caps. Against a ring that visibly breaks, that is the
+   better trade. */
+.week-strip-day::before {
+  content: "";
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    var(--day-ring, var(--accent)) calc(var(--day-progress, 0) * 360deg),
+    var(--line) 0
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
   pointer-events: none;
-  overflow: visible;
+  transition: background 0.4s cubic-bezier(.2,.8,.2,1);
 }
-.week-ring-track {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.week-ring-path {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2;
-  stroke-linecap: round;
-  /* The svg is stretched to the chip, which would otherwise squash the
-     vertical strokes thinner than the horizontal ones. */
-  vector-effect: non-scaling-stroke;
-  /* Starts at the top-left corner and runs clockwise. */
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.45s cubic-bezier(.2,.8,.2,1);
-}
-/* Over the top of the range, the ring is full but says so in the fat
-   colour — a closed accent ring would read as "done" on a day you
-   overshot. */
-.week-ring-path.is-over { stroke: var(--macro-fat); }
-/* On the selected day the chip already carries an accent ring of its own;
-   the progress ring sits inside it so the two don't sit on the same line. */
-.week-strip-day.is-selected .week-ring { inset: 2.5px; }
+/* Brighter green on the day you're looking at, so the active day reads
+   from the ring's intensity rather than from a second outline. */
+.week-strip-day.is-selected { --day-ring: var(--accent-ink); }
+/* Past the top of the range. A closed accent ring would say "done" on a
+   day you overshot. */
+.week-strip-day.is-over { --day-ring: var(--macro-fat); }
 .week-strip-letter {
   font-size: var(--fs-micro);
   font-weight: 700;
@@ -350,15 +355,11 @@ button {
   font-weight: 700;
   color: var(--ink);
 }
-/* Selection speaks the app's one selected-state language: the soft
-   accent wash the tab bar and chips already use. It used to fill with
-   --ink — a *text* colour, which in dark mode is near-white, so the
-   selected day became the brightest element on the screen and sat off
-   the palette entirely. */
-.week-strip-day.is-selected {
-  background: var(--accent-soft);
-  box-shadow: var(--shadow), inset 0 0 0 1.5px var(--accent);
-}
+/* Selection is the chip's fill, not a second outline. It used to add its
+   own accent ring, which sat a pixel or two off the progress ring and read
+   as two broken circles stacked on one chip — the reference distinguishes
+   the active day with a solid fill and leaves the outline to the ring. */
+.week-strip-day.is-selected { background: var(--accent-soft); }
 .week-strip-day.is-selected .week-strip-letter { color: var(--accent-ink); opacity: 0.8; }
 .week-strip-day.is-selected .week-strip-num { color: var(--accent-ink); }
 .week-strip-day.is-future:not(.is-selected) {
