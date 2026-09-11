@@ -63,11 +63,14 @@ export function AnalyticsView() {
   const periodDays = period === "all" ? getAllDays(days, weightLog) : getRecentDays(days, period);
   const dateKeys = new Set(periodDays.map((d) => d.date));
 
-  // Computed once and shared by the insights card, the stat line and the
-  // chart itself, so all three agree on the same sorted/smoothed data
-  // instead of each re-deriving it slightly differently.
-  const periodEma = computeEma(
-    weightLog.filter((w) => dateKeys.has(w.date)).sort((a, b) => (a.date < b.date ? -1 : 1))
+  // The Análisis tiles get a fixed thirty days rather than the period
+  // above. That control sits under the "Historial" heading and governs
+  // the cards below it; having it also silently drive a tile *above* it
+  // meant the weight tile read "en el periodo" for a period the user had
+  // selected somewhere else entirely, defaulting to seven days.
+  const insightKeys = new Set(getRecentDays(days, 30).map((d) => d.date));
+  const insightEma = computeEma(
+    weightLog.filter((w) => insightKeys.has(w.date)).sort((a, b) => (a.date < b.date ? -1 : 1))
   );
 
   // Cards not present in the stored layout are appended, so a card added
@@ -195,7 +198,7 @@ export function AnalyticsView() {
         <div className="section-head">
           <span className="section-title">Análisis</span>
         </div>
-        <InsightsGrid weightWithEma={periodEma} />
+        <InsightsGrid weightWithEma={insightEma} />
 
         {/* The period toggle belongs to the history below, not to the
             screen, so it sits on that section's header where what it

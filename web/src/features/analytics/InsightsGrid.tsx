@@ -124,7 +124,10 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
 
   const cards: React.ReactNode[] = [];
 
-  const expenditure = expenditureSeries(days, weightLog);
+  // Thirty days, like every other tile here. The caption used to say
+  // "14 días" while the series actually ran sixty: 14 is the rolling
+  // window each point is computed over, not the range on screen.
+  const expenditure = expenditureSeries(days, weightLog, 30);
   if (expenditure.length >= 2) {
     const latest = expenditure[expenditure.length - 1].kcal;
     cards.push(
@@ -132,7 +135,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
               onClick={() => setDetail("expenditure")}>
         <span className="insight-card-label">Gasto energético</span>
         <span className="insight-card-value">{Math.round(latest)} kcal</span>
-        <span className="insight-card-sub">estimado, 14 días</span>
+        <span className="insight-card-sub">estimado · 30 días</span>
         <span className="insight-card-spark">
           <Sparkline values={expenditure.map((p) => p.kcal)} />
         </span>
@@ -150,7 +153,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
         <span className="insight-card-value">{last.ema.toFixed(1)} kg</span>
         <span className="insight-card-sub">
           {diff > 0 ? "+" : ""}
-          {diff.toFixed(1)} kg en el periodo
+          {diff.toFixed(1)} kg en 30 días
         </span>
         <span className="insight-card-spark">
           <Sparkline values={weightWithEma.map((p) => p.raw)} />

@@ -12,7 +12,12 @@ import { getRecentDays } from "../../../shared/lib/analytics";
 import { estimateCurrentTdee } from "../../../shared/lib/targets";
 import { targetMidpoints } from "../week";
 
-const DAYS = 30;
+// Seven, not thirty. The deck is the "where am I right now" surface —
+// its other pages read today and this week — and a balance widget sitting
+// on a month of history answered a different question from the ones
+// either side of it. The month-long view of the same thing lives in
+// Análisis, which is the trend layer.
+const DAYS = 7;
 const H = 90;
 
 type Ref = "target" | "expenditure";
