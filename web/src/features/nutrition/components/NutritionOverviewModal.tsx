@@ -12,6 +12,7 @@ import { Modal } from "../../../shared/components/Modal";
 import { ChevronDown } from "../../../shared/components/Icons";
 import { NutrientTrend } from "./NutrientTrend";
 import { useAppStore } from "../../../shared/store";
+import { targetMidpoints } from "../../analytics/week";
 import {
   OVERVIEW_PERIODS,
   readOverview,
@@ -118,13 +119,17 @@ export function NutritionOverviewModal({ open, dayKey, onClose }: NutritionOverv
   const spec = OVERVIEW_PERIODS.find((p) => p.id === period) ?? OVERVIEW_PERIODS[0];
   const reading = readOverview(days, dayKey, spec.days);
 
+  // Midpoints, matching every other target in the app. These rows used to
+  // divide by the ceiling of each range, which reported a different target
+  // from the one the deck and the day view showed for the same nutrient.
+  const mid = targetMidpoints(calorieTarget, macroTargets);
   const calorieRows: RowSpec[] = [
-    { id: "calories", label: "Calorías", unit: "kcal", target: calorieTarget.max, kind: "kcal" }
+    { id: "calories", label: "Calorías", unit: "kcal", target: mid.kcal, kind: "kcal" }
   ];
   const macroRows: RowSpec[] = [
-    { id: "protein", label: "Proteína", unit: "g", target: macroTargets.proteinMax, kind: "protein" },
-    { id: "fat", label: "Grasa", unit: "g", target: macroTargets.fatMax, kind: "fat" },
-    { id: "carbs", label: "Carbos", unit: "g", target: macroTargets.carbsMax, kind: "carbs" }
+    { id: "protein", label: "Proteína", unit: "g", target: mid.protein, kind: "protein" },
+    { id: "fat", label: "Grasa", unit: "g", target: mid.fat, kind: "fat" },
+    { id: "carbs", label: "Carbos", unit: "g", target: mid.carbs, kind: "carbs" }
   ];
   // No targets are stored for these, so they report intake without a
   // denominator rather than inventing one.

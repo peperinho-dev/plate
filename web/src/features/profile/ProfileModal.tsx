@@ -211,10 +211,13 @@ export function ProfileModal({ open, onClose, onOpenWeight }: ProfileModalProps)
 
         {draftEta && (
           <p className="goal-eta">
-            <span className="goal-eta-date">{formatGoalDate(draftEta.date)}</span>
+            {/* The date answers the question the field just asked, so it
+                leads; the arithmetic that produced it reads as a footnote
+                under it rather than running on from the date. */}
+            <span className="goal-eta-date">Lo alcanzarías el {formatGoalDate(draftEta.date)}</span>
             <span className="goal-eta-note">
               {draftEta.kg.toFixed(1)} kg en {Math.round(draftEta.weeks)}{" "}
-              {Math.round(draftEta.weeks) === 1 ? "semana" : "semanas"}, si mantienes este ritmo
+              {Math.round(draftEta.weeks) === 1 ? "semana" : "semanas"}, a tu ritmo actual
             </span>
           </p>
         )}

@@ -3570,3 +3570,59 @@ button:focus-visible, input:focus-visible {
 }
 .photo-ribbon-item.is-picked img { border-color: var(--accent); }
 .photo-ribbon-item.is-picked { color: var(--accent-ink); font-weight: 700; }
+
+/* The projected goal date, under the target-weight field. Both spans were
+   unstyled, so they ran together into "20 de noviembre3.0 kg en 10
+   semanas" — the date is the answer and needs its own line, with the
+   arithmetic behind it as a footnote. */
+.goal-eta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.goal-eta-date {
+  font-size: var(--fs-body);
+  font-weight: 650;
+  color: var(--ink);
+}
+.goal-eta-note {
+  font-size: var(--fs-caption);
+  color: var(--ink-soft);
+}
+
+/* The rest bar, stacked.
+   As one row it had no slack at all: measured on a 375px screen the
+   content needed exactly the 307px available, so "DESCANSO" overprinted
+   the start button and "Ahora no" ran off the right edge — and anything
+   narrower, or a longer duration, made it worse. Two rows cost ~26px of
+   height and remove the constraint entirely: the label and the clock read
+   as a header, the buttons get a full-width row of their own, and the
+   preset list wraps instead of shrinking. */
+.rest-timer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.rest-timer-info {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rest-timer-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* The one thing here that starts something takes the room; the rest size
+   to their text beside it. */
+.rest-timer-go {
+  flex: 1 1 auto;
+  padding: 9px 14px;
+}
+.rest-timer-preset { padding: 9px 12px; }
+.rest-timer-skip { padding: 9px 8px; }
+/* Skipping the rest is a real choice, so it has to be readable. It was on
+   --ink-faint, which measures 2.6:1 in dark and 2.1:1 in light — under the
+   floor for any text, and indefensible for a button. */
+.rest-timer-skip { color: var(--ink-soft); }

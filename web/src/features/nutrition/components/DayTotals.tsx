@@ -6,6 +6,7 @@ import { useAppStore } from "../../../shared/store";
 import { AnimatedNumber } from "../../../shared/components/AnimatedNumber";
 import { sumCalories, sumMacros, sumMicros } from "../../../shared/lib/nutrition";
 import { useUiStore } from "../../../shared/store/ui";
+import { targetMidpoints } from "../../analytics/week";
 
 interface DayTotalsProps {
   entries: Entry[];
@@ -18,25 +19,35 @@ function MacroCol({
   total,
   min,
   max,
+  target,
   remaining
 }: {
   label: string;
   total: number;
   min: number;
   max: number;
+  /** The single number to aim at: the midpoint of min..max. */
+  target: number;
   remaining: boolean;
 }) {
   // The bar always shows progress toward the target. Only the figure
   // changes with the mode — a bar that emptied as you ate would invert
   // the meaning of every other bar in the app.
-  const pct = Math.min(100, (total / max) * 100 || 0);
+  //
+  // Measured against the midpoint, not the ceiling. This screen used to
+  // divide by max while Resumen divided by the midpoint, so the same
+  // protein figure was reported against two different targets depending
+  // on which tab you were looking at. min..max still decides the colour —
+  // that is a different question ("am I inside the band?") and the band
+  // is drawn right above for calories.
+  const pct = Math.min(100, (total / target) * 100 || 0);
   const inRange = total >= min && total <= max;
-  const shown = remaining ? Math.max(0, max - total) : total;
+  const shown = remaining ? Math.max(0, target - total) : total;
   return (
     <div className="macro-col">
       <div className="macro-label">{label}</div>
       <div className="macro-value">
-        {Math.round(shown)}/{max} g
+        {Math.round(shown)}/{Math.round(target)} g
       </div>
       <div className="macro-track">
         <div className={"macro-fill" + (inRange ? " in-range" : "")} style={{ width: `${pct}%` }} />
@@ -75,6 +86,7 @@ export function DayTotals({ entries, dayKey }: DayTotalsProps) {
   const macros = sumMacros(entries);
   const micros = sumMicros(entries);
   const showMacros = macroTargets.proteinMin !== null;
+  const mid = targetMidpoints(calorieTarget, macroTargets);
 
   // Counted against the top of the range: the range's ceiling is the
   // number you'd exceed, so "restante" is how much is still available
@@ -124,9 +136,9 @@ export function DayTotals({ entries, dayKey }: DayTotalsProps) {
 
       {showMacros && (
         <div className="macro-row">
-          <MacroCol label="Prot." total={macros.protein} min={macroTargets.proteinMin!} max={macroTargets.proteinMax!} remaining={remaining} />
-          <MacroCol label="Grasa" total={macros.fat} min={macroTargets.fatMin!} max={macroTargets.fatMax!} remaining={remaining} />
-          <MacroCol label="Carbos" total={macros.carbs} min={macroTargets.carbsMin!} max={macroTargets.carbsMax!} remaining={remaining} />
+          <MacroCol label="Prot." total={macros.protein} min={macroTargets.proteinMin!} max={macroTargets.proteinMax!} target={mid.protein!} remaining={remaining} />
+          <MacroCol label="Grasa" total={macros.fat} min={macroTargets.fatMin!} max={macroTargets.fatMax!} target={mid.fat!} remaining={remaining} />
+          <MacroCol label="Carbos" total={macros.carbs} min={macroTargets.carbsMin!} max={macroTargets.carbsMax!} target={mid.carbs!} remaining={remaining} />
         </div>
       )}
 

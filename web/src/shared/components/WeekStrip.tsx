@@ -6,6 +6,7 @@ import { useUiStore } from "../store/ui";
 import { DAY_MS, formatDateKey } from "../lib/date";
 import { WEEKDAY_LETTERS_MON } from "../lib/format";
 import { dayCalorieTotal, hasWorkoutSession } from "../lib/nutrition";
+import { targetMidpoints } from "../../features/analytics/week";
 
 interface StripDay {
   date: Date;
@@ -43,7 +44,9 @@ export function WeekStrip() {
   const loggedDays = useAppStore((s) => s.days);
   const workouts = useAppStore((s) => s.workouts);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
+  const macroTargets = useAppStore((s) => s.macroTargets);
   const days = getWeekStripDays(dayOffset);
+  const target = targetMidpoints(calorieTarget, macroTargets);
 
   return (
     <div className="week-strip">
@@ -51,10 +54,13 @@ export function WeekStrip() {
         const key = formatDateKey(d.date);
         const exercised = hasWorkoutSession(workouts, key);
         const total = dayCalorieTotal(loggedDays, key);
-        const floor = calorieTarget.min || 0;
+        // The midpoint, like every other target in the app. This used to
+        // measure against the bottom of the range, so the ring closed on a
+        // day the rest of the app still showed as short of target.
+        const goal = target.kcal ?? 0;
         // A day with nothing logged draws no ring at all, rather than an
         // empty one — a future Saturday shouldn't look like a failure.
-        const progress = floor > 0 && total > 0 ? total / floor : 0;
+        const progress = goal > 0 && total > 0 ? total / goal : 0;
         const over = !!(calorieTarget.max && total > calorieTarget.max);
         // A conic gradient has a seam where it wraps, so a full sweep still
         // shows a hairline gap at twelve o'clock — exactly where the eye
