@@ -2029,9 +2029,24 @@ button:focus-visible, input:focus-visible {
      needed fat and carbs. The widgets show all four series at once, so
      it gets one, warm enough to separate from the green accent. */
   --macro-protein: #D8562B;
+
+  /* A hue per domain, so the Análisis tiles read as four different things
+     rather than four green rectangles. Placed by hue distance from what
+     is already spoken for — protein 17°, fat 35°, accent 152°, carbs
+     238° — which leaves cyan (193°) and orchid (277°) as the two clearly
+     free bands, each ~40° from its nearest neighbour. Body covers weight
+     *and* goal progress: they answer the same question, so they share a
+     colour. Energy keeps the accent, because calories are the app's
+     subject and green already means them. */
+  --metric-body: #0A7391;
+  --metric-training: #8340B8;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --macro-protein: #F0865C; }
+  :root {
+    --macro-protein: #F0865C;
+    --metric-body: #3BB6D9;
+    --metric-training: #C98CF0;
+  }
 }
 
 /* Cards had an asymmetric 22/20/20 that made their contents sit low in
@@ -2063,6 +2078,24 @@ button:focus-visible, input:focus-visible {
 /* And with a whole card row to itself, a 4px hairline reads as a
    leftover rather than the card's chart. */
 .insight-card > .goal-meter { height: 6px; }
+
+/* Each Análisis tile carries its domain's hue, and everything inside it —
+   line, fill, endpoint, bars, meter — inherits from currentColor, so a
+   tile's colour is set in exactly one place. */
+.insight-card.is-energy { color: var(--accent); }
+.insight-card.is-body { color: var(--metric-body); }
+.insight-card.is-training { color: var(--metric-training); }
+/* The value and its label stay ink. The hue identifies the tile; it does
+   not get to make the number harder to read. */
+.insight-card-value { color: var(--ink); }
+.insight-card-label { color: var(--ink-soft); }
+
+/* 0.18 rather than a gradient: the reference app fills flat at ~16%, and
+   a flat fill has no gradient id to collide with across many charts. */
+.spark-area { fill: currentColor; opacity: 0.18; }
+.spark-end { fill: currentColor; }
+.axis-area { opacity: 0.16; }
+.insight-card > .goal-meter .goal-meter-fill { background: currentColor; }
 
 /* When something follows the empty day card, the empty state stops being
    the screen and becomes a caption for it. The 34px dumbbell was the

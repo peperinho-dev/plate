@@ -23,6 +23,17 @@ import type { EmaPoint } from "../profile/adaptive";
 const SPARK_W = 100;
 const SPARK_H = 32;
 
+/**
+ * A trend line with the area under it filled.
+ *
+ * The fill is the single change that most closes the gap with the
+ * reference app: a bare 2px stroke reads as a wire laid over the card,
+ * while a filled one reads as a quantity with weight. Every chart in this
+ * app was a bare stroke — 38 of them, none filled.
+ *
+ * `currentColor` throughout, so the tile sets the domain hue once on
+ * itself and the line, the fill and the endpoint all follow.
+ */
 function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) return <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} />;
   const minV = Math.min(...values);
@@ -32,10 +43,18 @@ function Sparkline({ values }: { values: number[] }) {
     x: (i / (values.length - 1)) * SPARK_W,
     y: 4 + (SPARK_H - 8) - ((v - minV) / range) * (SPARK_H - 8)
   }));
+  const line = smoothPath(pts);
+  // The same curve, closed down to the baseline. Reusing the line's own
+  // path data keeps the fill's top edge exactly on the stroke — building
+  // a second curve would let the two drift apart by a subpixel.
+  const area = `${line} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`;
+  const last = pts[pts.length - 1];
   return (
     <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
-      <path d={smoothPath(pts)} fill="none" stroke="var(--accent)" strokeWidth={2}
+      <path className="spark-area" d={area} />
+      <path d={line} fill="none" stroke="currentColor" strokeWidth={2}
             strokeLinecap="round" strokeLinejoin="round" />
+      <circle className="spark-end" cx={last.x} cy={last.y} r={2.4} />
     </svg>
   );
 }
@@ -69,7 +88,7 @@ function MiniBars({ values }: { values: number[] }) {
             y={SPARK_H - h}
             width={barW}
             height={h}
-            fill={v > 0 ? "var(--accent)" : "var(--line)"}
+            fill={v > 0 ? "currentColor" : "var(--line)"}
           />
         );
       })}
@@ -98,7 +117,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   if (expenditure.length >= 2) {
     const latest = expenditure[expenditure.length - 1].kcal;
     cards.push(
-      <button type="button" className="insight-card is-tappable" key="expenditure"
+      <button type="button" className="insight-card is-tappable is-energy" key="expenditure"
               onClick={() => setDetail("expenditure")}>
         <span className="insight-card-label">Gasto energético</span>
         <span className="insight-card-value">{Math.round(latest)} kcal</span>
@@ -114,7 +133,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
     const last = weightWithEma[weightWithEma.length - 1];
     const diff = last.ema - weightWithEma[0].ema;
     cards.push(
-      <button type="button" className="insight-card is-tappable" key="weight"
+      <button type="button" className="insight-card is-tappable is-body" key="weight"
               onClick={() => setDetail("weight")}>
         <span className="insight-card-label">Tendencia de peso</span>
         <span className="insight-card-value">{last.ema.toFixed(1)} kg</span>
@@ -145,7 +164,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   if (goal) {
     const pct = Math.round(goal.fraction * 100);
     cards.push(
-      <button type="button" className="insight-card is-tappable" key="goal"
+      <button type="button" className="insight-card is-tappable is-body" key="goal"
               onClick={() => setDetail("goal")}>
         <span className="insight-card-label">Progreso</span>
         <span className="insight-card-value">
@@ -179,7 +198,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
           ? -Math.abs(profile.rateKgPerWeek)
           : Math.abs(profile.rateKgPerWeek);
     cards.push(
-      <div className="insight-card" key="rate">
+      <div className="insight-card is-body" key="rate">
         <span className="insight-card-label">Ritmo</span>
         <span className="insight-card-value">
           {actualRate > 0 ? "+" : ""}
@@ -204,7 +223,7 @@ export function InsightsGrid({ weightWithEma }: InsightsGridProps) {
   if (sessions.length > 0) {
     const totalSets = sessions.reduce((sum, p) => sum + p.value, 0);
     cards.push(
-      <button type="button" className="insight-card is-tappable" key="training"
+      <button type="button" className="insight-card is-tappable is-training" key="training"
               onClick={() => setDetail("training")}>
         <span className="insight-card-label">Entreno</span>
         <span className="insight-card-value">{sessions.length} sesiones</span>

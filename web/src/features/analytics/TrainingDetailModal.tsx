@@ -108,7 +108,8 @@ export function TrainingDetailModal({ open, onClose, onPickExercise }: TrainingD
               id: metric,
               label: `${spec.label} por sesión`,
               points,
-              color: "var(--accent)",
+              color: "var(--metric-training)",
+              area: true,
               endDot: true,
               markers: points
             }

@@ -62,7 +62,7 @@ export function ExerciseTrendModal({ open, name, onClose }: ExerciseTrendModalPr
       </div>
 
       <AxisChart
-        series={[{ id: metric, label: unit.label, points: chart, color: "var(--accent)", endDot: true, markers: chart }]}
+        series={[{ id: metric, label: unit.label, points: chart, color: "var(--metric-training)", endDot: true, area: true, markers: chart }]}
         formatY={unit.fmt}
         formatX={(v) => {
           const d = new Date(v * DAY);

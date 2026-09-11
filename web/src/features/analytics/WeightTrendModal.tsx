@@ -138,7 +138,8 @@ export function WeightTrendModal({ open, onClose }: WeightTrendModalProps) {
             id: "trend",
             label: "Tendencia",
             points: trendPoints,
-            color: "var(--accent)",
+            color: "var(--metric-body)",
+            area: true,
             endDot: true
           }
         ]}

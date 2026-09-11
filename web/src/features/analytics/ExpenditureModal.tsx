@@ -87,7 +87,7 @@ export function ExpenditureModal({ open, onClose }: ExpenditureModalProps) {
       <AxisChart
         series={[
           { id: "intake", label: "Ingesta", points: intake, color: "var(--ink-faint)", faint: true },
-          { id: "exp", label: "Gasto estimado", points: expPoints, color: "var(--accent)", endDot: true }
+          { id: "exp", label: "Gasto estimado", points: expPoints, color: "var(--accent)", endDot: true, area: true }
         ]}
         includeY={target != null ? [target] : []}
         formatY={(v) => String(Math.round(v))}

@@ -28,6 +28,13 @@ export interface ChartSeries {
   /** Mark the final point, which is the one the headline quotes. */
   endDot?: boolean;
   /**
+   * Fill the area under the line. A bare stroke reads as a wire laid over
+   * the card; a filled one reads as a quantity. Off by default because a
+   * chart with two series can only afford one fill before the overlap
+   * turns both to mud — fill the series the headline quotes.
+   */
+  area?: boolean;
+  /**
    * Points to mark with a dot. Separate from `points` because a line can
    * be denser than its evidence: the weight line is interpolated to one
    * point per day, but only some of those days were actually weighed, and
@@ -160,6 +167,17 @@ export function AxisChart({ series, formatY, formatX, includeY = [], height = 18
         )}
         {series.map((s) => (
           <g key={s.id}>
+            {s.area && s.points.length > 1 && (
+              <path
+                className="axis-area"
+                style={{ fill: s.color }}
+                d={
+                  s.points.map((p, i) => `${i ? "L" : "M"}${px(p.x).toFixed(2)} ${py(p.y).toFixed(2)}`).join(" ") +
+                  ` L${px(s.points[s.points.length - 1].x).toFixed(2)} ${height - PAD.bottom}` +
+                  ` L${px(s.points[0].x).toFixed(2)} ${height - PAD.bottom} Z`
+                }
+              />
+            )}
             <path
               className={"axis-line" + (s.faint ? " is-faint" : "")}
               style={{ stroke: s.color }}
