@@ -9,7 +9,8 @@ import { Modal } from "../../shared/components/Modal";
 import { AxisChart, type ChartPoint } from "../../shared/components/AxisChart";
 import { useAppStore } from "../../shared/store";
 import { expenditureSeries } from "./expenditure";
-import { getRecentDays } from "../../shared/lib/analytics";
+import { getAllDays, getRecentDays } from "../../shared/lib/analytics";
+import { CHART_RANGES, findRange } from "../../shared/lib/chart";
 import { parseDateKey } from "../../shared/lib/date";
 import { targetMidpoints } from "./week";
 
@@ -19,27 +20,27 @@ interface ExpenditureModalProps {
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-const RANGES = [
-  { id: "60", label: "60 d", days: 60 },
-  { id: "120", label: "4 m", days: 120 },
-  { id: "365", label: "1 año", days: 365 }
-];
+
+// Same windows as every other chart. The *default* is three months
+// rather than thirty days because the estimate needs a fortnight of
+// logging before it settles — a 30-day default would open on the part of
+// the curve that is still finding itself.
 
 export function ExpenditureModal({ open, onClose }: ExpenditureModalProps) {
   const days = useAppStore((s) => s.days);
   const weightLog = useAppStore((s) => s.weightLog);
   const calorieTarget = useAppStore((s) => s.calorieTarget);
   const macroTargets = useAppStore((s) => s.macroTargets);
-  const [rangeId, setRangeId] = useState("60");
+  const [rangeId, setRangeId] = useState("90");
 
-  const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[0];
+  const range = findRange(rangeId);
   const dayOf = (d: string) => Math.round(parseDateKey(d).getTime() / DAY);
 
   const exp = expenditureSeries(days, weightLog, range.days);
   const expPoints: ChartPoint[] = exp.map((p) => ({ x: dayOf(p.date), y: p.kcal }));
 
   // Only days with food, so an unlogged day doesn't draw a dive to zero.
-  const intake: ChartPoint[] = getRecentDays(days, range.days)
+  const intake: ChartPoint[] = (range.days == null ? getAllDays(days, weightLog) : getRecentDays(days, range.days))
     .filter((d) => d.total > 0)
     .map((d) => ({ x: dayOf(d.date), y: d.total }));
 
@@ -55,7 +56,7 @@ export function ExpenditureModal({ open, onClose }: ExpenditureModalProps) {
   return (
     <Modal open={open} title="Gasto energético" onClose={onClose}>
       <div className="segmented segmented--compact">
-        {RANGES.map((r) => (
+        {CHART_RANGES.map((r) => (
           <button
             key={r.id}
             type="button"

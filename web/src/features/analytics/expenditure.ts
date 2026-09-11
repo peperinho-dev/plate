@@ -13,7 +13,7 @@
 // estimate by hundreds of calories.
 import type { AppState } from "../../shared/store/types";
 import { computeEma, type EmaPoint } from "../profile/adaptive";
-import { getRecentDays } from "../../shared/lib/analytics";
+import { getAllDays, getRecentDays } from "../../shared/lib/analytics";
 
 const KCAL_PER_KG = 7700;
 const WINDOW = 14;
@@ -26,7 +26,8 @@ export interface ExpenditurePoint {
 export function expenditureSeries(
   days: AppState["days"],
   weightLog: AppState["weightLog"],
-  span = 60
+  /** Days back, or null for the whole log. */
+  span: number | null = 60
 ): ExpenditurePoint[] {
   const sorted = [...weightLog].sort((a, b) => (a.date < b.date ? -1 : 1));
   const ema = computeEma(sorted);
@@ -44,7 +45,7 @@ export function expenditureSeries(
     return best;
   };
 
-  const period = getRecentDays(days, span);
+  const period = span == null ? getAllDays(days, weightLog) : getRecentDays(days, span);
   const out: ExpenditurePoint[] = [];
 
   for (let i = WINDOW - 1; i < period.length; i++) {

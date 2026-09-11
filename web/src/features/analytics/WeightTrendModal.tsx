@@ -19,18 +19,13 @@ import { trendRatePerWeek } from "./expenditure";
 import { removeWeightEntry } from "../profile/actions";
 import { formatShortDate } from "../../shared/lib/format";
 import { parseDateKey } from "../../shared/lib/date";
+import { CHART_RANGES, findRange } from "../../shared/lib/chart";
 
 interface WeightTrendModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-const RANGES: { id: string; label: string; days: number | null }[] = [
-  { id: "30", label: "30 d", days: 30 },
-  { id: "90", label: "3 m", days: 90 },
-  { id: "365", label: "1 año", days: 365 },
-  { id: "all", label: "Todo", days: null }
-];
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -64,7 +59,7 @@ export function WeightTrendModal({ open, onClose }: WeightTrendModalProps) {
   const weightLog = useAppStore((s) => s.weightLog);
   const [rangeId, setRangeId] = useState("90");
 
-  const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[1];
+  const range = findRange(rangeId);
   const cutoff = range.days == null ? null : Date.now() - range.days * DAY;
   const inRange = weightLog.filter(
     (e) => cutoff == null || parseDateKey(e.date).getTime() >= cutoff
@@ -92,7 +87,7 @@ export function WeightTrendModal({ open, onClose }: WeightTrendModalProps) {
   return (
     <Modal open={open} title="Tendencia de peso" onClose={onClose}>
       <div className="segmented segmented--compact">
-        {RANGES.map((r) => (
+        {CHART_RANGES.map((r) => (
           <button
             key={r.id}
             type="button"

@@ -10,7 +10,8 @@ import { Modal } from "../../shared/components/Modal";
 import { AxisChart, type ChartPoint } from "../../shared/components/AxisChart";
 import { ChevronRight } from "../../shared/components/Icons";
 import { useAppStore } from "../../shared/store";
-import { getRecentDays } from "../../shared/lib/analytics";
+import { getAllDays, getRecentDays } from "../../shared/lib/analytics";
+import { CHART_RANGES, findRange } from "../../shared/lib/chart";
 import { formatDuration } from "../../shared/lib/workouts";
 import { parseDateKey } from "../../shared/lib/date";
 import { trainingSeries, volumeSplit, TRAINING_METRICS, type TrainingMetric } from "./trainingSeries";
@@ -23,11 +24,6 @@ interface TrainingDetailModalProps {
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-const RANGES = [
-  { id: "30", label: "30 d", days: 30 },
-  { id: "90", label: "3 m", days: 90 },
-  { id: "365", label: "1 año", days: 365 }
-];
 
 export function TrainingDetailModal({ open, onClose, onPickExercise }: TrainingDetailModalProps) {
   const workouts = useAppStore((s) => s.workouts);
@@ -36,8 +32,8 @@ export function TrainingDetailModal({ open, onClose, onPickExercise }: TrainingD
   const [metric, setMetric] = useState<TrainingMetric>("sets");
   const [rangeId, setRangeId] = useState("30");
 
-  const range = RANGES.find((r) => r.id === rangeId) ?? RANGES[0];
-  const keys = getRecentDays(days, range.days).map((d) => d.date);
+  const range = findRange(rangeId);
+  const keys = (range.days == null ? getAllDays(days, weightLog) : getRecentDays(days, range.days)).map((d) => d.date);
   const series = trainingSeries(workouts, keys, metric, weightLog);
   const split = volumeSplit(workouts, keys, weightLog);
   const spec = TRAINING_METRICS.find((m) => m.id === metric)!;
@@ -60,7 +56,7 @@ export function TrainingDetailModal({ open, onClose, onPickExercise }: TrainingD
   return (
     <Modal open={open} title="Entreno" onClose={onClose}>
       <div className="segmented segmented--compact">
-        {RANGES.map((r) => (
+        {CHART_RANGES.map((r) => (
           <button
             key={r.id}
             type="button"

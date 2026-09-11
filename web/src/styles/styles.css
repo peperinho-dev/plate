@@ -2138,6 +2138,20 @@ button:focus-visible, input:focus-visible {
 .mini-bar { fill: currentColor; }
 .mini-bar.is-rest { opacity: 0.22; }
 .axis-area { opacity: 0.16; }
+
+/* Zoom reset. Sits in the legend row because that is where the chart's
+   own metadata already lives, and it only appears when zoomed. */
+.axis-reset {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-family: inherit;
+}
+.axis-reset:active { transform: scale(0.95); }
 .insight-card > .goal-meter .goal-meter-fill { background: currentColor; }
 
 /* When something follows the empty day card, the empty state stops being

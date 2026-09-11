@@ -3,7 +3,9 @@
 // The chart's metric follows the movement: kilos for weighted work, reps
 // for bodyweight, seconds for holds. Charting volume for a plank would
 // draw a flat line and call it a plateau.
+import { useState } from "react";
 import { Modal } from "../../shared/components/Modal";
+import { CHART_RANGES, findRange } from "../../shared/lib/chart";
 import { AxisChart, type ChartPoint } from "../../shared/components/AxisChart";
 import { useAppStore } from "../../shared/store";
 import { exerciseHistory } from "./exerciseTrend";
@@ -29,8 +31,19 @@ export function ExerciseTrendModal({ open, name, onClose }: ExerciseTrendModalPr
   const workouts = useAppStore((s) => s.workouts);
   const weightLog = useAppStore((s) => s.weightLog);
 
+  // This chart had no window control at all, which made it the one place
+  // you could not ask "how far back?" — with a year of sessions behind a
+  // movement, that is exactly where the question matters most.
+  const [rangeId, setRangeId] = useState("90");
+  const range = findRange(rangeId);
+
   if (!name) return null;
-  const { points, metric } = exerciseHistory(workouts, name, weightLog);
+  const { points: allPoints, metric } = exerciseHistory(workouts, name, weightLog);
+  const cutoffDay =
+    range.days == null ? null : Math.round((Date.now() - range.days * DAY) / DAY);
+  const points = allPoints.filter(
+    (p) => cutoffDay == null || Math.round(parseDateKey(p.date).getTime() / DAY) >= cutoffDay
+  );
   const unit = UNITS[metric];
 
   const chart: ChartPoint[] = points.map((p) => ({
@@ -44,6 +57,19 @@ export function ExerciseTrendModal({ open, name, onClose }: ExerciseTrendModalPr
 
   return (
     <Modal open={open} title={name} onClose={onClose}>
+      <div className="segmented segmented--compact">
+        {CHART_RANGES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            className={"segmented-btn" + (r.id === rangeId ? " active" : "")}
+            onClick={() => setRangeId(r.id)}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
       <div className="ss-totals">
         <div className="ss-total">
           <span className="ss-total-value">{points.length}</span>
