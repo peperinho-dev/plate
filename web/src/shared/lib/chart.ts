@@ -34,11 +34,32 @@ export interface ChartRange {
   days: number | null;
 }
 
+/**
+ * One name per duration, app-wide.
+ *
+ * The same window was called two different things depending on the screen:
+ * the charts said "30 d" and "3 m" where the nutrition overview said
+ * "1 mes" and "3 meses". Which windows a screen *offers* can reasonably
+ * differ — the overview needs a single day, a trend chart doesn't — but a
+ * given length of time should not change its name on the way there.
+ *
+ * The shape is deliberately uniform: a number and a unit, so a row of them
+ * scans as a scale rather than as five unrelated words.
+ */
+export const RANGE_LABELS: Record<number | "all", string> = {
+  1: "1 d",
+  7: "7 d",
+  30: "30 d",
+  90: "3 m",
+  365: "1 año",
+  all: "Todo"
+};
+
 export const CHART_RANGES: ChartRange[] = [
-  { id: "30", label: "30 d", days: 30 },
-  { id: "90", label: "3 m", days: 90 },
-  { id: "365", label: "1 año", days: 365 },
-  { id: "all", label: "Todo", days: null }
+  { id: "30", label: RANGE_LABELS[30], days: 30 },
+  { id: "90", label: RANGE_LABELS[90], days: 90 },
+  { id: "365", label: RANGE_LABELS[365], days: 365 },
+  { id: "all", label: RANGE_LABELS.all, days: null }
 ];
 
 export function findRange(id: string, fallback = "90"): ChartRange {

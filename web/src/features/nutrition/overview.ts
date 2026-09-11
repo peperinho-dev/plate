@@ -6,15 +6,19 @@
 // are driving each number.
 import type { AppState, Entry } from "../../shared/store/types";
 import { formatDateKey, parseDateKey } from "../../shared/lib/date";
+import { RANGE_LABELS } from "../../shared/lib/chart";
 
 export type PeriodId = "day" | "week" | "month" | "quarter" | "year";
 
+// Labels come from the shared table so a window cannot be called "1 mes"
+// here and "30 d" on a chart. The option set is this screen's own: an
+// overview of a single day is a real question, a one-day trend is not.
 export const OVERVIEW_PERIODS: { id: PeriodId; label: string; days: number }[] = [
-  { id: "day", label: "Día", days: 1 },
-  { id: "week", label: "1 sem", days: 7 },
-  { id: "month", label: "1 mes", days: 30 },
-  { id: "quarter", label: "3 meses", days: 90 },
-  { id: "year", label: "1 año", days: 365 }
+  { id: "day", label: RANGE_LABELS[1], days: 1 },
+  { id: "week", label: RANGE_LABELS[7], days: 7 },
+  { id: "month", label: RANGE_LABELS[30], days: 30 },
+  { id: "quarter", label: RANGE_LABELS[90], days: 90 },
+  { id: "year", label: RANGE_LABELS[365], days: 365 }
 ];
 
 /** The `count` days ending at (and including) `endDayKey`. */

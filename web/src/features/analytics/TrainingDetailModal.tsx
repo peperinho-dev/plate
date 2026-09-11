@@ -30,7 +30,8 @@ export function TrainingDetailModal({ open, onClose, onPickExercise }: TrainingD
   const weightLog = useAppStore((s) => s.weightLog);
   const days = useAppStore((s) => s.days);
   const [metric, setMetric] = useState<TrainingMetric>("sets");
-  const [rangeId, setRangeId] = useState("30");
+  // Three months, like the other detail charts. Zoom covers going closer.
+  const [rangeId, setRangeId] = useState("90");
 
   const range = findRange(rangeId);
   const keys = (range.days == null ? getAllDays(days, weightLog) : getRecentDays(days, range.days)).map((d) => d.date);

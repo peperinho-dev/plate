@@ -57,7 +57,7 @@ export function EnergyBalanceWidget() {
             className={"segmented-btn" + (ref === "target" ? " active" : "")}
             onClick={() => setRef("target")}
           >
-            Objetivo
+            Meta
           </button>
           <button
             type="button"
@@ -102,7 +102,7 @@ export function EnergyBalanceWidget() {
         <span className="eb-op">−</span>
         <div className="eb-term">
           <span className="eb-term-value">{refValue == null ? "—" : Math.round(refValue)}</span>
-          <span className="eb-term-label">{ref === "target" ? "Objetivo" : "Gasto est."}</span>
+          <span className="eb-term-label">{ref === "target" ? "Meta" : "Gasto est."}</span>
         </div>
         <span className="eb-op">=</span>
         <div className="eb-term">
