@@ -9,6 +9,7 @@ import { showToast } from "../../shared/components/Toast";
 import { ChevronLeft, XIcon } from "../../shared/components/Icons";
 import { useAppStore } from "../../shared/store";
 import { todayKey } from "../../shared/lib/date";
+import { formatRelativeDay } from "../../shared/lib/format";
 import { logWeight, removeWeightEntry } from "./actions";
 
 interface WeightModalProps {
@@ -37,30 +38,45 @@ export function WeightModal({ open, onClose, onBack }: WeightModalProps) {
       </div>
 
       {sorted.length > 0 ? (
-        <div className="log-list">
-          {sorted.map((w) => (
-            <SwipeToDelete
-              key={w.date}
-              onDelete={() => {
-                removeWeightEntry(w.date);
-                showToast("Registro eliminado");
-              }}
-            >
-              <div className="row">
-                <div className="row-main">
-                  <span className="row-name">{w.weightKg.toFixed(1)} kg</span>
-                  <span className="row-qty">{w.date}</span>
-                </div>
-                <button
-                  className="row-del"
-                  aria-label="Quitar"
-                  onClick={() => removeWeightEntry(w.date)}
+        <div className="card">
+          <div className="log-list">
+            {sorted.map((w, i) => {
+              // Against the previous weigh-in, not against yesterday: the
+              // gap between entries is whatever it is, and the useful
+              // comparison is "since last time I stood on the scale".
+              const prev = sorted[i + 1];
+              const delta = prev ? w.weightKg - prev.weightKg : null;
+              return (
+                <SwipeToDelete
+                  key={w.date}
+                  onDelete={() => {
+                    removeWeightEntry(w.date);
+                    showToast("Registro eliminado");
+                  }}
                 >
-                  <XIcon />
-                </button>
-              </div>
-            </SwipeToDelete>
-          ))}
+                  <div className="row weigh-row">
+                    <span className="weigh-kg">{w.weightKg.toFixed(1)}<span className="weigh-unit">kg</span></span>
+                    <span className="weigh-date">{formatRelativeDay(w.date)}</span>
+                    <span
+                      className={
+                        "weigh-delta" +
+                        (delta == null ? " is-none" : delta > 0 ? " is-up" : delta < 0 ? " is-down" : "")
+                      }
+                    >
+                      {delta == null ? "—" : `${delta > 0 ? "+" : delta < 0 ? "−" : "±"}${Math.abs(delta).toFixed(1)}`}
+                    </span>
+                    <button
+                      className="row-del"
+                      aria-label="Quitar"
+                      onClick={() => removeWeightEntry(w.date)}
+                    >
+                      <XIcon />
+                    </button>
+                  </div>
+                </SwipeToDelete>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="empty-state">

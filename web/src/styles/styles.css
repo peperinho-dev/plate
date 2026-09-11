@@ -291,7 +291,9 @@ button {
   align-items: center;
   gap: 4px;
   padding: 8px 0;
-  border-radius: 14px;
+  /* Much rounder than the 14px it was: the reference draws these as pills,
+     and the progress ring reads as a ring rather than as a box outline. */
+  border-radius: 999px;
   background: var(--surface);
   box-shadow: var(--shadow);
   transition: background 0.15s ease, transform 0.12s cubic-bezier(.2,.8,.2,1);
@@ -309,6 +311,12 @@ button {
   height: 100%;
   pointer-events: none;
   overflow: visible;
+}
+.week-ring-track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 .week-ring-path {
   fill: none;
@@ -2314,6 +2322,35 @@ button:focus-visible, input:focus-visible {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* The weight log. It was a stack of two-line rows printing the raw date
+   key — "82.4 kg" over "2026-09-10" — which read as a database dump and
+   buried the one thing you actually scan a weight log for: which way it
+   moved. One line now: weight, when, and the change since the previous
+   weigh-in. */
+.weigh-row { display: flex; align-items: baseline; gap: var(--space-3); }
+.weigh-kg {
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  min-width: 62px;
+}
+.weigh-unit { font-size: var(--fs-caption); font-weight: 600; color: var(--ink-faint); margin-left: 2px; }
+.weigh-date { font-size: var(--fs-label); color: var(--ink-soft); flex: 1; min-width: 0; }
+.weigh-delta {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  min-width: 42px;
+  text-align: right;
+}
+/* Direction, not judgement — which way it went is a fact, and whether
+   that is good depends on a goal this row knows nothing about. */
+.weigh-delta.is-up { color: var(--metric-body); }
+.weigh-delta.is-down { color: var(--metric-body); }
+.weigh-delta.is-none { color: var(--ink-faint); }
 
 /* A row you read rather than tap: name on the left, figure on the right,
    both on one line. The tappable .row puts its two texts in a stacked

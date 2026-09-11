@@ -1,7 +1,7 @@
 // Display formatting helpers, ported from app.js. Kept separate from
 // date.ts (pure date-key math) because these are locale/presentation
 // concerns rather than storage-key concerns.
-import { DAY_MS, parseDateKey } from "./date";
+import { DAY_MS, dateOffsetFromToday, parseDateKey } from "./date";
 
 export const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 export const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -46,6 +46,19 @@ export function formatGoalDate(d: Date): string {
   const year = d.getFullYear();
   const suffix = year === new Date().getFullYear() ? "" : ` de ${year}`;
   return `${day} de ${month}${suffix}`;
+}
+
+/**
+ * "Hoy", "Ayer", otherwise "9 sep" — and the year once it stops being
+ * obvious. Written twice in two features before it lived here.
+ */
+export function formatRelativeDay(dayKey: string): string {
+  const offset = dateOffsetFromToday(parseDateKey(dayKey));
+  if (offset === 0) return "Hoy";
+  if (offset === -1) return "Ayer";
+  const d = parseDateKey(dayKey);
+  const base = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return d.getFullYear() === new Date().getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
 export function formatTime(ts: number): string {

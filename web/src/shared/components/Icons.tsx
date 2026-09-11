@@ -87,6 +87,23 @@ export function ScanIcon({ size = 17 }: IconProps) {
   );
 }
 
+/**
+ * A bathroom scale: a rounded slab with a readout window and the two feet
+ * marks. The quick-action sheet was the only row with no glyph at all,
+ * which made "Peso" read as a gap in the list rather than an option.
+ */
+export function ScaleIcon({ size = 19 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M9 9h6" />
+      <path d="M12 9v2.5" />
+      <path d="M7.5 15.5h2" />
+      <path d="M14.5 15.5h2" />
+    </svg>
+  );
+}
+
 export function DumbbellIcon({ size = 22 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">

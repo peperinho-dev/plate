@@ -10,6 +10,7 @@ import { ChevronRight } from "../../shared/components/Icons";
 import { useAppStore } from "../../shared/store";
 import { useUiStore } from "../../shared/store/ui";
 import { latestWeightEntry } from "../../shared/lib/targets";
+import { formatRelativeDay } from "../../shared/lib/format";
 import { ProfileModal } from "./ProfileModal";
 import { WeightModal } from "./WeightModal";
 import { TargetModal } from "./TargetModal";
@@ -63,7 +64,7 @@ export function SettingsView() {
         },
         {
           label: "Registro de peso",
-          hint: latest ? `${latest.weightKg.toFixed(1)} kg · ${latest.date}` : "Sin registros",
+          hint: latest ? `${latest.weightKg.toFixed(1)} kg · ${formatRelativeDay(latest.date)}` : "Sin registros",
           onClick: () => setWeightOpen(true)
         },
         {
