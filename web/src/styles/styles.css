@@ -351,6 +351,12 @@ button {
   pointer-events: none;
   transition: background 0.4s cubic-bezier(.2,.8,.2,1);
 }
+/* Goal reached: one colour, no gradient, so the ring actually closes.
+   Sits before the colour rules below so `is-selected` and `is-over` still
+   decide *which* colour it closes in. */
+.week-strip-day.is-complete::before {
+  background: var(--day-ring, var(--accent));
+}
 /* Brighter green on the day you're looking at, so the active day reads
    from the ring's intensity rather than from a second outline. */
 .week-strip-day.is-selected { --day-ring: var(--accent-ink); }

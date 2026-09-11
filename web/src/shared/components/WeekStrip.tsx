@@ -56,8 +56,16 @@ export function WeekStrip() {
         // empty one — a future Saturday shouldn't look like a failure.
         const progress = floor > 0 && total > 0 ? total / floor : 0;
         const over = !!(calorieTarget.max && total > calorieTarget.max);
+        // A conic gradient has a seam where it wraps, so a full sweep still
+        // shows a hairline gap at twelve o'clock — exactly where the eye
+        // checks whether the ring closed. A completed day says so with a
+        // flag and gets a solid ring instead of a 360deg sweep.
+        const complete = progress >= 1;
         const className =
-          "week-strip-day" + (d.isSelected ? " is-selected" : "") + (d.isFuture ? " is-future" : "");
+          "week-strip-day" +
+          (d.isSelected ? " is-selected" : "") +
+          (d.isFuture ? " is-future" : "") +
+          (complete ? " is-complete" : "");
         return (
           <button
             key={key}
