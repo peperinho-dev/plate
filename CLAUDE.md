@@ -35,12 +35,22 @@ does typecheck. Lint is `npx oxlint src`; the two `Toast.tsx`
 
 ## What can't be verified from a dev browser
 
-The browser pane reports `document.visibilityState: "hidden"`, so rAF-driven
-gestures never run, and `getUserMedia` is blocked. These need a real device:
+This used to say rAF-driven gestures never run because
+`document.visibilityState` reports "hidden". Checked directly (11 Sep 2026):
+the pane currently reports `"visible"`, rAF ran at a normal frame rate, and
+both swipe-to-delete and drag-to-reorder (dnd-kit) worked end-to-end via
+`computer` tool pointer drags — a row was actually deleted, two cards were
+actually reordered. That claim was stale; don't trust it without re-checking,
+since pane behaviour here is a black box and may not hold in every session.
 
-- swipe-to-delete, drag-to-reorder (dnd-kit)
-- camera barcode scanning
-- whether the rest-timer beep is audible with the ringer off
+Still genuinely blocked or untestable here:
+
+- Camera barcode scanning — `getUserMedia` throws `NotAllowedError`
+  ("Permission denied"); the pane sandbox refuses camera access outright.
+- Whether the rest-timer beep is audible with the ringer off — not a
+  software capability question at all. It depends on the iOS silent
+  switch's handling of the `<audio>` element's playback category, which
+  needs physical hardware and a human ear; no browser tool answers it.
 
 ## Test data
 
