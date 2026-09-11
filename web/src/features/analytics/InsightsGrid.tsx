@@ -49,13 +49,20 @@ function Sparkline({ values }: { values: number[] }) {
   // a second curve would let the two drift apart by a subpixel.
   const area = `${line} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`;
   const last = pts[pts.length - 1];
+  // Where the last point sits as a share of the chart's height, measured
+  // from the bottom. The dot is placed with CSS off this rather than drawn
+  // in the SVG: at x = SPARK_W it sat exactly on the svg's edge and was
+  // clipped, and preserveAspectRatio="none" stretched it into an ellipse.
+  const endPct = ((SPARK_H - last.y) / SPARK_H) * 100;
   return (
-    <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
-      <path className="spark-area" d={area} />
-      <path d={line} fill="none" stroke="currentColor" strokeWidth={2}
-            strokeLinecap="round" strokeLinejoin="round" />
-      <circle className="spark-end" cx={last.x} cy={last.y} r={2.4} />
-    </svg>
+    <span className="spark-wrap">
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
+        <path className="spark-area" d={area} />
+        <path d={line} fill="none" stroke="currentColor" strokeWidth={2}
+              strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="spark-end" style={{ bottom: `${endPct}%` }} />
+    </span>
   );
 }
 
@@ -74,21 +81,25 @@ function MiniBars({ values }: { values: number[] }) {
   if (values.length === 0) return <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} />;
   const maxV = Math.max(...values, 1);
   const slot = SPARK_W / values.length;
-  const barW = Math.max(slot * 0.62, 0.8);
+  // Narrower than the slot by a good margin. At 0.62 the bars nearly
+  // touched, and thirty of them read as a solid wall rather than as the
+  // rhythm of training against rest, which is the only thing this chart
+  // exists to show.
+  const barW = Math.max(slot * 0.42, 0.8);
   return (
     <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} width="100%" height={SPARK_H} preserveAspectRatio="none">
       {values.map((v, i) => {
         // Trained days get at least 3px so a single-set day still reads as
-        // a session; rest days get a 1.5px tick, present but clearly empty.
-        const h = v > 0 ? Math.max((v / maxV) * (SPARK_H - 4), 3) : 1.5;
+        // a session; rest days get a 2px tick, present but clearly empty.
+        const h = v > 0 ? Math.max((v / maxV) * (SPARK_H - 4), 3) : 2;
         return (
           <rect
             key={i}
+            className={"mini-bar" + (v > 0 ? "" : " is-rest")}
             x={i * slot + (slot - barW) / 2}
             y={SPARK_H - h}
             width={barW}
             height={h}
-            fill={v > 0 ? "currentColor" : "var(--line)"}
           />
         );
       })}

@@ -2067,7 +2067,12 @@ button:focus-visible, input:focus-visible {
   :root {
     --macro-protein: #F0865C;
     --metric-body: #3BB6D9;
-    --metric-training: #C98CF0;
+    /* L72 S48 rather than L75 S77. At full chroma this was the loudest
+       thing on the dashboard — brighter and more saturated than either
+       other hue — and it sat on the least urgent tile. Contrast on card
+       is 7.12:1, in family with cyan's 7.39 and green's 7.79, so it
+       reads as calm rather than dim. */
+    --metric-training: #C095DA;
   }
 }
 
@@ -2109,7 +2114,29 @@ button:focus-visible, input:focus-visible {
 /* 0.18 rather than a gradient: the reference app fills flat at ~16%, and
    a flat fill has no gradient id to collide with across many charts. */
 .spark-area { fill: currentColor; opacity: 0.18; }
-.spark-end { fill: currentColor; }
+
+/* The endpoint marker is a positioned element, not an SVG circle: the
+   chart stretches horizontally (preserveAspectRatio="none"), which turns
+   any circle inside it into an ellipse, and the last point sits exactly
+   on the right edge, where the svg clipped it. */
+.spark-wrap { position: relative; display: block; }
+.spark-end {
+  position: absolute;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  /* `bottom` is set inline from the last value; this lifts the dot so
+     that value sits at its centre rather than at its lower edge. */
+  transform: translateY(50%);
+}
+
+/* Rest days draw in the same hue at low opacity rather than in a neutral:
+   an untrained day is the same series reading nothing, not a different
+   kind of thing. */
+.mini-bar { fill: currentColor; }
+.mini-bar.is-rest { opacity: 0.22; }
 .axis-area { opacity: 0.16; }
 .insight-card > .goal-meter .goal-meter-fill { background: currentColor; }
 
