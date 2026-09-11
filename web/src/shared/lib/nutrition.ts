@@ -28,25 +28,21 @@ export function groupEntriesByHour(entries: Entry[]): HourGroup[] {
 }
 
 /**
- * The day as an unbroken run of hours rather than only the ones that have
- * food in them.
+ * The whole day, 00:00 to 23:00.
  *
- * An empty hour is still somewhere you might want to log — the 10am snack
- * you forgot — and it can only be tapped if it's drawn. The run spans the
- * first logged hour through `throughHour` (the current hour on today, the
- * last logged hour on any other day) so the list stays as long as the day
- * actually is, instead of always rendering all 24.
+ * This used to run from the first logged meal to the current hour, which
+ * quietly made some hours unreachable: log breakfast at 08:00 and there
+ * was no 07:00 row to tap, and an untouched day drew no timeline at all.
+ * Logging at an hour you had skipped meant there was nowhere to put it.
+ *
+ * Every hour is a row now. Empty ones are cheap — a label and a + — and
+ * the point of the timeline is that any hour is one tap away, which only
+ * holds if every hour is on it.
  */
-export function timelineHours(entries: Entry[], throughHour: number | null): HourGroup[] {
-  const logged = groupEntriesByHour(entries);
-  if (logged.length === 0) return [];
-
-  const byHour = new Map(logged.map((g) => [g.hour, g]));
-  const first = logged[0].hour;
-  const last = Math.max(logged[logged.length - 1].hour, throughHour ?? -1);
-
+export function timelineHours(entries: Entry[]): HourGroup[] {
+  const byHour = new Map(groupEntriesByHour(entries).map((g) => [g.hour, g]));
   const out: HourGroup[] = [];
-  for (let h = first; h <= last; h++) {
+  for (let h = 0; h < 24; h++) {
     out.push(byHour.get(h) ?? { hour: h, entries: [], total: 0, macros: sumMacros([]) });
   }
   return out;

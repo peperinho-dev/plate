@@ -3658,3 +3658,26 @@ button:focus-visible, input:focus-visible {
   border-radius: var(--radius-md);
   padding: 10px 12px;
 }
+
+/* The 24 hours, as a grid of chips. Four rows of six reads as a clock
+   face you scan rather than a list you read, and keeps the sheet from
+   growing by twenty-four full-width buttons. */
+.hour-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+.hour-picker-chip {
+  padding: 10px 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
+}
+.hour-picker-chip:active { transform: scale(0.92); }

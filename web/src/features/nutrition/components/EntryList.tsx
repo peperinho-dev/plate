@@ -1,10 +1,10 @@
 // The day as a timeline of hours.
 //
-// Every hour between the first meal and now is drawn, not only the ones
-// with food in them: an empty hour is a place you might want to log the
-// snack you forgot, and it can only be tapped if it's on screen. Each
-// hour carries its own totals and its own + , so adding at 11am is one
-// tap from the 11am row rather than a trip through a time picker.
+// All twenty-four hours are drawn, not only the ones with food in them:
+// an empty hour is a place you might want to log the snack you forgot,
+// and it can only be tapped if it's on screen. Each hour carries its own
+// totals and its own +, so logging something you ate at 08:00 while it is
+// already the afternoon is one tap from the 08:00 row.
 import { AnimatePresence, motion } from "framer-motion";
 import type { Entry } from "../../../shared/store/types";
 import { timelineHours } from "../../../shared/lib/nutrition";
@@ -15,8 +15,6 @@ import { EntryRow } from "./EntryRow";
 interface EntryListProps {
   entries: Entry[];
   dayKey: string;
-  /** Current hour when the day on screen is today; null otherwise. */
-  throughHour: number | null;
   onEdit: (entry: Entry) => void;
   onEditGroup: (entry: Entry) => void;
   onEditItem: (entry: Entry, itemIndex: number) => void;
@@ -26,7 +24,6 @@ interface EntryListProps {
 export function EntryList({
   entries,
   dayKey,
-  throughHour,
   onEdit,
   onEditGroup,
   onEditItem,
@@ -34,7 +31,7 @@ export function EntryList({
 }: EntryListProps) {
   const collapsedHourGroups = useUiStore((s) => s.collapsedHourGroups);
   const toggleHourGroup = useUiStore((s) => s.toggleHourGroup);
-  const groups = timelineHours(entries, throughHour);
+  const groups = timelineHours(entries);
 
   return (
     <div className="log-list">

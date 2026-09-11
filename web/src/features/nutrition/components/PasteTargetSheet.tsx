@@ -1,6 +1,7 @@
 // "Pegar en…" — the destination picker that opens right after Copiar.
 // Ported from the pasteTargetModal in the vanilla app, which replaced the
 // old flow of navigating to a day first and only then pasting.
+import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { useUiStore } from "../../../shared/store/ui";
 import { todayKey } from "../../../shared/lib/date";
@@ -14,11 +15,18 @@ export function PasteTargetSheet() {
   const clipboard = useUiStore((s) => s.clipboard);
   const setClipboard = useUiStore((s) => s.setClipboard);
 
-  const paste = (dayKey: string, timeMode: PasteTimeMode, message: string) => {
+  // Moving within the day is the common case — something eaten at
+  // breakfast but logged in the afternoon — and it was the one thing this
+  // sheet could not do: every option re-dated the entry or stamped it
+  // "now". The hours stay behind a disclosure so the four day-level
+  // choices remain the first thing you see.
+  const [pickingHour, setPickingHour] = useState(false);
+
+  const paste = (dayKey: string, timeMode: PasteTimeMode, message: string, hour = 0) => {
     // This sheet is only ever reached from the food log, so a workout on
     // the clipboard isn't something it can paste.
     if (clipboard?.type !== "nutrition") return;
-    pasteEntriesToDay(clipboard.entries, dayKey, timeMode);
+    pasteEntriesToDay(clipboard.entries, dayKey, timeMode, hour);
     // A move is a paste that also takes the originals away, and only once
     // they have safely landed — never the other way round, so a failure
     // can't lose the entries.
@@ -66,6 +74,34 @@ export function PasteTargetSheet() {
         <button type="button" className="btn btn--secondary btn--block" onClick={() => openCalendar("paste")}>
           Elegir día…
         </button>
+        <button
+          type="button"
+          className="btn btn--secondary btn--block"
+          onClick={() => setPickingHour((v) => !v)}
+        >
+          {pickingHour ? "Ocultar horas" : "A una hora de este día…"}
+        </button>
+        {pickingHour && (
+          <div className="hour-picker">
+            {Array.from({ length: 24 }, (_, h) => (
+              <button
+                key={h}
+                type="button"
+                className="hour-picker-chip"
+                onClick={() =>
+                  paste(
+                    clipboard?.type === "nutrition" ? clipboard.sourceDayKey : todayKey(0),
+                    "hour",
+                    `Pegado a las ${String(h).padStart(2, "0")}:00`,
+                    h
+                  )
+                }
+              >
+                {String(h).padStart(2, "0")}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </Modal>
   );

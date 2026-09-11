@@ -154,3 +154,82 @@ export function plateItemToEntry(item: PlateItem, addedAt: number): Omit<Entry, 
     sourceRecipeId: item.sourceRecipeId
   };
 }
+
+/**
+ * A staged recipe, broken back into its ingredients.
+ *
+ * A recipe lands on the plate as one row with no per-100g basis of its
+ * own, so "toca para ajustar" did nothing on it — the one thing you
+ * actually want when today's portion is bigger than the recipe's. Rather
+ * than invent a scaling rule for the whole meal, it becomes the
+ * ingredients it is made of, each with its own basis and therefore each
+ * adjustable with the machinery that already works. MacroFactor calls
+ * this exploding a recipe, and offers it for the same reason: changing an
+ * amount today shouldn't mean editing the recipe for every future day.
+ */
+export function explodePlateItem(item: PlateItem): PlateItem[] {
+  if (!item.items || item.items.length === 0) return [item];
+  return item.items.map((basis) => {
+    const scaled = scaleFoodItem(basis);
+    return {
+      id: newId(),
+      name: basis.name,
+      qtyLabel: formatQuantity(basis),
+      calories: scaled.calories,
+      protein: scaled.protein,
+      fat: scaled.fat,
+      carbs: scaled.carbs,
+      // Ingredient bases carry no micro data, so these stay zero rather
+      // than splitting the meal's totals by a rule nobody chose.
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      basis: { ...basis },
+      microsPer100: { fiber: 0, sugar: 0, sodium: 0 }
+    };
+  });
+}
+
+/** The plate as recipe ingredients, for saving a combination you repeat. */
+export function plateToRecipeItems(plate: PlateItem[]): FoodItemBasis[] {
+  return plate.flatMap((item) =>
+    item.items && item.items.length > 0
+      ? item.items.map((i) => ({ ...i }))
+      : item.basis
+        ? [{ ...item.basis }]
+        : [basisWithoutBasis(item)]
+  );
+}
+
+/**
+ * An ingredient for a plate item that has no basis of its own.
+ *
+ * `basis` is optional and genuinely absent on a lot of real data: the
+ * vanilla app never wrote it, so every entry imported from there has only
+ * a label like "40 g". Where that label names grams, it is used — the
+ * recipe then holds the real weight and per-100g figures derived from it.
+ * Where it doesn't ("1 plato"), the logged amount becomes the 100 g
+ * reference, which is the same fallback migrateData uses for pre-grams
+ * recipes. Either way the totals are preserved exactly; only the unit the
+ * recipe reads in differs.
+ */
+function basisWithoutBasis(item: PlateItem): FoodItemBasis {
+  const grams = gramsFromLabel(item.qtyLabel) ?? 100;
+  const per100 = 100 / grams;
+  return {
+    name: item.name,
+    grams,
+    kcalPer100: item.calories * per100,
+    proteinPer100: item.protein * per100,
+    fatPer100: item.fat * per100,
+    carbsPer100: item.carbs * per100
+  };
+}
+
+/** Grams named by a label like "40 g" or "150 g + 1 lata"; null otherwise. */
+function gramsFromLabel(label: string): number | null {
+  const match = /^\s*([\d.,]+)\s*g\b/.exec(label ?? "");
+  if (!match) return null;
+  const value = parseFloat(match[1].replace(",", "."));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}

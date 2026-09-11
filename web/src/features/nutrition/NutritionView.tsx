@@ -350,7 +350,6 @@ export function NutritionView() {
             <EntryList
               entries={entries}
               dayKey={dayKey}
-              throughHour={dayOffset === 0 ? new Date().getHours() : null}
               onAddAtHour={(hour) => {
                 setTargetHour(hour);
                 setAddFoodOpen(true);

@@ -20,12 +20,16 @@ import { useAppStore } from "../../../shared/store";
 import { buildFoodCandidates, searchFoodCandidates } from "../foodCandidates";
 import { basicToSearchHit, searchBasicFoods } from "../basicFoods";
 import {
+  explodePlateItem,
   plateItemFromCandidate,
   plateItemFromSearchHit,
+  plateToRecipeItems,
   plateTotals,
   rescalePlateItem,
   type PlateItem
 } from "../plate";
+import { saveRecipe } from "../recipeActions";
+import { showToast } from "../../../shared/components/Toast";
 
 interface AddFoodModalProps {
   open: boolean;
@@ -71,6 +75,12 @@ export function AddFoodModal({
   // assemble, so it's opt-in rather than the price of every add.
   const [grouping, setGrouping] = useState(false);
   const [groupName, setGroupName] = useState("");
+  // Saving the plate as a recipe: the combination you just assembled is
+  // exactly the thing worth keeping, and until now there was no way to
+  // keep it from here — recipes could only be built in the old manual
+  // form. MacroFactor offers the same move from the timeline.
+  const [savingRecipe, setSavingRecipe] = useState(false);
+  const [recipeName, setRecipeName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   // Which measure the field is currently in. Defaults to the food's own
@@ -88,6 +98,8 @@ export function AddFoodModal({
       setOffResults(null);
       setGrouping(false);
       setGroupName("");
+      setSavingRecipe(false);
+      setRecipeName("");
       setEditingId(null);
     }
   }
@@ -249,6 +261,19 @@ export function AddFoodModal({
                     {item.basis ? " · toca para ajustar" : ""}
                   </span>
                 </button>
+                {/* A recipe has no basis of its own, so the row cannot be
+                    adjusted — but its ingredients can. */}
+                {item.items && item.items.length > 0 && (
+                  <button
+                    type="button"
+                    className="link-btn link-btn--muted"
+                    onClick={() =>
+                      setPlate((p) => p.flatMap((x) => (x.id === item.id ? explodePlateItem(x) : [x])))
+                    }
+                  >
+                    Ingredientes
+                  </button>
+                )}
                 <span className="row-amount">{Math.round(item.calories)} kcal</span>
                 <button
                   className="row-del"
@@ -309,6 +334,35 @@ export function AddFoodModal({
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Quick access, the way favourites already work. Recipes are in the
+          search results too, but only if you remember the name — and the
+          point of a recipe is that it is the meal you repeat, so it
+          should be one tap from an empty field. */}
+      {!trimmed && recipes.length > 0 && (
+        <div className="quick-section">
+          <div className="quick-label-row">
+            <div className="quick-label">Recetas</div>
+          </div>
+          <div className="quick-row">
+            {recipes.map((r) => {
+              const c = candidates.find((x) => x.recipe?.id === r.id);
+              if (!c) return null;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="quick-chip"
+                  onClick={() => stage(plateItemFromCandidate(c))}
+                >
+                  <span className="quick-chip-name">{r.name}</span>
+                  <span className="quick-chip-kcal">{Math.round(c.calories)} kcal</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -440,6 +494,48 @@ export function AddFoodModal({
 
       {plate.length > 0 && (
         <div className="form">
+          {/* Keep the combination, not just log it. A meal you repeat at
+              the same weights is a recipe — and it was only creatable in
+              the old manual form, which is why recipes felt gone. Saving
+              here never touches what you log: the entry is a snapshot, so
+              editing the recipe later leaves your history alone. */}
+          {plate.length > 1 &&
+            (savingRecipe ? (
+              <div className="field-row">
+                <label className="field" style={{ flex: 1 }}>
+                  <span>Nombre de la receta</span>
+                  <input
+                    type="text"
+                    placeholder="p. ej. Avena con leche"
+                    value={recipeName}
+                    onChange={(e) => setRecipeName(e.target.value)}
+                    autoFocus
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  disabled={!recipeName.trim()}
+                  onClick={() => {
+                    saveRecipe(recipeName.trim(), plateToRecipeItems(plate));
+                    setSavingRecipe(false);
+                    setRecipeName("");
+                    showToast("Receta guardada");
+                  }}
+                >
+                  Guardar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => setSavingRecipe(true)}
+              >
+                Guardar como receta
+              </button>
+            ))}
+
           {/* Offered, not imposed: separate rows stay the default, because
               a day you can read food-by-food is more useful than a tidy
               one. Only worth asking once there's more than one thing. */}

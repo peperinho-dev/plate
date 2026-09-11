@@ -5,7 +5,7 @@
 import { useAppStore } from "../../shared/store";
 import type { AppState, Entry, Favorite, FoodItemBasis } from "../../shared/store/types";
 import { newId } from "../../shared/lib/id";
-import { rebaseTimeToDay } from "../../shared/lib/date";
+import { atHourOnDay, rebaseTimeToDay } from "../../shared/lib/date";
 import { cloneEntry } from "../../shared/lib/cloneEntry";
 import { sumFoodItems } from "../../shared/lib/foodItems";
 import type { EntryFormState } from "./entryForm";
@@ -110,7 +110,7 @@ export function removeFavorite(id: string) {
   useAppStore.setState((s) => ({ favorites: s.favorites.filter((f) => f.id !== id) }));
 }
 
-export type PasteTimeMode = "keep" | "now";
+export type PasteTimeMode = "keep" | "now" | "hour";
 
 // Ported from pasteEntriesToDay() in app.js. "keep" rebases each entry's
 // original time-of-day onto the target date (Hoy/Mañana/Elegir día…);
@@ -120,14 +120,26 @@ export type PasteTimeMode = "keep" | "now";
 // exhaustively and checks that at compile time. This function used to do
 // it inline and had quietly stopped copying `basis`, so every pasted meal
 // forgot its units.
-export function pasteEntriesToDay(entries: Entry[], targetDayKey: string, timeMode: PasteTimeMode) {
+export function pasteEntriesToDay(
+  entries: Entry[],
+  targetDayKey: string,
+  timeMode: PasteTimeMode,
+  // Only read for timeMode "hour": the whole hour to land on, so a meal
+  // logged in the afternoon can be moved to the morning it was eaten.
+  hour = 0
+) {
   useAppStore.setState((s) => {
     const existing = s.days[targetDayKey]?.entries ?? [];
+    const stampFor = (entry: Entry) => {
+      if (timeMode === "now") return Date.now();
+      if (timeMode === "hour") return atHourOnDay(targetDayKey, hour);
+      return rebaseTimeToDay(entry.addedAt, targetDayKey);
+    };
     const copies: Entry[] = entries.map((entry) =>
       cloneEntry(entry, {
         id: newId(),
         qtyLabel: entry.qtyLabel || "",
-        addedAt: timeMode === "now" ? Date.now() : rebaseTimeToDay(entry.addedAt, targetDayKey)
+        addedAt: stampFor(entry)
       })
     );
     return updateDay(s, targetDayKey, [...existing, ...copies]);
