@@ -2101,12 +2101,6 @@ button:focus-visible, input:focus-visible {
    leftover rather than the card's chart. */
 .insight-card > .goal-meter { height: 6px; }
 
-/* Each Análisis tile carries its domain's hue, and everything inside it —
-   line, fill, endpoint, bars, meter — inherits from currentColor, so a
-   tile's colour is set in exactly one place. */
-.insight-card.is-energy { color: var(--accent); }
-.insight-card.is-body { color: var(--metric-body); }
-.insight-card.is-training { color: var(--metric-training); }
 /* The value and its label stay ink. The hue identifies the tile; it does
    not get to make the number harder to read. */
 .insight-card-value { color: var(--ink); }
@@ -3231,6 +3225,16 @@ button:focus-visible, input:focus-visible {
   transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
 }
 .insight-card.is-tappable:active { transform: scale(0.98); }
+
+/* Each Análisis tile carries its domain's hue, and everything inside it —
+   line, fill, endpoint, bars, meter — resolves through currentColor, so a
+   tile's colour is set in exactly one place.
+   MUST stay below `.is-tappable`, which resets `color: inherit` at the
+   same specificity: above it, these lose on source order and every chart
+   silently renders in ink instead of its hue. */
+.insight-card.is-energy { color: var(--accent); }
+.insight-card.is-body { color: var(--metric-body); }
+.insight-card.is-training { color: var(--metric-training); }
 
 /* ---------------------------------------------------------------------
    The divider-footer rule.
