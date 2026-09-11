@@ -16,7 +16,16 @@
   --carbs-soft: rgba(84, 87, 224, 0.13);
   --danger: #DC2626;
   --danger-soft: rgba(220, 38, 38, 0.12);
+  /* Surfaces are a ladder, not a pair: canvas → card → well → raised.
+     `--surface-alt` is the recessed well *inside* a card (track fills,
+     inputs, pressed states); `--surface-raised` sits above a card, for
+     sheets. On this light ground a drop shadow does real work, so it
+     stays and the hairline is off. */
+  --surface-raised: #FFFFFF;
+  --card-edge: transparent;
   --shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 12px 28px rgba(16, 16, 20, 0.07);
+  /* For things that float over *content* rather than over the page. */
+  --shadow-float: 0 2px 6px rgba(16, 16, 20, 0.08), 0 16px 36px rgba(16, 16, 20, 0.14);
   --shadow-sheet: 0 -8px 30px rgba(16, 16, 20, 0.12);
   --font: 'Inter', system-ui, sans-serif;
 
@@ -46,13 +55,18 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0E0F11;
-    --surface: #1B1C1F;
-    --surface-alt: #232428;
+    /* Four steps instead of one. Depth on a dark ground comes from
+       luminance — a black drop shadow on a near-black page composites to
+       a 1.044:1 difference, which is nothing, so the app was rendering a
+       shadow on every card and getting no separation for it. */
+    --bg: #090B0D;
+    --surface: #161A1F;
+    --surface-alt: #1E232A;
+    --surface-raised: #272D35;
     --ink: #F2F2F3;
     --ink-soft: #9C9CA3;
     --ink-faint: #5C5C63;
-    --line: #2C2D31;
+    --line: #242A31;
     --accent: #34C481;
     --accent-ink: #6FE3A8;
     --accent-soft: rgba(52, 196, 129, 0.16);
@@ -63,7 +77,18 @@
     --carbs-soft: rgba(146, 149, 245, 0.2);
     --danger: #DC2626;
     --danger-soft: rgba(220, 38, 38, 0.12);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.45);
+    --card-edge: rgba(255, 255, 255, 0.055);
+    /* Replaces the invisible drop shadow with the two cues that do read
+       on a dark ground: a hairline edge, and a rim of light along the top
+       as if the surface were lit from above. Both are insets, so nothing
+       reflows. Same token name, so every card, chip and tile picks it up
+       without touching a single rule. */
+    --shadow:
+      inset 0 0 0 1px var(--card-edge),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    /* A drop shadow still works when it falls on content rather than on
+       the flat page — so the toast and the central + keep theirs. */
+    --shadow-float: 0 2px 8px rgba(0, 0, 0, 0.5), 0 16px 36px rgba(0, 0, 0, 0.6);
     --shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
   }
 }
@@ -920,7 +945,7 @@ button.row-main:active { opacity: 0.55; }
 }
 
 .modal-sheet {
-  background: var(--surface);
+  background: var(--surface-raised);
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -1743,6 +1768,8 @@ button.row-main:active { opacity: 0.55; }
 .timer-run-controls.is-complete .timer-run-btn--stop { display: none; }
 
 /* ---------- Toast ---------- */
+/* Over content, so a real drop shadow reads here — it darkens the log
+   behind it rather than the flat page. */
 .toast {
   position: fixed;
   bottom: max(20px, env(safe-area-inset-bottom));
@@ -1755,7 +1782,7 @@ button.row-main:active { opacity: 0.55; }
   font-size: var(--fs-body);
   font-weight: 600;
   z-index: 60;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-float);
   animation: toastIn 0.2s ease;
 }
 @keyframes toastIn {
@@ -1949,7 +1976,7 @@ button:focus-visible, input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-float);
   transition: transform 0.12s cubic-bezier(.2,.8,.2,1), background 0.15s ease, opacity 0.15s ease;
 }
 .tabbar-add:active { transform: scale(0.9); background: var(--ink-pressed); }
