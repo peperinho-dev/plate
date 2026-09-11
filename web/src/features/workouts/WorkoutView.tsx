@@ -2,7 +2,7 @@
 // keeps the same day in view.
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../shared/store";
-import { latestWeightEntry } from "../../shared/lib/targets";
+import { bodyweightOn } from "../../shared/lib/bodyweight";
 import { useUiStore } from "../../shared/store/ui";
 import { todayKey } from "../../shared/lib/date";
 import { capitalizeFirst, formatDateLabel } from "../../shared/lib/format";
@@ -64,12 +64,13 @@ export function WorkoutView() {
   const workoutGoal = useAppStore((s) => s.workoutGoal);
   const requestAction = useUiStore((s) => s.requestAction);
 
-  // Bodyweight counts as resistance for calisthenics, so the day's volume
-  // needs to know what you weigh. Null until the first weigh-in, which
-  // falls back to loaded-only volume rather than guessing.
-  const bodyweightKg = latestWeightEntry(weightLog)?.weightKg ?? null;
-
   const dayKey = todayKey(dayOffset);
+  // What you weighed *that day*, not today. Using the latest weigh-in
+  // valued every past session at your current weight, so a session from a
+  // year ago read 22% heavier than it was — and the whole history shifted
+  // upward every time you stepped on the scale. The Análisis charts
+  // already did it this way; this is the same number in both places now.
+  const bodyweightKg = bodyweightOn(weightLog, dayKey);
   const exercises = workouts[dayKey]?.exercises ?? [];
   const label = formatDateLabel(dayOffset);
   const totals = computeWorkoutDayTotals(exercises, bodyweightKg);

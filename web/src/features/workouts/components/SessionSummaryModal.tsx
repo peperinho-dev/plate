@@ -10,7 +10,7 @@ import { Modal } from "../../../shared/components/Modal";
 import { useAppStore } from "../../../shared/store";
 import { formatDuration, formatSet } from "../../../shared/lib/workouts";
 import { summarizeSession } from "../sessionSummary";
-import { latestWeightEntry } from "../../../shared/lib/targets";
+import { bodyweightOn } from "../../../shared/lib/bodyweight";
 
 interface SessionSummaryModalProps {
   open: boolean;
@@ -33,7 +33,9 @@ function Delta({ now, before, unit }: { now: number; before: number | null; unit
 export function SessionSummaryModal({ open, dayKey, onClose }: SessionSummaryModalProps) {
   const workouts = useAppStore((s) => s.workouts);
   const weightLog = useAppStore((s) => s.weightLog);
-  const bodyweightKg = latestWeightEntry(weightLog)?.weightKg ?? null;
+  // The weight on the day being summarised, not today's — same reason
+  // as the day card it opens from.
+  const bodyweightKg = bodyweightOn(weightLog, dayKey);
   const summary = summarizeSession(workouts, dayKey, bodyweightKg);
 
   return (

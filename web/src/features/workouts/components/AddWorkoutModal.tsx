@@ -16,6 +16,7 @@ import {XIcon} from "../../../shared/components/Icons";
 import { useAppStore } from "../../../shared/store";
 import { computeExerciseCatalog, searchCatalog } from "../../../shared/lib/workouts";
 import { foldText } from "../../../shared/lib/text";
+import { suggestMovements, shareFromName } from "../../../shared/lib/bodyweight";
 import { relativeDayLabel } from "../../../shared/lib/format";
 import type { Exercise, Routine, TimerPreset } from "../../../shared/store/types";
 import { removeExercise, removeRoutine, startRoutine } from "../actions";
@@ -63,6 +64,14 @@ export function AddWorkoutModal({
   const catalog = computeExerciseCatalog(workouts, dayKey);
   const results = searchCatalog(catalog, query).slice(0, 12);
   const trimmed = query.trim();
+  // Known movements that match what is being typed, minus any you have
+  // already logged — those are in `results` with their real history, which
+  // is more useful than a canonical name.
+  const logged = new Set(catalog.map((e) => foldText(e.name)));
+  const suggestions = suggestMovements(trimmed).filter((m) => !logged.has(foldText(m.name)));
+  // Whether a freely typed name would count as bodyweight, so creating one
+  // that scores nothing is a visible choice rather than a silent surprise.
+  const typedShare = shareFromName(trimmed);
   // Only offer to create when nothing in the catalog already *is* what was
   // typed — otherwise the create row shadows the real entry.
   const canCreate =
@@ -118,11 +127,25 @@ export function AddWorkoutModal({
         )}
 
         <div className="log-list">
+          {suggestions.map((m) => (
+            <div className="row" key={`known-${m.name}`}>
+              <button type="button" className="row-main" onClick={() => add(m.name)}>
+                <span className="row-name">{m.name}</span>
+                <span className="row-qty">
+                  Cuenta como {Math.round(m.share * 100)} % del peso corporal
+                </span>
+              </button>
+            </div>
+          ))}
           {canCreate && (
             <div className="row">
               <button type="button" className="row-main" onClick={() => add(trimmed)}>
                 <span className="row-name">Crear “{trimmed}”</span>
-                <span className="row-qty">Ejercicio nuevo</span>
+                <span className="row-qty">
+                  {typedShare > 0
+                    ? `Cuenta como ${Math.round(typedShare * 100)} % del peso corporal`
+                    : "No contará peso corporal en el volumen"}
+                </span>
               </button>
             </div>
           )}
