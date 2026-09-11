@@ -70,6 +70,22 @@ after midnight or "today" reads empty.
   to 13 sizes that way. Two documented exceptions: `--fs-display-xl` (the
   full-screen rest timer only) and `--fs-input: 16px`, which is functional
   — iOS zooms the viewport when a focused input is smaller.
+- **Depth in dark mode does not come from shadows.** A black drop shadow on
+  the near-black canvas composites to 1.044:1 — invisible. `--shadow` is
+  therefore *two insets* in dark (a hairline edge plus a rim of light along
+  the top) and a real drop shadow in light; same token, so cards, chips and
+  tiles get the right thing per theme without a rule changing. Use
+  `--shadow-float` only for things that sit over *content* (toast, the
+  central +), where a drop shadow does read. Surfaces are a four-step
+  ladder: `--bg` → `--surface` → `--surface-alt` (recessed well *inside* a
+  card) → `--surface-raised` (sheets).
+- Metric hues (`--metric-body`, `--metric-training`) were placed by hue
+  distance from the four already spoken for — protein 17°, fat 35°, accent
+  152°, carbs 238° — which leaves cyan 193° and orchid 277°. Adding another
+  means finding a free band, not picking a colour you like. There are three
+  domains, not four: weight and goal progress share `--metric-body` because
+  they answer the same question. A tile sets its hue once and everything
+  inside resolves through `currentColor`.
 - `--ink`, `--ink-soft`, `--ink-faint` and `--ink-pressed` are text and
   interaction-state colours. Never fill a shape with them: they invert
   between themes, so a "dark" fill becomes near-white in dark mode. Both
