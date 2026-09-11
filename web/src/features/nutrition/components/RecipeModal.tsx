@@ -6,7 +6,8 @@ import { showToast } from "../../../shared/components/Toast";
 import { XIcon } from "../../../shared/components/Icons";
 import type { FoodItemBasis, Recipe } from "../../../shared/store/types";
 import { scaleFoodItem, sumFoodItems } from "../../../shared/lib/foodItems";
-import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
+import { type SearchHit } from "../../../shared/lib/foodLookup";
+import { searchFoodsWithBasics } from "../basicFoods";
 import { saveRecipe } from "../recipeActions";
 
 interface RecipeModalProps {
@@ -39,7 +40,7 @@ export function RecipeModal({ open, recipe, onClose }: RecipeModalProps) {
     if (!term) return;
     setSearching(true);
     try {
-      setResults(await searchFoods(term, 8));
+      setResults(await searchFoodsWithBasics(term, 8));
     } catch {
       setResults([]);
     } finally {

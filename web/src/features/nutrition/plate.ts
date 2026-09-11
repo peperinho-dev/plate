@@ -66,17 +66,23 @@ const DEFAULT_GRAMS = 100;
 
 // A database hit has per-100g figures but no idea how much you ate, so it
 // stages at 100 g — a starting point to adjust, not a guess at your meal.
+// A basic food that knows a natural serving stages at one of those
+// instead: "1 plátano" is a better opening guess than 100 g of banana,
+// and the grams underneath stay authoritative either way.
 export function plateItemFromSearchHit(hit: SearchHit): PlateItem {
+  const grams = hit.gramsPerUnit && hit.gramsPerUnit > 0 ? hit.gramsPerUnit : DEFAULT_GRAMS;
   const basis: FoodItemBasis = {
     name: hit.name,
-    grams: DEFAULT_GRAMS,
+    grams,
     kcalPer100: hit.kcalPer100 ?? 0,
     proteinPer100: hit.proteinPer100 ?? 0,
     fatPer100: hit.fatPer100 ?? 0,
-    carbsPer100: hit.carbsPer100 ?? 0
+    carbsPer100: hit.carbsPer100 ?? 0,
+    unitName: hit.unitName,
+    gramsPerUnit: hit.gramsPerUnit
   };
   const scaled = scaleFoodItem(basis);
-  const factor = DEFAULT_GRAMS / 100;
+  const factor = grams / 100;
   return {
     id: newId(),
     name: hit.name,

@@ -18,6 +18,7 @@ import { foldText } from "../../../shared/lib/text";
 import { gramsFromUnits, hasUnit, pluralize, unitsFromGrams } from "../../../shared/lib/quantity";
 import { useAppStore } from "../../../shared/store";
 import { buildFoodCandidates, searchFoodCandidates } from "../foodCandidates";
+import { basicToSearchHit, searchBasicFoods } from "../basicFoods";
 import {
   plateItemFromCandidate,
   plateItemFromSearchHit,
@@ -107,6 +108,12 @@ export function AddFoodModal({
   const candidates = buildFoodCandidates(days, favorites, recipes, hour);
   const trimmed = query.trim();
   const results = searchFoodCandidates(candidates, query).slice(0, trimmed ? 8 : 6);
+  // Basics you already log are dropped: your own entry carries the
+  // quantity you actually eat, so showing a generic 100 g twin of it
+  // would be the worse of two rows.
+  const known = new Set(results.map((c) => foldText(c.name)));
+  const basics = searchBasicFoods(trimmed).filter((b) => !known.has(foldText(b.name)));
+
   const canCreate =
     trimmed.length > 0 && !candidates.some((c) => foldText(c.name) === foldText(trimmed));
 
@@ -348,13 +355,52 @@ export function AddFoodModal({
         )}
       </div>
 
+      {/* Generic foods, between your own history and the barcode
+          database — the order MacroFactor uses, and for the same reason:
+          branded products are normally reached by scanning, so they are
+          the last thing a typed query should lead with. These come from
+          the bundle, so they answer instantly and offline. */}
+      {basics.length > 0 && (
+        <div className="quick-section">
+          <div className="quick-label-row">
+            <div className="quick-label">Básicos</div>
+          </div>
+          <div className="log-list">
+            {basics.map((b) => {
+              const hit = basicToSearchHit(b);
+              return (
+                <div className="row" key={b.id}>
+                  <span className="row-emoji" aria-hidden="true">{foodEmoji(b.name)}</span>
+                  <button
+                    type="button"
+                    className="row-main"
+                    onClick={() => pick(plateItemFromSearchHit(hit))}
+                  >
+                    <span className="row-name">{b.name}</span>
+                    <span className="row-qty">{Math.round(b.kcal)} kcal / 100 g</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="row-add"
+                    aria-label={`Añadir ${b.name} al plato`}
+                    onClick={() => stage(plateItemFromSearchHit(hit))}
+                  >
+                    <PlusIcon />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Asked for rather than automatic: the common case is re-logging
           something you already eat, and that shouldn't wait on a network
           round-trip — or fail when you're offline in a supermarket. */}
       {trimmed.length > 0 && (
         <div className="quick-section">
           <div className="quick-label-row">
-            <div className="quick-label">Open Food Facts</div>
+            <div className="quick-label">Productos de marca</div>
             {offResults === null && (
               <button type="button" className="link-btn" onClick={() => void runOffSearch()}>
                 {offSearching ? "Buscando…" : "Buscar"}

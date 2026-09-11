@@ -112,6 +112,24 @@ after midnight or "today" reads empty.
 - Volume counts bodyweight as resistance (`shared/lib/bodyweight.ts`), because
   plain weight × reps reads zero for calisthenics. Unrecognised exercise names
   contribute 0 rather than a guess; the share is overridable per exercise.
+- Food search has two tiers, and the order is deliberate: `Básicos`
+  (`features/nutrition/basicFoods.ts`, ~185 Spanish staples in the bundle)
+  above `Productos de marca` (Open Food Facts), because OFF is a *barcode*
+  database — branded items are normally reached by scanning, and OFF
+  simply does not know what a banana is: "plátano" returns six entries and
+  every one has an empty `nutriments`.
+- OFF's only browser-reachable search is the legacy `cgi/search.pl`. The
+  newer `search.openfoodfacts.org` ranks far better and tolerates typos,
+  but sends **no `Access-Control-Allow-Origin`**, so `fetch` cannot touch
+  it; `/api/v2/search` does send CORS but ignores `search_terms` and
+  returns the whole database. Legacy has no relevance model — "azucar"
+  returned twelve products advertising *no* sugar — so results are
+  re-ranked on arrival and negations ("sin", "0 %", "50 % menos") sink.
+  It is also genuinely flaky, answering with an HTML error page perhaps
+  half the time, hence the retry loop. Re-test if OFF ever adds CORS.
+- User-Agent is a forbidden header in `fetch`; OFF asking API clients to
+  identify themselves is a curl-side concern only.
+
 - Progress photos live in IndexedDB (`plate-photos` → `photos`), never
   localStorage, and ride inside the backup JSON as data URLs — updating the
   app means reinstalling it, so an export without them would lose them.

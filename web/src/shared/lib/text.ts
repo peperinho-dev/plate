@@ -20,3 +20,16 @@ export function matchRank(name: string, foldedQuery: string): number | null {
   if (folded.includes(foldedQuery)) return 1;
   return null;
 }
+
+// Three bands instead of two: a query that starts the name, one that
+// starts a *word* inside it, then anything else. Without the middle band
+// "pollo" led with "Repollo" — a mid-word substring, shorter than every
+// chicken, and so first on any length tiebreak.
+export function wordMatchRank(name: string, foldedQuery: string): number | null {
+  if (!foldedQuery) return 0;
+  const folded = foldText(name);
+  if (folded.startsWith(foldedQuery)) return 0;
+  if (!folded.includes(foldedQuery)) return null;
+  const escaped = foldedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}`).test(folded) ? 1 : 2;
+}

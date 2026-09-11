@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { ScanIcon, StarIcon } from "../../../shared/components/Icons";
-import { searchFoods, type SearchHit } from "../../../shared/lib/foodLookup";
+import { type SearchHit } from "../../../shared/lib/foodLookup";
+import { searchFoodsWithBasics } from "../basicFoods";
 import { deriveEntry, type EntryFormState } from "../entryForm";
 
 interface EntryModalProps {
@@ -51,7 +52,7 @@ export function EntryModal({
     const seq = ++requestSeq.current;
     setSearching(true);
     try {
-      const hits = await searchFoods(term);
+      const hits = await searchFoodsWithBasics(term);
       if (seq === requestSeq.current) setResults(hits);
     } catch {
       if (seq === requestSeq.current) setResults([]);
