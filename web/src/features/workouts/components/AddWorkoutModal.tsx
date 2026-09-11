@@ -16,7 +16,8 @@ import {XIcon} from "../../../shared/components/Icons";
 import { useAppStore } from "../../../shared/store";
 import { computeExerciseCatalog, searchCatalog } from "../../../shared/lib/workouts";
 import { foldText } from "../../../shared/lib/text";
-import { suggestMovements, shareFromName } from "../../../shared/lib/bodyweight";
+import { suggestMovements, shareFromName, gateLabel } from "../../../shared/lib/bodyweight";
+import { BodyweightChip } from "./BodyweightChip";
 import { relativeDayLabel } from "../../../shared/lib/format";
 import type { Exercise, Routine, TimerPreset } from "../../../shared/store/types";
 import { removeExercise, removeRoutine, startRoutine } from "../actions";
@@ -127,14 +128,29 @@ export function AddWorkoutModal({
         )}
 
         <div className="log-list">
+          {/* Its own labelled block, because this is the one list where
+              picking a row is how you *guarantee* the movement will be
+              weighed. It used to render as three more indistinguishable
+              rows whose only tell was a line of faint grey text, and it
+              was missed entirely. The share is a chip now, the way the
+              reference app shows it. */}
+          {suggestions.length > 0 && (
+            <div className="quick-label-row">
+              <div className="quick-label">Movimientos reconocidos</div>
+            </div>
+          )}
           {suggestions.map((m) => (
             <div className="row" key={`known-${m.name}`}>
               <button type="button" className="row-main" onClick={() => add(m.name)}>
-                <span className="row-name">{m.name}</span>
+                <span className="row-name">
+                  {m.name}
+                  {m.equipment === "bar" && <span className="row-badge">barra</span>}
+                </span>
                 <span className="row-qty">
-                  Cuenta como {Math.round(m.share * 100)} % del peso corporal
+                  {m.note ?? (gateLabel(m) ? `Objetivo del paso: ${gateLabel(m)}` : "Cuenta peso corporal")}
                 </span>
               </button>
+              <BodyweightChip share={m.share} />
             </div>
           ))}
           {canCreate && (
@@ -143,10 +159,11 @@ export function AddWorkoutModal({
                 <span className="row-name">Crear “{trimmed}”</span>
                 <span className="row-qty">
                   {typedShare > 0
-                    ? `Cuenta como ${Math.round(typedShare * 100)} % del peso corporal`
+                    ? "Se reconoce: contará peso corporal"
                     : "No contará peso corporal en el volumen"}
                 </span>
               </button>
+              <BodyweightChip share={typedShare} />
             </div>
           )}
           {results.map((e) => (
@@ -159,6 +176,9 @@ export function AddWorkoutModal({
                     : "Sin series previas"}
                 </span>
               </button>
+              {/* Also on exercises you have already logged: "will this
+                  count?" is the same question whether the name is new. */}
+              <BodyweightChip share={shareFromName(e.name)} />
             </div>
           ))}
           {!canCreate && results.length === 0 && (

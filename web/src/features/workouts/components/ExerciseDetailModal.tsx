@@ -16,6 +16,13 @@ import {
   formatSet,
   isHoldSet, REST_CHOICES } from "../../../shared/lib/workouts";
 import { addSet, setExerciseRest } from "../actions";
+import {
+  clearsGate,
+  gateLabel,
+  movementFromName,
+  nextInChain
+} from "../../../shared/lib/bodyweight";
+import { foldText } from "../../../shared/lib/text";
 import { SetTable } from "./SetTable";
 import { useRestTimer } from "../useRestTimer";
 
@@ -68,6 +75,23 @@ export function ExerciseDetailModal({
 
   const lastPerf = findLastExerciseSets(workouts, exercise.name, dayKey);
   const pr = findExercisePR(workouts, exercise.name);
+
+  // The next step in this movement's chain, and whether it is unlocked.
+  // Every session ever logged under this name is checked, not just the
+  // last: clearing the gate once is what earns the step.
+  const progression = (() => {
+    const movement = movementFromName(exercise.name);
+    if (!movement) return null;
+    const next = nextInChain(movement);
+    if (!next) return null;
+    const folded = foldText(exercise.name);
+    const ready = Object.values(workouts).some((day) =>
+      day.exercises.some(
+        (ex) => foldText(ex.name) === folded && clearsGate(movement, ex.sets)
+      )
+    );
+    return { next, ready, gate: gateLabel(movement) };
+  })();
   // Whatever occupied this slot last session — index N of the previous
   // session lines up with the set about to be added.
   const suggestion = lastPerf?.ex.sets[exercise.sets.length] ?? null;
@@ -95,6 +119,29 @@ export function ExerciseDetailModal({
         </p>
       )}
       {pr && <p className="modal-hint modal-hint--pr">Mejor marca: {formatSet(pr)}</p>}
+
+      {/* Where this movement sits in its progression.
+          A calisthenics log has no weight to add, so the way forward is a
+          harder variant — and the question is always "when". The step
+          carries its own gate, and having cleared it once is enough:
+          earning a step is not something a bad session takes back. */}
+      {progression && (
+        <p
+          className={
+            "modal-hint modal-hint--next" + (progression.ready ? " is-ready" : "")
+          }
+        >
+          {progression.ready ? "Listo para " : "Siguiente paso: "}
+          <strong>{progression.next.name}</strong>
+          {progression.ready
+            ? progression.next.note
+              ? ` — ${progression.next.note}`
+              : ""
+            : progression.gate
+              ? ` — cuando hagas ${progression.gate}`
+              : ""}
+        </p>
+      )}
 
       <div className="set-mode">
         <div className="segmented segmented--compact">

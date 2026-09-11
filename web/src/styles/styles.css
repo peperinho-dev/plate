@@ -3626,3 +3626,35 @@ button:focus-visible, input:focus-visible {
    --ink-faint, which measures 2.6:1 in dark and 2.1:1 in light — under the
    floor for any text, and indefensible for a button. */
 .rest-timer-skip { color: var(--ink-soft); }
+
+/* Bodyweight share, as a chip beside the exercise rather than a line of
+   grey text under it. Accent-tinted because it is a positive fact about
+   the movement; the unknown case is neutral and says "—" instead of
+   hiding, since "this will contribute nothing to your volume" is the
+   case most worth noticing before you add it. */
+.bw-chip {
+  flex-shrink: 0;
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.bw-chip.is-none {
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+}
+/* The next step in a progression. Muted while it is still out of reach —
+   it is information, not a nag — and accent-lit once the gate is cleared,
+   which is the one moment it is worth acting on. */
+.modal-hint--next { color: var(--ink-soft); }
+.modal-hint--next.is-ready {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
