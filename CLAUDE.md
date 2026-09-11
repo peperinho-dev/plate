@@ -112,6 +112,14 @@ after midnight or "today" reads empty.
 - Volume counts bodyweight as resistance (`shared/lib/bodyweight.ts`), because
   plain weight × reps reads zero for calisthenics. Unrecognised exercise names
   contribute 0 rather than a guess; the share is overridable per exercise.
+- A `::before` with `position: absolute; inset: 0` needs its host to be
+  `position: relative`, and the week strip had no positioned ancestor at
+  all — so all seven day rings resolved against the viewport and painted
+  371x808 rounded rectangles over the whole Comida tab. What looked like
+  a working ring was the UA's own `2px outset white` on the `<button>`,
+  never reset, which is also why every day read as equally full. Both
+  fixed; nothing else in the app carries an unreset UA control border.
+
 - Food search has two tiers, and the order is deliberate: `Básicos`
   (`features/nutrition/basicFoods.ts`, ~185 Spanish staples in the bundle)
   above `Productos de marca` (Open Food Facts), because OFF is a *barcode*

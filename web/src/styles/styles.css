@@ -286,6 +286,14 @@ button {
 
 .week-strip-day {
   flex: 1;
+  /* The ring below is `position: absolute; inset: 0`, so this has to be
+     the containing block. Without it the strip had no positioned ancestor
+     at all and every ring resolved against the viewport instead — seven
+     371x808 rounded rectangles stacked on the whole screen, which is the
+     faint outline that kept appearing around the Comida tab. The rings
+     you could see around each day were this chip's own edge; the real
+     ring has never been drawn where it belongs. */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -296,6 +304,12 @@ button {
      `border-radius: inherit` — so the shape stays a free choice instead of
      something the ring dictates. */
   border-radius: 14px;
+  /* The UA's own `2px outset white` on a <button>, never reset. That edge
+     is what has been reading as the day ring all along — which is why the
+     ring looked like it worked while it was actually painting the whole
+     viewport, and why every day appeared equally "full" regardless of
+     what was logged. */
+  border: none;
   background: var(--surface);
   /* No --shadow here: in dark mode that token is an inset hairline, which
      drew a third edge a pixel inside the ring. The ring is this chip's
