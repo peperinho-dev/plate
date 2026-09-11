@@ -138,6 +138,17 @@ after midnight or "today" reads empty.
 - User-Agent is a forbidden header in `fetch`; OFF asking API clients to
   identify themselves is a curl-side concern only.
 
+- Only schema keys may reach the store. A backup file carries `photos`
+  next to the state, and `migrateData` used to pass unknown keys straight
+  through, so importing wrote every photo into localStorage as base64
+  (616 KB of state became 1217 KB with three photos). Safari caps
+  localStorage near 5 MB, setItem then throws, and persist swallows it —
+  the app stops saving without saying so. Two guards now: `migrateData`
+  drops non-schema keys, and persist has a `partialize`. Both read
+  `STATE_KEYS`, derived from `defaultState()` so it cannot drift — if you
+  add a field to `AppState`, add it to `defaultState()` or it will never
+  be persisted.
+
 - Progress photos live in IndexedDB (`plate-photos` → `photos`), never
   localStorage, and ride inside the backup JSON as data URLs — updating the
   app means reinstalling it, so an export without them would lose them.
