@@ -117,7 +117,12 @@ export function AddFoodModal({
   consumedRef.current = onPendingHitConsumed;
   useEffect(() => {
     if (!pendingHit) return;
-    setPlate((p) => [...p, plateItemFromSearchHit(pendingHit)]);
+    // Through the portion sheet, not straight onto the plate. A scanned
+    // product arrived at a flat 100 g with no chance to say otherwise,
+    // which is the same complaint as tapping a search result — and it is
+    // where it stings most, since you are usually holding the packet and
+    // know exactly how much of it you are about to eat.
+    setPortionItem(plateItemFromSearchHit(pendingHit));
     consumedRef.current();
   }, [pendingHit]);
 

@@ -27,6 +27,8 @@ export const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128",
 
 export interface ScanControls {
   stop: () => void;
+  /** Turns the rear light on or off; null when the device has none. */
+  setTorch: ((on: boolean) => Promise<void>) | null;
 }
 
 export interface StartScanOptions {
@@ -42,10 +44,43 @@ export interface StartScanOptions {
 export async function startScan({ video, onResult, onError }: StartScanOptions): Promise<ScanControls> {
   const detector = new BarcodeDetector({ formats: [...BARCODE_FORMATS] });
 
+  // Resolution is the whole ballgame. Asking only for the rear camera
+  // lets the browser pick, and browsers pick 640x480 — at which an EAN-13
+  // printed 25mm wide across a curved packet is a handful of pixels per
+  // bar and simply does not decode. Asking for 1080p is honoured on every
+  // phone made in the last decade, and `ideal` means a device that can't
+  // manage it still gets a camera rather than an error.
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: "environment" } },
+    video: {
+      facingMode: { ideal: "environment" },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    },
     audio: false
   });
+
+  // Continuous autofocus, where the browser exposes it. Chrome on Android
+  // otherwise locks focus at whatever it had when the stream opened, which
+  // is the difference between reading a barcode held 10cm away and never
+  // reading it at all. Unsupported keys throw rather than being ignored,
+  // so this is attempted separately and allowed to fail.
+  const [track] = stream.getVideoTracks();
+  try {
+    await track.applyConstraints({
+      advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet]
+    });
+  } catch {
+    // iOS focuses continuously on its own and rejects the constraint.
+  }
+
+  // Torch, for the inside of a supermarket aisle. Reported per device, so
+  // the button can be hidden entirely when there is nothing to toggle.
+  const capabilities = track.getCapabilities?.() as { torch?: boolean } | undefined;
+  const setTorch = capabilities?.torch
+    ? async (on: boolean) => {
+        await track.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] });
+      }
+    : null;
 
   video.srcObject = stream;
   video.setAttribute("playsinline", "true"); // iOS refuses inline playback without this
@@ -60,6 +95,9 @@ export async function startScan({ video, onResult, onError }: StartScanOptions):
     stopped = true;
     cancelAnimationFrame(rafId);
     clearTimeout(timeoutId);
+    // Torch off before the track dies, or some Android devices leave the
+    // light on until the camera is next opened.
+    if (setTorch) void setTorch(false).catch(() => {});
     stream.getTracks().forEach((t) => t.stop());
     video.srcObject = null;
   };
@@ -68,14 +106,24 @@ export async function startScan({ video, onResult, onError }: StartScanOptions):
   // real gain in hit rate.
   const SCAN_INTERVAL_MS = 100;
 
+  // The same value has to come back twice before it is believed. EAN-13
+  // carries a check digit, so a misread is unlikely rather than
+  // impossible — and the cost of the second frame is 100ms, against a
+  // wrong product silently logged.
+  let lastValue: string | null = null;
+
   const tick = async () => {
     if (stopped) return;
     try {
       if (video.readyState >= 2) {
         const found = await detector.detect(video);
-        if (!stopped && found.length > 0 && found[0].rawValue) {
-          onResult(found[0].rawValue);
-          return; // caller decides whether to stop; don't keep firing
+        const value = found[0]?.rawValue;
+        if (!stopped && value) {
+          if (value === lastValue) {
+            onResult(value);
+            return; // caller decides whether to stop; don't keep firing
+          }
+          lastValue = value;
         }
       }
     } catch (err) {
@@ -92,5 +140,5 @@ export async function startScan({ video, onResult, onError }: StartScanOptions):
 
   rafId = requestAnimationFrame(tick);
 
-  return { stop };
+  return { stop, setTorch };
 }

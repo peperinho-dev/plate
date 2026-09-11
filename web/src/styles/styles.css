@@ -3715,3 +3715,11 @@ button:focus-visible, input:focus-visible {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+/* Scanner actions sit on one line: the light where a thumb already is,
+   the manual escape hatch beside it. */
+.scanner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

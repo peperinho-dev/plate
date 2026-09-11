@@ -17,6 +17,10 @@ export function ScanModal({ open, onClose, onDetected }: ScanModalProps) {
   const [hint, setHint] = useState("Apunta al código de barras del producto.");
   const [manualOpen, setManualOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
+  // Only offered when the device actually reports a light, so the button
+  // never appears and then does nothing.
+  const [hasTorch, setHasTorch] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   // Held in a ref so the camera effect below depends only on `open`.
   // Depending on the callback itself would restart the camera on every
@@ -28,7 +32,9 @@ export function ScanModal({ open, onClose, onDetected }: ScanModalProps) {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setHint("Apunta al código de barras del producto.");
+    setHint("Apunta al código de barras. Muévete un poco: le ayuda a enfocar.");
+    setHasTorch(false);
+    setTorchOn(false);
 
     (async () => {
       try {
@@ -44,7 +50,10 @@ export function ScanModal({ open, onClose, onDetected }: ScanModalProps) {
         // The modal may have closed while getUserMedia was still pending;
         // if so, shut the camera down rather than leaking the track.
         if (cancelled) controls.stop();
-        else controlsRef.current = controls;
+        else {
+          controlsRef.current = controls;
+          setHasTorch(!!controls.setTorch);
+        }
       } catch (err) {
         if (cancelled) return;
         const name = (err as { name?: string })?.name;
@@ -71,9 +80,24 @@ export function ScanModal({ open, onClose, onDetected }: ScanModalProps) {
         <div className="scanner-frame" aria-hidden="true" />
       </div>
       <p className="scanner-hint">{hint}</p>
-      <button type="button" className="link-btn" onClick={() => setManualOpen((v) => !v)}>
-        Introducir código a mano
-      </button>
+      <div className="scanner-actions">
+        {hasTorch && (
+          <button
+            type="button"
+            className={"link-btn" + (torchOn ? "" : " link-btn--muted")}
+            onClick={() => {
+              const next = !torchOn;
+              setTorchOn(next);
+              void controlsRef.current?.setTorch?.(next).catch(() => setTorchOn(!next));
+            }}
+          >
+            {torchOn ? "Apagar luz" : "Encender luz"}
+          </button>
+        )}
+        <button type="button" className="link-btn" onClick={() => setManualOpen((v) => !v)}>
+          Introducir código a mano
+        </button>
+      </div>
       {manualOpen && (
         <form
           className="form"
