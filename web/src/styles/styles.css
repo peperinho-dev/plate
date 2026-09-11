@@ -1223,6 +1223,9 @@ button.row-main:active { opacity: 0.55; }
 }
 /* When the best set happened — real information, in the space the bar
    was using to say nothing. */
+/* A record set in the last month reads in the accent — that is what
+   "recientes" means now that there is no period control to mean it. */
+.record-date.is-recent { color: var(--accent-ink); font-weight: 700; }
 .record-date {
   font-size: var(--fs-caption);
   color: var(--ink-faint);

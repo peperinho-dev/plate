@@ -24,7 +24,6 @@ import { DailyNutritionWidget } from "./widgets/DailyNutritionWidget";
 import { WeeklyWorkoutsWidget } from "./widgets/WeeklyWorkoutsWidget";
 import {
   computeExerciseRecords,
-  getAllDays,
   getRecentDays
 } from "../../shared/lib/analytics";
 import { dayCalorieTotal, hasWorkoutSession } from "../../shared/lib/nutrition";
@@ -41,7 +40,7 @@ const ALL_CARDS = ["records", "streak"] as const;
 type CardId = (typeof ALL_CARDS)[number];
 
 const CARD_TITLES: Record<CardId, string> = {
-  records: "Récords recientes",
+  records: "Récords",
   streak: "Constancia"
 };
 
@@ -52,7 +51,6 @@ export function AnalyticsView() {
   const layout = useAppStore((s) => s.analyticsLayout);
 
 
-  const [period, setPeriod] = useState<number | "all">(7);
   const [editing, setEditing] = useState(false);
   const [recordsMode, setRecordsMode] = useState<"reps" | "hold">("reps");
 
@@ -60,8 +58,9 @@ export function AnalyticsView() {
   // starts on the handle would be swallowed as a drag.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const periodDays = period === "all" ? getAllDays(days, weightLog) : getRecentDays(days, period);
-  const dateKeys = new Set(periodDays.map((d) => d.date));
+  // Records are all-time, so they read every day that has a session
+  // rather than a window.
+  const allWorkoutKeys = new Set(Object.keys(workouts));
 
   // The Análisis tiles get a fixed thirty days rather than the period
   // above. That control sits under the "Historial" heading and governs
@@ -128,7 +127,12 @@ export function AnalyticsView() {
       }
 
       case "records": {
-        const records = computeExerciseRecords(workouts, dateKeys, recordsMode);
+        // All-time, always. A record filtered to seven days is not a
+        // record — it is your best set this week, which for most movements
+        // is just whatever you did last session. The window that makes
+        // this card mean "récord" is the only one worth offering.
+        const records = computeExerciseRecords(workouts, allWorkoutKeys, recordsMode);
+        const recentCutoff = todayKey(-30);
         return (
           <>
             <div className="segmented segmented--compact">
@@ -148,13 +152,18 @@ export function AnalyticsView() {
               </button>
             </div>
             {records.length === 0 ? (
-              <p className="empty-state">Sin series de este tipo en este periodo.</p>
+              <p className="empty-state">Sin series de este tipo todavía.</p>
             ) : (
               <div className="record-list">
                 {records.map((r) => (
                   <div className="record-row" key={r.name}>
                     <span className="record-name">{r.name}</span>
-                    <span className="record-date">{formatShortDate(r.date)}</span>
+                    {/* "Recientes" earns its meaning here rather than from
+                        a filter: the date is always shown, and one set in
+                        the last month is flagged. */}
+                    <span className={"record-date" + (r.date >= recentCutoff ? " is-recent" : "")}>
+                      {formatShortDate(r.date)}
+                    </span>
                     <span className="record-value">
                       {recordsMode === "hold" ? formatDuration(r.value) : `${r.value} reps`}
                     </span>
@@ -200,23 +209,11 @@ export function AnalyticsView() {
         </div>
         <InsightsGrid weightWithEma={insightEma} />
 
-        {/* The period toggle belongs to the history below, not to the
-            screen, so it sits on that section's header where what it
-            changes is visible. */}
+        {/* No period control: after the tiles were pinned to thirty days
+            this governed exactly one card, and that card is records, which
+            are all-time by definition. Constancia states its own window. */}
         <div className="section-head">
           <span className="section-title">Historial</span>
-          <div className="segmented segmented--compact">
-            {([7, 30, "all"] as const).map((p) => (
-              <button
-                key={String(p)}
-                type="button"
-                className={"segmented-btn" + (period === p ? " active" : "")}
-                onClick={() => setPeriod(p)}
-              >
-                {p === "all" ? "Todo" : `${p} d`}
-              </button>
-            ))}
-          </div>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
