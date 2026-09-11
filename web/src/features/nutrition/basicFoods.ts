@@ -205,7 +205,7 @@ const ROWS: Row[] = [
   ["Mermelada", 278, 0.4, 0.1, 69, 1, 60, 32],
   ["Chocolate negro 70%", 546, 7.8, 31, 61, 7, 48, 24, "onza", 10],
   ["Chocolate con leche", 535, 7.6, 30, 59, 3.4, 52, 79, "onza", 10],
-  ["Cacao en polvo desgrasado", 228, 19.6, 13.7, 57.9, 33, 1.8, 21],
+  ["Cacao en polvo desgrasado", 355, 20.5, 10.9, 17.7, 31.5, 1.2, 20],
   ["Crema de cacao y avellanas", 539, 6, 31, 57, 5, 56, 41],
   ["Galletas María", 430, 7, 10, 76, 2.5, 22, 500, "galleta", 7],
   ["Helado de vainilla", 207, 3.5, 11, 23.6, 0.7, 21, 80],

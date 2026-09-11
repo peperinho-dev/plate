@@ -36,6 +36,12 @@ export function defaultWorkoutGoal(): WorkoutGoal {
   return { weeklySessions: 4, restSeconds: 90 };
 }
 
+// The keys that belong in the store, and therefore the only keys that may
+// be persisted. Derived from defaultState() below so the two cannot drift.
+export const STATE_KEYS = Object.keys(
+  (() => defaultState())()
+) as (keyof AppState)[];
+
 export function defaultState(): AppState {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -165,6 +171,18 @@ export function migrateData(parsed: unknown): AppState {
     ...r,
     createdAt: typeof r.createdAt === "number" ? r.createdAt : Date.now()
   }));
+  // Anything not in the schema is dropped. A backup file carries `photos`
+  // alongside the state — they live in IndexedDB and are restored there —
+  // and importing used to hand that array straight to the store, which
+  // persist then wrote into localStorage as base64. Measured: 616 KB of
+  // state became 1217 KB after importing a backup with three photos, on
+  // top of the copies already in IndexedDB. Safari caps localStorage at
+  // about 5 MB per origin, so a real set of progress photos overflows it,
+  // setItem throws, persist swallows the error, and the app silently
+  // stops saving anything.
+  for (const key of Object.keys(data)) {
+    if (!(STATE_KEYS as string[]).includes(key)) delete data[key];
+  }
   return data as AppState;
 }
 

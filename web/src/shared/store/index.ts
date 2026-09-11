@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AppState } from "./types";
-import { STORAGE_KEY, SCHEMA_VERSION, loadInitialState, migrateData } from "./schema";
+import { STORAGE_KEY, SCHEMA_VERSION, STATE_KEYS, loadInitialState, migrateData } from "./schema";
 import { recalculatedTargets } from "../lib/targets";
 
 // migrateData() is the ONE place schema migration happens. It has to run
@@ -17,7 +17,15 @@ export const useAppStore = create<AppState>()(
     {
       name: STORAGE_KEY,
       version: SCHEMA_VERSION,
-      merge: (persistedState) => migrateData(persistedState)
+      merge: (persistedState) => migrateData(persistedState),
+      // Second guard, independent of migrateData: only schema keys are
+      // ever written. localStorage is the one store with a hard per-origin
+      // cap (~5 MB on Safari), and a single stray key holding image data
+      // is enough to break every save from then on, silently.
+      partialize: (state) =>
+        Object.fromEntries(
+          STATE_KEYS.filter((k) => k in state).map((k) => [k, state[k]])
+        ) as unknown as AppState
     }
   )
 );
