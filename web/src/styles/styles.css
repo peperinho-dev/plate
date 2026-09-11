@@ -40,7 +40,12 @@
   --fs-body-lg: 15px;    /* primary row names and amounts, buttons */
   --fs-heading: 17px;    /* section titles, modal headers, day nav */
   --fs-title: 24px;      /* page titles */
-  --fs-display: 36px;    /* the one hero number on a screen */
+  /* 40, not 36: both reference apps set their hero far larger relative to
+     everything else (WHOOP 76pt, Oura 52pt) because size is how a screen
+     says "this is the number you came for". Weight drops to 700 at the
+     same time — large and light reads as considered, large and heavy
+     reads as shouting. */
+  --fs-display: 40px;    /* the one hero number on a screen */
   /* The full-screen rest timer is the sole exception: it is a single
      number on an otherwise empty screen, meant to be read from across
      the room. Not a general step — do not reuse it. */
@@ -153,6 +158,17 @@ button {
   padding: 8px 12px max(8px, env(safe-area-inset-bottom));
   z-index: 40;
 }
+/* Content scrolls underneath the tab bar, so this is the one surface in
+   the app where translucency carries information — it shows there is more
+   log below. Gated on @supports because without the blur a see-through
+   bar over a scrolling list is just unreadable. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .tabbar {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+  }
+}
 
 .tab-btn {
   flex: 1;
@@ -179,7 +195,13 @@ button {
   transition: background 0.2s ease, color 0.2s ease, transform 0.15s cubic-bezier(.2,.8,.2,1);
 }
 .tab-btn.active { color: var(--accent-ink); }
-.tab-btn.active .tab-icon { background: var(--accent-soft); }
+/* Lit rather than lifted. A drop shadow renders as nothing on the dark
+   ground; a glow in the accent is the cue that does read, and it is the
+   one piece of the neon idiom worth taking. */
+.tab-btn.active .tab-icon {
+  background: var(--accent-soft);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 32%, transparent);
+}
 .tab-btn:active .tab-icon { transform: scale(0.88); }
 
 /* ---------- Adaptive banner ---------- */
@@ -714,8 +736,8 @@ button.row-main:active { opacity: 0.55; }
 
 .totals-value {
   font-size: var(--fs-display);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2472,8 +2494,8 @@ button:focus-visible, input:focus-visible {
 .dn-hero { display: flex; flex-direction: column; }
 .dn-hero-value {
   font-size: var(--fs-display);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
