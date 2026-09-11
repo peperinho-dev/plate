@@ -28,22 +28,28 @@ export function groupEntriesByHour(entries: Entry[]): HourGroup[] {
 }
 
 /**
- * The whole day, 00:00 to 23:00.
+ * The day as rows, 00:00 through 23:00 minus the small hours.
  *
  * This used to run from the first logged meal to the current hour, which
  * quietly made some hours unreachable: log breakfast at 08:00 and there
  * was no 07:00 row to tap, and an untouched day drew no timeline at all.
- * Logging at an hour you had skipped meant there was nowhere to put it.
+ * So every hour became a row — and then 01:00 to 05:00 were five rows of
+ * nothing at the top of every single day, which is the kind of wasted
+ * space the rest of this app has been stripped of.
  *
- * Every hour is a row now. Empty ones are cheap — a label and a + — and
- * the point of the timeline is that any hour is one tap away, which only
- * holds if every hour is on it.
+ * They are skipped, but never when they hold food: an hour with entries
+ * is always drawn, whatever time it is. Hiding a row is a layout choice;
+ * hiding something you logged would be a lie.
  */
+const QUIET_HOURS = new Set([1, 2, 3, 4, 5]);
+
 export function timelineHours(entries: Entry[]): HourGroup[] {
   const byHour = new Map(groupEntriesByHour(entries).map((g) => [g.hour, g]));
   const out: HourGroup[] = [];
   for (let h = 0; h < 24; h++) {
-    out.push(byHour.get(h) ?? { hour: h, entries: [], total: 0, macros: sumMacros([]) });
+    const group = byHour.get(h);
+    if (!group && QUIET_HOURS.has(h)) continue;
+    out.push(group ?? { hour: h, entries: [], total: 0, macros: sumMacros([]) });
   }
   return out;
 }

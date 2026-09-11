@@ -3681,3 +3681,37 @@ button:focus-visible, input:focus-visible {
   transition: transform 0.12s cubic-bezier(.2,.8,.2,1);
 }
 .hour-picker-chip:active { transform: scale(0.92); }
+
+/* The portion sheet: the amount, and what that amount actually comes to.
+   The figures lead because they are the reason you opened it — the input
+   below is how you move them. */
+.portion-totals {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+.portion-kcal {
+  font-size: var(--fs-title);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.portion-macros {
+  display: flex;
+  gap: 10px;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+/* Two commitments side by side: keep building, or finish. Equal width so
+   neither reads as the accident. */
+.portion-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

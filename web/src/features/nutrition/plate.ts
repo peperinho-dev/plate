@@ -44,6 +44,10 @@ function microsPer100From(item: {
 // Stages something from your own data at the quantity you last had it —
 // the whole point of remembering the basis.
 export function plateItemFromCandidate(c: FoodCandidate): PlateItem {
+  // Recipes are adjusted by expanding them, so they stay basis-less on
+  // purpose; everything else gets one, reconstructed from its label when
+  // the entry it came from predates the field.
+  const basis = c.recipe ? undefined : c.basis ?? basisFromLogged(c);
   return {
     id: newId(),
     name: c.name,
@@ -55,8 +59,8 @@ export function plateItemFromCandidate(c: FoodCandidate): PlateItem {
     fiber: c.fiber,
     sugar: c.sugar,
     sodium: c.sodium,
-    basis: c.basis,
-    microsPer100: c.basis ? microsPer100From(c, c.basis.grams) : undefined,
+    basis,
+    microsPer100: basis ? microsPer100From(c, basis.grams) : undefined,
     items: c.recipe ? c.recipe.items.map((i) => ({ ...i })) : undefined,
     sourceRecipeId: c.recipe?.id
   };
@@ -197,24 +201,41 @@ export function plateToRecipeItems(plate: PlateItem[]): FoodItemBasis[] {
       ? item.items.map((i) => ({ ...i }))
       : item.basis
         ? [{ ...item.basis }]
-        : [basisWithoutBasis(item)]
+        : [basisFromLogged(item)]
   );
 }
 
 /**
- * An ingredient for a plate item that has no basis of its own.
+ * A basis reconstructed for a plate item that never had one.
  *
- * `basis` is optional and genuinely absent on a lot of real data: the
- * vanilla app never wrote it, so every entry imported from there has only
- * a label like "40 g". Where that label names grams, it is used — the
- * recipe then holds the real weight and per-100g figures derived from it.
- * Where it doesn't ("1 plato"), the logged amount becomes the 100 g
- * reference, which is the same fallback migrateData uses for pre-grams
- * recipes. Either way the totals are preserved exactly; only the unit the
- * recipe reads in differs.
+ * `basis` is optional and genuinely absent from most real data: the
+ * vanilla app never wrote it, so every entry carried over from there has
+ * only a label — "40 g", "2 rebanadas", "1 plato". Without a basis there
+ * is nothing to scale against, which meant those foods could not have
+ * their amount adjusted at all: not on the plate, not in the portion
+ * sheet, not as a recipe ingredient. For a log with years of history in
+ * it, that is most of the food.
+ *
+ * The label is enough to rebuild one. "40 g" gives the real weight.
+ * "2 rebanadas" gives a unit: the logged amount becomes the 100 g
+ * reference and one rebanada is half of it, so the food reads and scales
+ * in rebanadas. Anything unparseable falls back to the logged amount as
+ * 100 g — the same convention migrateData uses for pre-grams recipes.
+ *
+ * Totals are identical in every branch. Only the unit the amount reads in
+ * differs, and reading in the unit you logged beats reading in grams that
+ * were never measured.
  */
-function basisWithoutBasis(item: PlateItem): FoodItemBasis {
-  const grams = gramsFromLabel(item.qtyLabel) ?? 100;
+export function basisFromLogged(item: {
+  name: string;
+  qtyLabel: string;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+}): FoodItemBasis {
+  const parsed = parseQtyLabel(item.qtyLabel);
+  const grams = parsed?.unit ? 100 : parsed?.grams ?? 100;
   const per100 = 100 / grams;
   return {
     name: item.name,
@@ -222,14 +243,38 @@ function basisWithoutBasis(item: PlateItem): FoodItemBasis {
     kcalPer100: item.calories * per100,
     proteinPer100: item.protein * per100,
     fatPer100: item.fat * per100,
-    carbsPer100: item.carbs * per100
+    carbsPer100: item.carbs * per100,
+    ...(parsed?.unit
+      ? { unitName: parsed.unit, gramsPerUnit: 100 / parsed.count }
+      : {})
   };
 }
 
-/** Grams named by a label like "40 g" or "150 g + 1 lata"; null otherwise. */
-function gramsFromLabel(label: string): number | null {
-  const match = /^\s*([\d.,]+)\s*g\b/.exec(label ?? "");
+/**
+ * Reads "40 g", "2 rebanadas" or "1 plato" off a quantity label.
+ *
+ * Only the leading quantity is read. "150 g + 1 lata" is a compound the
+ * app writes for grouped meals; treating its first number as the weight
+ * keeps the totals exact and is the closest honest reading available.
+ */
+function parseQtyLabel(
+  label: string
+): { grams: number; unit?: string; count: number } | null {
+  const match = /^\s*([\d.,]+)\s*([^\d\s+·]*)/.exec(label ?? "");
   if (!match) return null;
-  const value = parseFloat(match[1].replace(",", "."));
-  return Number.isFinite(value) && value > 0 ? value : null;
+  const count = parseFloat(match[1].replace(",", "."));
+  if (!Number.isFinite(count) || count <= 0) return null;
+  const word = match[2].trim().toLowerCase();
+  if (!word) return null;
+  if (word === "g" || word === "gr" || word === "gramos") return { grams: count, count };
+  return { grams: 100, unit: singularize(word), count };
+}
+
+/** Mirror of pluralize() in quantity.ts, for reading a label back in. */
+function singularize(word: string): string {
+  if (/ones$/i.test(word)) return word.slice(0, -4) + "ón";
+  if (/ces$/i.test(word)) return word.slice(0, -3) + "z";
+  if (/[^aeiou]es$/i.test(word)) return word.slice(0, -2);
+  if (/s$/i.test(word)) return word.slice(0, -1);
+  return word;
 }

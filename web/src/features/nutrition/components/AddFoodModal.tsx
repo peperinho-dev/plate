@@ -29,6 +29,7 @@ import {
   type PlateItem
 } from "../plate";
 import { saveRecipe } from "../recipeActions";
+import { PortionSheet } from "./PortionSheet";
 import { showToast } from "../../../shared/components/Toast";
 
 interface AddFoodModalProps {
@@ -81,6 +82,8 @@ export function AddFoodModal({
   // form. MacroFactor offers the same move from the timeline.
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [recipeName, setRecipeName] = useState("");
+  // The food whose amount is being chosen, before it is staged or logged.
+  const [portionItem, setPortionItem] = useState<PlateItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   // Which measure the field is currently in. Defaults to the food's own
@@ -100,6 +103,7 @@ export function AddFoodModal({
       setGroupName("");
       setSavingRecipe(false);
       setRecipeName("");
+      setPortionItem(null);
       setEditingId(null);
     }
   }
@@ -151,19 +155,12 @@ export function AddFoodModal({
     setOffResults(null);
   };
 
-  // Two verbs, no mode. Tapping the row logs that one food and closes,
-  // which is the common case; tapping its + puts it on the plate and
-  // leaves the list up so the next one is another tap away.
-  //
-  // This replaces an "Añadir varios" switch that had to be found and
-  // flipped before the first item, i.e. before you necessarily knew you
-  // were adding several. Once anything is on the plate a bare tap joins
-  // it rather than logging past it, so a half-built meal can't be lost by
-  // tapping the wrong part of a row.
-  const pick = (item: PlateItem) => {
-    if (plate.length > 0) stage(item);
-    else onCommit([item], null);
-  };
+  // Two gestures, two intents — the split MacroFactor uses. The + on a
+  // row stages it as it is, so several foods are several taps and nothing
+  // interrupts. Tapping the row itself asks how much first, because a
+  // food you eat in a particular amount was previously logged at 100 g
+  // and left for you to correct afterwards.
+  const pick = (item: PlateItem) => setPortionItem(item);
 
   const editingItem = plate.find((it) => it.id === editingId) ?? null;
   const editingUnit = hasUnit(editingItem?.basis);
@@ -491,6 +488,20 @@ export function AddFoodModal({
           )}
         </div>
       )}
+
+      <PortionSheet
+        item={portionItem}
+        plateHasItems={plate.length > 0}
+        onClose={() => setPortionItem(null)}
+        onStage={(item) => {
+          setPortionItem(null);
+          stage(item);
+        }}
+        onLog={(item) => {
+          setPortionItem(null);
+          onCommit([item], null);
+        }}
+      />
 
       {plate.length > 0 && (
         <div className="form">
