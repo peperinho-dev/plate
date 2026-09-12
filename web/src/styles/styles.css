@@ -3723,3 +3723,25 @@ button:focus-visible, input:focus-visible {
   justify-content: space-between;
   gap: 12px;
 }
+/* "Añadir a otra hora" — the way to any hour the timeline doesn't draw.
+   A full-width row rather than a floating control, so it reads as the end
+   of the day's list instead of a fifth button competing with the tab bar. */
+.hour-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  margin-top: 4px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  transition: color .14s ease, border-color .14s ease;
+}
+.hour-more:active { color: var(--accent-ink); border-color: var(--accent); }
+.hour-picker-chip.is-current { background: var(--accent-soft); color: var(--accent-ink); }

@@ -18,6 +18,8 @@ import { ScanModal } from "./components/ScanModal";
 import { BackupBanner } from "../profile/BackupBanner";
 import { AdaptiveBanner } from "../profile/AdaptiveBanner";
 import { RecipeModal } from "./components/RecipeModal";
+import { Modal } from "../../shared/components/Modal";
+import { HourGrid } from "../../shared/components/HourGrid";
 import { GroupMealModal } from "./components/GroupMealModal";
 import { RenameGroupModal } from "./components/RenameGroupModal";
 import { IngredientGramsModal } from "./components/IngredientGramsModal";
@@ -103,6 +105,8 @@ export function NutritionView() {
   const [favoritesEditing, setFavoritesEditing] = useState(false);
   const [recipesEditing, setRecipesEditing] = useState(false);
   const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  // Reaching an hour the timeline doesn't draw, which is most of them.
+  const [hourPickerOpen, setHourPickerOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [groupOpen, setGroupOpen] = useState(false);
   const [renameEntry, setRenameEntry] = useState<Entry | null>(null);
@@ -350,6 +354,8 @@ export function NutritionView() {
             <EntryList
               entries={entries}
               dayKey={dayKey}
+              currentHour={dayOffset === 0 ? new Date().getHours() : null}
+              onPickHour={() => setHourPickerOpen(true)}
               onAddAtHour={(hour) => {
                 setTargetHour(hour);
                 setAddFoodOpen(true);
@@ -368,6 +374,12 @@ export function NutritionView() {
                 <br />
                 Escanea o añade el primero.
               </p>
+              {/* The hour picker belongs here too: an empty past day has
+                  no rows to tap, and the central + can only log to the
+                  hour it is right now. */}
+              <button type="button" className="link-btn" onClick={() => setHourPickerOpen(true)}>
+                Añadir a una hora
+              </button>
               {prevEntries.length > 0 && (
                 <button type="button" className="link-btn" onClick={handleCopyYesterday}>
                   Copiar de ayer
@@ -517,6 +529,17 @@ export function NutritionView() {
         onPendingHitConsumed={() => setPendingHit(null)}
       />
       <ScanModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={handleDetected} />
+      <Modal open={hourPickerOpen} title="¿A qué hora?" onClose={() => setHourPickerOpen(false)}>
+        <HourGrid
+          current={dayOffset === 0 ? new Date().getHours() : null}
+          onPick={(hour) => {
+            setHourPickerOpen(false);
+            setTargetHour(hour);
+            setAddFoodOpen(true);
+          }}
+        />
+      </Modal>
+
       <RecipeModal
         open={recipeModalOpen}
         recipe={editingRecipeId ? (recipes.find((r) => r.id === editingRecipeId) ?? null) : null}

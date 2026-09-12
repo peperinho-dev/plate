@@ -3,6 +3,7 @@
 // old flow of navigating to a day first and only then pasting.
 import { useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
+import { HourGrid } from "../../../shared/components/HourGrid";
 import { useUiStore } from "../../../shared/store/ui";
 import { todayKey } from "../../../shared/lib/date";
 import { showToast } from "../../../shared/components/Toast";
@@ -82,25 +83,16 @@ export function PasteTargetSheet() {
           {pickingHour ? "Ocultar horas" : "A una hora de este día…"}
         </button>
         {pickingHour && (
-          <div className="hour-picker">
-            {Array.from({ length: 24 }, (_, h) => (
-              <button
-                key={h}
-                type="button"
-                className="hour-picker-chip"
-                onClick={() =>
-                  paste(
-                    clipboard?.type === "nutrition" ? clipboard.sourceDayKey : todayKey(0),
-                    "hour",
-                    `Pegado a las ${String(h).padStart(2, "0")}:00`,
-                    h
-                  )
-                }
-              >
-                {String(h).padStart(2, "0")}
-              </button>
-            ))}
-          </div>
+          <HourGrid
+            onPick={(h) =>
+              paste(
+                clipboard?.type === "nutrition" ? clipboard.sourceDayKey : todayKey(0),
+                "hour",
+                `Pegado a las ${String(h).padStart(2, "0")}:00`,
+                h
+              )
+            }
+          />
         )}
       </div>
     </Modal>

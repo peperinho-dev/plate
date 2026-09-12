@@ -28,30 +28,37 @@ export function groupEntriesByHour(entries: Entry[]): HourGroup[] {
 }
 
 /**
- * The day as rows, 00:00 through 23:00 minus the small hours.
+ * The hours worth drawing: the ones with food in them, plus the hour it
+ * is right now.
  *
- * This used to run from the first logged meal to the current hour, which
- * quietly made some hours unreachable: log breakfast at 08:00 and there
- * was no 07:00 row to tap, and an untouched day drew no timeline at all.
- * So every hour became a row — and then 01:00 to 05:00 were five rows of
- * nothing at the top of every single day, which is the kind of wasted
- * space the rest of this app has been stripped of.
+ * This has been wrong twice in opposite directions. It first ran from the
+ * first logged meal to the current hour, which made earlier hours
+ * unreachable — log breakfast at 08:00 and there was no 07:00 row to tap.
+ * Then every hour became a row, which fixed reaching them and replaced it
+ * with nineteen rows of nothing to scroll past.
  *
- * They are skipped, but never when they hold food: an hour with entries
- * is always drawn, whatever time it is. Hiding a row is a layout choice;
- * hiding something you logged would be a lie.
+ * Both were the same mistake: treating the timeline as the way to *pick*
+ * an hour. It isn't — picking an hour is a grid of twenty-four chips that
+ * costs four rows of height (see HourGrid). Once that exists the timeline
+ * only has to show what happened, so it shows exactly that, plus now, so
+ * that logging something you are eating right now is always one tap.
+ *
+ * MacroFactor solves the same problem with a configurable hour range,
+ * hiding "the hours when they're usually asleep". That keeps every waking
+ * hour as a row; this keeps none you didn't use, which is the same
+ * intention taken further.
  */
-const QUIET_HOURS = new Set([1, 2, 3, 4, 5]);
-
-export function timelineHours(entries: Entry[]): HourGroup[] {
+export function timelineHours(entries: Entry[], currentHour: number | null): HourGroup[] {
   const byHour = new Map(groupEntriesByHour(entries).map((g) => [g.hour, g]));
-  const out: HourGroup[] = [];
-  for (let h = 0; h < 24; h++) {
-    const group = byHour.get(h);
-    if (!group && QUIET_HOURS.has(h)) continue;
-    out.push(group ?? { hour: h, entries: [], total: 0, macros: sumMacros([]) });
+  if (currentHour != null && !byHour.has(currentHour)) {
+    byHour.set(currentHour, {
+      hour: currentHour,
+      entries: [],
+      total: 0,
+      macros: sumMacros([])
+    });
   }
-  return out;
+  return [...byHour.values()].sort((a, b) => a.hour - b.hour);
 }
 
 export function sumCalories(entries: Entry[]): number {

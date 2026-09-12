@@ -1,10 +1,9 @@
 // The day as a timeline of hours.
 //
-// All twenty-four hours are drawn, not only the ones with food in them:
-// an empty hour is a place you might want to log the snack you forgot,
-// and it can only be tapped if it's on screen. Each hour carries its own
-// totals and its own +, so logging something you ate at 08:00 while it is
-// already the afternoon is one tap from the 08:00 row.
+// Only the hours that have food, plus the current one. Each carries its
+// own totals and its own +, so adding to an hour already on screen is one
+// tap; any other hour is reached through the picker at the end, which is
+// four rows of chips instead of twenty-four rows of nothing.
 import { AnimatePresence, motion } from "framer-motion";
 import type { Entry } from "../../../shared/store/types";
 import { timelineHours } from "../../../shared/lib/nutrition";
@@ -15,6 +14,10 @@ import { EntryRow } from "./EntryRow";
 interface EntryListProps {
   entries: Entry[];
   dayKey: string;
+  /** Current hour when the day on screen is today; null otherwise. */
+  currentHour: number | null;
+  /** Opens the hour picker, for an hour that isn't drawn. */
+  onPickHour: () => void;
   onEdit: (entry: Entry) => void;
   onEditGroup: (entry: Entry) => void;
   onEditItem: (entry: Entry, itemIndex: number) => void;
@@ -24,6 +27,8 @@ interface EntryListProps {
 export function EntryList({
   entries,
   dayKey,
+  currentHour,
+  onPickHour,
   onEdit,
   onEditGroup,
   onEditItem,
@@ -31,7 +36,7 @@ export function EntryList({
 }: EntryListProps) {
   const collapsedHourGroups = useUiStore((s) => s.collapsedHourGroups);
   const toggleHourGroup = useUiStore((s) => s.toggleHourGroup);
-  const groups = timelineHours(entries);
+  const groups = timelineHours(entries, currentHour);
 
   return (
     <div className="log-list">
@@ -108,6 +113,12 @@ export function EntryList({
           </div>
         );
       })}
+
+      {/* The rest of the day, without the rest of the day on screen. */}
+      <button type="button" className="hour-more" onClick={onPickHour}>
+        <PlusIcon />
+        <span>Añadir a otra hora</span>
+      </button>
     </div>
   );
 }
