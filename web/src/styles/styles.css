@@ -3745,3 +3745,22 @@ button:focus-visible, input:focus-visible {
 }
 .hour-more:active { color: var(--accent-ink); border-color: var(--accent); }
 .hour-picker-chip.is-current { background: var(--accent-soft); color: var(--accent-ink); }
+/* The session name is editable, so it has to look like it. Same type as
+   the label it replaces — this is a heading you can tap, not a control
+   competing with the exercises under it. */
+.workout-block-label--edit {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 4px;
+}
+.workout-block-label--edit:active { color: var(--accent-ink); }

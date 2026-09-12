@@ -241,6 +241,29 @@ export function saveRoutine(
   });
 }
 
+/**
+ * Renames the session, or clears the name when given null.
+ *
+ * The name arrives from the routine that started the day and then travels
+ * with every copy and every "Repetir" — which is right, repeating Empuje
+ * is still Empuje, but it made a wrong name permanent and
+ * self-perpetuating. One session mislabelled years ago relabels every
+ * session descended from it, and nothing in the app could undo it.
+ */
+export function setWorkoutDayName(dayKey: string, name: string | null) {
+  useAppStore.setState((s) => {
+    const day = s.workouts[dayKey];
+    if (!day) return {};
+    const trimmed = name?.trim();
+    return {
+      workouts: {
+        ...s.workouts,
+        [dayKey]: { ...day, routineName: trimmed ? trimmed : undefined }
+      }
+    };
+  });
+}
+
 export function removeRoutine(id: string) {
   useAppStore.setState((s) => ({ routines: s.routines.filter((r) => r.id !== id) }));
 }

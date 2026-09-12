@@ -22,6 +22,7 @@ import { ExerciseDetailModal } from "./components/ExerciseDetailModal";
 import { ExerciseEditModal } from "./components/ExerciseEditModal";
 import { ProgressionDetailModal } from "./components/ProgressionDetailModal";
 import { SessionSummaryModal } from "./components/SessionSummaryModal";
+import { Modal } from "../../shared/components/Modal";
 import { collectProgressionGroups } from "./progressions";
 import { AddWorkoutModal } from "./components/AddWorkoutModal";
 import { EmptyDayStarters } from "./components/EmptyDayStarters";
@@ -32,7 +33,8 @@ import {
   copyWorkoutToDay,
   logTimerRun,
   removeExercise,
-  removeTimerLog
+  removeTimerLog,
+  setWorkoutDayName
 } from "./actions";
 
 function TimerLogRows({ logs, dayKey }: { logs: TimerLog[]; dayKey: string }) {
@@ -95,6 +97,8 @@ export function WorkoutView() {
   // a property of a movement, so it belongs beside the movement you just
   // logged, not in a chart three tabs away.
   const [progressionGroup, setProgressionGroup] = useState<string | null>(null);
+  const [renamingSession, setRenamingSession] = useState(false);
+  const [sessionNameDraft, setSessionNameDraft] = useState("");
   const [addOpen, setAddOpen] = useState(false);
 
   const detailExercise = exercises.find((e) => e.id === detailId) ?? null;
@@ -225,7 +229,19 @@ export function WorkoutView() {
 
               {exercises.length > 0 && (
                 <div className="workout-block">
-                  <span className="workout-block-label">{routineName || "Series"}</span>
+                  {/* Tappable: the name comes from whichever routine
+                      started the day and then rides along with every
+                      copy, so it needs a way back out. */}
+                  <button
+                    type="button"
+                    className="workout-block-label workout-block-label--edit"
+                    onClick={() => {
+                      setSessionNameDraft(routineName ?? "");
+                      setRenamingSession(true);
+                    }}
+                  >
+                    {routineName || "Series"}
+                  </button>
                   <div className="log-list">
                     {exercises.map((ex) => (
                       <SwipeToDelete
@@ -321,6 +337,47 @@ export function WorkoutView() {
         onClose={() => setDetailId(null)}
         onEditExercise={() => setEditOpen(true)}
       />
+      <Modal
+        open={renamingSession}
+        title="Nombre de la sesión"
+        onClose={() => setRenamingSession(false)}
+      >
+        <label className="field">
+          <span>Cómo se llama este entreno</span>
+          <input
+            type="text"
+            placeholder="p. ej. Flexiones y barra"
+            value={sessionNameDraft}
+            onChange={(e) => setSessionNameDraft(e.target.value)}
+            autoFocus
+          />
+        </label>
+        <button
+          type="button"
+          className="btn btn--primary btn--block"
+          onClick={() => {
+            setWorkoutDayName(dayKey, sessionNameDraft);
+            setRenamingSession(false);
+            showToast("Sesión renombrada");
+          }}
+        >
+          Guardar
+        </button>
+        {routineName && (
+          <button
+            type="button"
+            className="btn btn--secondary btn--block"
+            onClick={() => {
+              setWorkoutDayName(dayKey, null);
+              setRenamingSession(false);
+              showToast("Nombre quitado");
+            }}
+          >
+            Quitar el nombre
+          </button>
+        )}
+      </Modal>
+
       <SessionSummaryModal open={summaryOpen} dayKey={dayKey} onClose={() => setSummaryOpen(false)} />
       <ProgressionDetailModal
         open={progressionGroup !== null}
