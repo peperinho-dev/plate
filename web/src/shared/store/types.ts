@@ -200,6 +200,14 @@ export interface Routine {
   id: string;
   name: string;
   exerciseNames: string[];
+  /**
+   * Rest per exercise, by name. A routine used to carry one rest for the
+   * whole session, chosen when you start it — but the gap after a set of
+   * negatives is not the gap after a plank, so every session began with
+   * the same round of corrections. Optional: a routine without it behaves
+   * exactly as before, seeding every exercise from the session choice.
+   */
+  restByExercise?: Record<string, number>;
   createdAt: number;
 }
 

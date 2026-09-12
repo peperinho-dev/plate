@@ -127,6 +127,7 @@ export function migrateData(parsed: unknown): AppState {
   if (!data.routines) data.routines = [];
   if (!data.timers) data.timers = [];
   if (typeof data.onboardingShown !== "boolean") data.onboardingShown = false;
+
   if (typeof data.lastExportedAt !== "number") data.lastExportedAt = null;
   if (!Array.isArray(data.analyticsLayout)) data.analyticsLayout = null;
   // Additive field — no SCHEMA_VERSION bump needed, matching how the

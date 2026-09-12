@@ -5,6 +5,7 @@ import type {
   AppState,
   Exercise,
   ExerciseSet,
+  Routine,
   SetType,
   TimerCategory,
   TimerInterval,
@@ -210,10 +211,34 @@ export function copyWorkoutToDay(
 
 // A routine is just an ordered list of exercise names; starting one adds
 // them all as empty exercises ready to log into.
-export function saveRoutine(name: string, exerciseNames: string[]) {
-  useAppStore.setState((s) => ({
-    routines: [...s.routines, { id: newId(), name, exerciseNames, createdAt: Date.now() }]
-  }));
+// Saves a new routine, or updates one in place when given its id.
+//
+// It was create-only, so changing a single exercise meant deleting the
+// routine and rebuilding it from scratch — and a progression is exactly
+// a routine whose exercises get swapped one at a time, every few weeks,
+// forever. Updating keeps the id and the creation date, so its place in
+// the list doesn't move under you.
+export function saveRoutine(
+  name: string,
+  exerciseNames: string[],
+  restByExercise?: Record<string, number>,
+  existingId?: string
+) {
+  useAppStore.setState((s) => {
+    if (existingId) {
+      return {
+        routines: s.routines.map((r) =>
+          r.id === existingId ? { ...r, name, exerciseNames, restByExercise } : r
+        )
+      };
+    }
+    return {
+      routines: [
+        ...s.routines,
+        { id: newId(), name, exerciseNames, restByExercise, createdAt: Date.now() }
+      ]
+    };
+  });
 }
 
 export function removeRoutine(id: string) {
@@ -224,7 +249,10 @@ export function startRoutine(
   dayKey: string,
   exerciseNames: string[],
   routineName?: string,
-  restSeconds?: number
+  restSeconds?: number,
+  // Per-exercise rest from the routine, where it has one. The session
+  // choice stays the fallback, so a routine without it is unchanged.
+  restByExercise?: Record<string, number>
 ) {
   useAppStore.setState((s) => {
     const existing = s.workouts[dayKey]?.exercises ?? [];
@@ -232,9 +260,9 @@ export function startRoutine(
       id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       sets: [],
-      // Every exercise starts from the routine's choice and can diverge
-      // from it later.
-      restSeconds,
+      // Every exercise starts from the routine's own rest where it has
+      // one, else from the session choice, and can diverge later.
+      restSeconds: restByExercise?.[name] ?? restSeconds,
       addedAt: Date.now() + i // keeps the routine's order stable
     }));
     const next = updateWorkoutDay(s, dayKey, [...existing, ...added]);
@@ -327,4 +355,86 @@ export function setExerciseRest(dayKey: string, exerciseId: string, restSeconds:
       existing.map((e) => (e.id === exerciseId ? { ...e, restSeconds } : e))
     );
   });
+}
+
+/**
+ * Rutinas from a JSON file, appended to the ones already there.
+ *
+ * Deliberately not the backup importer: that one replaces the entire
+ * dataset, which is the right shape for restoring a device and the wrong
+ * shape for "here are two routines, keep everything else". This only ever
+ * adds.
+ *
+ * The shape is forgiving on purpose — a bare array, or anything with a
+ * `routines` key, which means a full Plate backup works as a source too.
+ * A routine needs a name and at least one exercise; anything else in the
+ * object is ignored rather than trusted, so a hand-edited file cannot
+ * push unknown fields into the store.
+ *
+ * Names already in use are skipped rather than merged or renamed: two
+ * routines called the same thing are indistinguishable in the picker,
+ * and silently overwriting one you built is worse than importing nothing.
+ * The count comes back so the caller can say what happened.
+ */
+export function importRoutines(rawJson: string): { added: number; skipped: number } | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    return null;
+  }
+
+  const list = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray((parsed as { routines?: unknown })?.routines)
+      ? (parsed as { routines: unknown[] }).routines
+      : null;
+  if (!list) return null;
+
+  const clean = list.flatMap((raw) => {
+    const r = raw as { name?: unknown; exerciseNames?: unknown; restByExercise?: unknown };
+    const name = typeof r.name === "string" ? r.name.trim() : "";
+    const names = Array.isArray(r.exerciseNames)
+      ? r.exerciseNames.filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+      : [];
+    if (!name || names.length === 0) return [];
+
+    // Only numeric rests, and only for exercises that are actually in the
+    // routine — a stray key would otherwise ride along forever.
+    const rests: Record<string, number> = {};
+    const source = (r.restByExercise ?? {}) as Record<string, unknown>;
+    names.forEach((n) => {
+      const value = source[n];
+      if (typeof value === "number" && Number.isFinite(value) && value > 0) rests[n] = value;
+    });
+
+    return [{ name, exerciseNames: names, rests }];
+  });
+
+  if (clean.length === 0) return null;
+
+  let added = 0;
+  let skipped = 0;
+  useAppStore.setState((s) => {
+    const taken = new Set(s.routines.map((r) => r.name.trim().toLowerCase()));
+    const fresh: Routine[] = [];
+    clean.forEach((r, i) => {
+      if (taken.has(r.name.toLowerCase())) {
+        skipped += 1;
+        return;
+      }
+      taken.add(r.name.toLowerCase());
+      added += 1;
+      fresh.push({
+        id: newId(),
+        name: r.name,
+        exerciseNames: r.exerciseNames,
+        restByExercise: Object.keys(r.rests).length > 0 ? r.rests : undefined,
+        createdAt: Date.now() + i
+      });
+    });
+    return { routines: [...s.routines, ...fresh] };
+  });
+
+  return { added, skipped };
 }

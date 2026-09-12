@@ -61,7 +61,13 @@ export function EmptyDayStarters({ dayKey }: { dayKey: string }) {
         onClose={() => setPendingRoutine(null)}
         onStart={(restSeconds) => {
           if (!pendingRoutine) return;
-          startRoutine(dayKey, pendingRoutine.exerciseNames, pendingRoutine.name, restSeconds);
+          startRoutine(
+            dayKey,
+            pendingRoutine.exerciseNames,
+            pendingRoutine.name,
+            restSeconds,
+            pendingRoutine.restByExercise
+          );
           showToast(`${pendingRoutine.name} empezada`);
           setPendingRoutine(null);
         }}

@@ -33,6 +33,15 @@ export function RoutineStartSheet({ routine, onClose, onStart }: RoutineStartShe
   if (!routine) return null;
   const chosen = rest ?? defaultRest;
 
+  // A routine can carry a rest per exercise. When it does, offering a
+  // single choice for the session would be a control that does nothing —
+  // the per-exercise value wins downstream. So the list shows what each
+  // one will actually get, and the chooser only appears for routines that
+  // leave it open. Either way any rest can still be changed mid-set.
+  const perExercise = routine.restByExercise;
+  const allSpecified =
+    !!perExercise && routine.exerciseNames.every((name) => perExercise[name] != null);
+
   return (
     <Modal open title={routine.name} onClose={onClose}>
       <div className="section-head">
@@ -46,26 +55,36 @@ export function RoutineStartSheet({ routine, onClose, onStart }: RoutineStartShe
           {routine.exerciseNames.map((name, i) => (
             <div className="row row--static" key={`${name}-${i}`}>
               <span className="row-name">{name}</span>
+              {perExercise?.[name] != null && (
+                <span className="row-amount">{formatDuration(perExercise[name])}</span>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="field">
-        <span>Descanso entre series</span>
-        <div className="segmented segmented--compact">
-          {REST_CHOICES.map((secs) => (
-            <button
-              key={secs}
-              type="button"
-              className={"segmented-btn" + (secs === chosen ? " active" : "")}
-              onClick={() => setRest(secs)}
-            >
-              {formatDuration(secs)}
-            </button>
-          ))}
+      {allSpecified ? (
+        <p className="modal-hint">
+          Cada ejercicio lleva su propio descanso. Puedes cambiarlo en cualquier momento
+          desde la serie.
+        </p>
+      ) : (
+        <div className="field">
+          <span>Descanso entre series</span>
+          <div className="segmented segmented--compact">
+            {REST_CHOICES.map((secs) => (
+              <button
+                key={secs}
+                type="button"
+                className={"segmented-btn" + (secs === chosen ? " active" : "")}
+                onClick={() => setRest(secs)}
+              >
+                {formatDuration(secs)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <button type="button" className="btn btn--primary btn--block" onClick={() => onStart(chosen)}>
         Empezar {routine.name}

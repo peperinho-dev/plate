@@ -9,7 +9,7 @@
 // Adding does not close the sheet. A session is several exercises, so
 // closing after each one meant reopening from the action bar every time;
 // instead they collect in a track at the top where they can be undone.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Modal } from "../../../shared/components/Modal";
 import { showToast } from "../../../shared/components/Toast";
 import {XIcon} from "../../../shared/components/Icons";
@@ -20,7 +20,7 @@ import { suggestMovements, shareFromName, gateLabel } from "../../../shared/lib/
 import { BodyweightChip } from "./BodyweightChip";
 import { relativeDayLabel } from "../../../shared/lib/format";
 import type { Exercise, Routine, TimerPreset } from "../../../shared/store/types";
-import { removeExercise, removeRoutine, startRoutine } from "../actions";
+import { importRoutines, removeExercise, removeRoutine, startRoutine } from "../actions";
 import { TimerSection } from "./TimerSection";
 import { LibrarySection } from "./LibrarySection";
 import { RoutineModal } from "./RoutineModal";
@@ -53,6 +53,10 @@ export function AddWorkoutModal({
   const [query, setQuery] = useState("");
   const [routinesEditing, setRoutinesEditing] = useState(false);
   const [routineOpen, setRoutineOpen] = useState(false);
+  // Set to edit an existing routine rather than build a new one — the
+  // edit a progression needs, one exercise at a time.
+  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  const routineFileRef = useRef<HTMLInputElement | null>(null);
   // Which routine is waiting on its start sheet.
   const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
 
@@ -208,6 +212,15 @@ export function AddWorkoutModal({
                 <button type="button" className="link-btn" onClick={() => setRoutineOpen(true)}>
                   + Nueva
                 </button>
+                {/* Adds routines to the ones you have; unlike the backup
+                    importer in Ajustes, it never replaces anything. */}
+                <button
+                  type="button"
+                  className="link-btn link-btn--muted"
+                  onClick={() => routineFileRef.current?.click()}
+                >
+                  Importar
+                </button>
                 {routines.length > 0 && (
                   <button
                     type="button"
@@ -234,14 +247,23 @@ export function AddWorkoutModal({
                   </span>
                 </button>
                 {routinesEditing && (
-                  <button
-                    type="button"
-                    className="row-del"
-                    aria-label={`Quitar ${r.name}`}
-                    onClick={() => removeRoutine(r.id)}
-                  >
-                    <XIcon />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => setEditingRoutine(r)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="row-del"
+                      aria-label={`Quitar ${r.name}`}
+                      onClick={() => removeRoutine(r.id)}
+                    >
+                      <XIcon />
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -278,16 +300,52 @@ export function AddWorkoutModal({
         onClose={() => setPendingRoutine(null)}
         onStart={(restSeconds) => {
           if (!pendingRoutine) return;
-          startRoutine(dayKey, pendingRoutine.exerciseNames, pendingRoutine.name, restSeconds);
+          startRoutine(
+            dayKey,
+            pendingRoutine.exerciseNames,
+            pendingRoutine.name,
+            restSeconds,
+            pendingRoutine.restByExercise
+          );
           showToast(`${pendingRoutine.name} empezada`);
           setPendingRoutine(null);
           onClose();
         }}
       />
 
+      <input
+        ref={routineFileRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = ""; // so the same file can be picked twice
+          if (!file) return;
+          void file.text().then((text) => {
+            const result = importRoutines(text);
+            if (!result) {
+              showToast("Ese archivo no tiene rutinas");
+              return;
+            }
+            const { added, skipped } = result;
+            showToast(
+              added === 0
+                ? "Ya las tenías todas"
+                : `${added} ${added === 1 ? "rutina importada" : "rutinas importadas"}` +
+                    (skipped > 0 ? `, ${skipped} repetida${skipped === 1 ? "" : "s"}` : "")
+            );
+          });
+        }}
+      />
+
       <RoutineModal
-        open={routineOpen}
-        onClose={() => setRoutineOpen(false)}
+        open={routineOpen || !!editingRoutine}
+        routine={editingRoutine}
+        onClose={() => {
+          setRoutineOpen(false);
+          setEditingRoutine(null);
+        }}
         initialExercises={exercises.map((e) => e.name)}
         nameOptions={catalog.map((e) => e.name)}
       />
