@@ -93,16 +93,22 @@ export function RecipeModal({ open, recipe, onClose }: RecipeModalProps) {
                 <span className="row-name">{it.name}</span>
                 <span className="row-qty">{Math.round(scaleFoodItem(it).calories)} kcal</span>
               </div>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                inputMode="decimal"
-                aria-label={`Gramos de ${it.name}`}
-                value={it.grams}
-                onChange={(e) => setGrams(i, parseFloat(e.target.value) || 0)}
-                style={{ width: 74 }}
-              />
+              {/* Labelled, because it was a bare number box: the amount
+                  of each ingredient is what a recipe *is*, and leaving it
+                  at the 100 default is how one ends up reading 100 g down
+                  the list when you expand it later. */}
+              <label className="recipe-grams">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  aria-label={`Gramos de ${it.name}`}
+                  value={it.grams}
+                  onChange={(e) => setGrams(i, parseFloat(e.target.value) || 0)}
+                />
+                <span>g</span>
+              </label>
               <button
                 className="row-del"
                 aria-label="Quitar"

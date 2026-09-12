@@ -524,6 +524,11 @@ export function NutritionView() {
           setEditingEntryId(null);
           setEntryOpen(true);
         }}
+        onEditRecipe={(id) => {
+          closeAddFood();
+          setEditingRecipeId(id);
+          setRecipeModalOpen(true);
+        }}
         onCommit={handlePlateCommit}
         pendingHit={pendingHit}
         onPendingHitConsumed={() => setPendingHit(null)}

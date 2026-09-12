@@ -3764,3 +3764,27 @@ button:focus-visible, input:focus-visible {
   text-underline-offset: 4px;
 }
 .workout-block-label--edit:active { color: var(--accent-ink); }
+/* Grams of one ingredient, in the recipe editor. The unit sits inside the
+   field so the number reads as a weight rather than a bare count. */
+.recipe-grams {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+.recipe-grams input {
+  width: 52px;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: right;
+  font-family: inherit;
+  font-size: var(--fs-input);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.recipe-grams span { font-size: var(--fs-label); color: var(--ink-soft); }
+.quick-chip.is-editing { border: 1px dashed var(--accent); }

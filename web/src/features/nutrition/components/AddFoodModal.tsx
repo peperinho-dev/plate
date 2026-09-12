@@ -40,6 +40,8 @@ interface AddFoodModalProps {
   onScanClick: () => void;
   /** Opens the full form for food that isn't in any list yet. */
   onCreateManual: (name: string) => void;
+  /** Opens the recipe editor — the only place ingredient grams live. */
+  onEditRecipe: (id: string) => void;
   onCommit: (items: PlateItem[], groupName: string | null) => void;
   /** Lets a scan stage straight onto the plate without leaving. */
   pendingHit: SearchHit | null;
@@ -58,6 +60,7 @@ export function AddFoodModal({
   onClose,
   onScanClick,
   onCreateManual,
+  onEditRecipe,
   onCommit,
   pendingHit,
   onPendingHitConsumed
@@ -80,6 +83,7 @@ export function AddFoodModal({
   // exactly the thing worth keeping, and until now there was no way to
   // keep it from here — recipes could only be built in the old manual
   // form. MacroFactor offers the same move from the timeline.
+  const [recipesEditing, setRecipesEditing] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [recipeName, setRecipeName] = useState("");
   // The food whose amount is being chosen, before it is staged or logged.
@@ -101,6 +105,7 @@ export function AddFoodModal({
       setOffResults(null);
       setGrouping(false);
       setGroupName("");
+      setRecipesEditing(false);
       setSavingRecipe(false);
       setRecipeName("");
       setPortionItem(null);
@@ -347,6 +352,17 @@ export function AddFoodModal({
         <div className="quick-section">
           <div className="quick-label-row">
             <div className="quick-label">Recetas</div>
+            {/* Editing a recipe was only possible from the old manual
+                form, so the grams of its ingredients — the whole point of
+                a recipe — were unreachable from the sheet you actually
+                use. */}
+            <button
+              type="button"
+              className="link-btn link-btn--muted"
+              onClick={() => setRecipesEditing((v) => !v)}
+            >
+              {recipesEditing ? "Listo" : "Editar"}
+            </button>
           </div>
           <div className="quick-row">
             {recipes.map((r) => {
@@ -356,8 +372,10 @@ export function AddFoodModal({
                 <button
                   key={r.id}
                   type="button"
-                  className="quick-chip"
-                  onClick={() => stage(plateItemFromCandidate(c))}
+                  className={"quick-chip" + (recipesEditing ? " is-editing" : "")}
+                  onClick={() =>
+                    recipesEditing ? onEditRecipe(r.id) : stage(plateItemFromCandidate(c))
+                  }
                 >
                   <span className="quick-chip-name">{r.name}</span>
                   <span className="quick-chip-kcal">{Math.round(c.calories)} kcal</span>
