@@ -7,27 +7,31 @@ import { Modal } from "../../../shared/components/Modal";
 import { showToast } from "../../../shared/components/Toast";
 import { XIcon } from "../../../shared/components/Icons";
 import { formatDuration } from "../../../shared/lib/workouts";
-import type { TimerCategory, TimerInterval } from "../../../shared/store/types";
+import type { TimerCategory, TimerInterval, TimerPreset } from "../../../shared/store/types";
 import { saveTimerPreset } from "../actions";
 
 interface TimerBuilderModalProps {
   open: boolean;
   category: TimerCategory;
+  /** Set to edit an existing preset rather than build a new one. */
+  preset?: TimerPreset | null;
   onClose: () => void;
 }
 
-export function TimerBuilderModal({ open, category, onClose }: TimerBuilderModalProps) {
+export function TimerBuilderModal({ open, category, preset, onClose }: TimerBuilderModalProps) {
   const [name, setName] = useState("");
   const [intervals, setIntervals] = useState<TimerInterval[]>([]);
   const [ivName, setIvName] = useState("");
   const [ivSeconds, setIvSeconds] = useState("");
 
   const [wasOpen, setWasOpen] = useState(open);
-  if (open !== wasOpen) {
+  const [lastId, setLastId] = useState(preset?.id ?? null);
+  if (open !== wasOpen || (preset?.id ?? null) !== lastId) {
     setWasOpen(open);
+    setLastId(preset?.id ?? null);
     if (open) {
-      setName("");
-      setIntervals([]);
+      setName(preset?.name ?? "");
+      setIntervals(preset ? preset.intervals.map((i) => ({ ...i })) : []);
       setIvName("");
       setIvSeconds("");
     }
@@ -53,13 +57,13 @@ export function TimerBuilderModal({ open, category, onClose }: TimerBuilderModal
       showToast("Añade al menos un intervalo");
       return;
     }
-    saveTimerPreset(name.trim(), category, intervals);
+    saveTimerPreset(name.trim(), category, intervals, preset?.id);
     showToast("Temporizador guardado");
     onClose();
   };
 
   return (
-    <Modal open={open} title="Nuevo temporizador" onClose={onClose}>
+    <Modal open={open} title={preset ? "Editar temporizador" : "Nuevo temporizador"} onClose={onClose}>
       <label className="field">
         <span>Nombre</span>
         <input

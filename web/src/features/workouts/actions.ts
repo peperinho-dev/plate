@@ -304,14 +304,29 @@ export function startRoutine(
 
 // --- Warmup / stretch timers ------------------------------------------
 
+// Saves a new preset, or updates one in place when given its id.
+//
+// It was create-only, so adding a step to a warm-up meant deleting it and
+// retyping every step — nine of them, in Carlos's case. A mobility
+// routine is exactly the kind of thing that grows one step at a time.
 export function saveTimerPreset(
   name: string,
   category: TimerCategory,
-  intervals: TimerInterval[]
+  intervals: TimerInterval[],
+  existingId?: string
 ) {
-  useAppStore.setState((s) => ({
-    timers: [...s.timers, { id: newId(), name, category, intervals, createdAt: Date.now() }]
-  }));
+  useAppStore.setState((s) => {
+    if (existingId) {
+      return {
+        timers: s.timers.map((t) =>
+          t.id === existingId ? { ...t, name, category, intervals } : t
+        )
+      };
+    }
+    return {
+      timers: [...s.timers, { id: newId(), name, category, intervals, createdAt: Date.now() }]
+    };
+  });
 }
 
 export function timerTotalSeconds(timer: TimerPreset): number {

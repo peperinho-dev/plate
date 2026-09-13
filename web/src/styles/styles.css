@@ -1545,13 +1545,21 @@ button.row-main:active { opacity: 0.55; }
 .scanner-viewport {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  /* Wider than it is tall, because a barcode is. A 3/4 portrait box
+     against a landscape camera stream crops most of the width away. */
+  aspect-ratio: 4 / 3;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #000;
 }
 
-#scannerVideo {
+/* By element, not by #scannerVideo. That id belongs to the vanilla app's
+   markup and the React component never sets it, so the rule matched
+   nothing: the video fell back to its intrinsic size — 1920x1080 — inside
+   a small box with overflow:hidden, showing its top-left corner at 1:1.
+   That is the "always zoomed" camera, and raising the capture resolution
+   from 640x480 made it three times worse. */
+.scanner-viewport video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1569,24 +1577,6 @@ button.row-main:active { opacity: 0.55; }
   box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   overflow: hidden;
-}
-.scanner-frame::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 4%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
-  box-shadow: 0 0 8px 1px var(--accent);
-  animation: scanSweep 2.2s ease-in-out infinite;
-}
-
-@keyframes scanSweep {
-  0% { top: 4%; opacity: 0; }
-  12% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { top: 94%; opacity: 0; }
 }
 
 .scanner-torch {
@@ -1903,9 +1893,8 @@ button:focus-visible, input:focus-visible {
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .row, .modal-sheet, .toast, .modal, .view, .tab-btn .tab-icon, .hour-chevron,
-  .chart-scroll svg, .scanner-frame::after, .modal-hint--loading,
+  .chart-scroll svg, .modal-hint--loading,
   .timer-run-ring-wrap, .timer-run-ring-progress { animation: none !important; transition: none !important; }
-  .scanner-frame::after { opacity: 0.6; top: 50%; }
 }
 
 /* Compact calorie bar chart for the Analytics card. Replaces the vanilla

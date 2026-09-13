@@ -139,9 +139,25 @@ export function migrateData(parsed: unknown): AppState {
   // as { seconds, addedAt } instead of { totalSeconds, completedAt }.
   // Normalise both so data written by either app opens in the other.
   data.timers = (Array.isArray(data.timers) ? data.timers : []).map((t: Record<string, unknown>) => {
-    const intervals = Array.isArray(t.intervals)
-      ? t.intervals
-      : [{ name: String(t.name ?? "Intervalo"), seconds: Number(t.seconds) || 60 }];
+    // Every interval is coerced, not just the legacy flat shape. An array
+    // of intervals used to be trusted as-is, and one step whose `seconds`
+    // wasn't a usable number froze the whole run: the countdown ended, the
+    // ring closed, the beep fired, and then `remaining - 1` was NaN
+    // forever — never <= 0, so it never ticked down and never advanced.
+    // The only way past it was skipping that step by hand.
+    const rawIntervals = Array.isArray(t.intervals)
+      ? (t.intervals as Record<string, unknown>[])
+      : [{ name: t.name, seconds: t.seconds }];
+    const intervals = rawIntervals.map((raw, i) => {
+      const seconds = Number(raw?.seconds);
+      return {
+        name: typeof raw?.name === "string" && raw.name.trim() ? raw.name : `Paso ${i + 1}`,
+        // 30s is the usual mobility hold. A step whose length was never
+        // stored has no right answer, and a wrong length you can see and
+        // edit beats a timer that stops.
+        seconds: Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds) : 30
+      };
+    });
     return {
       id: t.id,
       name: t.name,

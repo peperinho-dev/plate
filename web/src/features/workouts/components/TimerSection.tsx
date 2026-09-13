@@ -29,6 +29,10 @@ export function TimerSection({ category, label, expanded, onToggle, onRun, onLog
   const timers = allTimers.filter((t) => t.category === category);
   const [editing, setEditing] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
+  // Which preset the builder is editing; null means it is building a new
+  // one. Adding a step used to mean deleting the whole thing and retyping
+  // every step it already had.
+  const [editingPreset, setEditingPreset] = useState<TimerPreset | null>(null);
 
   return (
     <>
@@ -65,6 +69,14 @@ export function TimerSection({ category, label, expanded, onToggle, onRun, onLog
               </span>
             </button>
             {editing ? (
+              <>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => setEditingPreset(t)}
+              >
+                Editar
+              </button>
               <button
                 type="button"
                 className="row-del"
@@ -73,6 +85,7 @@ export function TimerSection({ category, label, expanded, onToggle, onRun, onLog
               >
                 <XIcon />
               </button>
+              </>
             ) : (
               /* Two verbs, as on a food search result: the row runs the
                  countdown, this records it as already done. Without it the
@@ -92,9 +105,13 @@ export function TimerSection({ category, label, expanded, onToggle, onRun, onLog
       </LibrarySection>
 
       <TimerBuilderModal
-        open={builderOpen}
+        open={builderOpen || !!editingPreset}
         category={category}
-        onClose={() => setBuilderOpen(false)}
+        preset={editingPreset}
+        onClose={() => {
+          setBuilderOpen(false);
+          setEditingPreset(null);
+        }}
       />
     </>
   );
