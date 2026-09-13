@@ -3777,3 +3777,27 @@ button:focus-visible, input:focus-visible {
 }
 .recipe-grams span { font-size: var(--fs-label); color: var(--ink-soft); }
 .quick-chip.is-editing { border: 1px dashed var(--accent); }
+
+/* Move a step up or down in a routine. Small and paired, because the two
+   only make sense next to each other, and greyed at the ends rather than
+   hidden so the row doesn't reflow as you shuffle things about. */
+.routine-move {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.routine-move button {
+  width: 26px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+}
+.routine-move button:disabled { opacity: 0.3; }
+.routine-move button:active:not(:disabled) { color: var(--accent-ink); }

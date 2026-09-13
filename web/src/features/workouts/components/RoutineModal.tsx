@@ -53,6 +53,20 @@ export function RoutineModal({
   // same routine, one step harder — and doing it by hand meant deleting
   // and rebuilding the whole thing. The rest travels with it, since the
   // gap after a harder variant of the same movement is the same gap.
+  // Order is not decoration: a routine is the order you do it in, and
+  // getting it wrong is easy — the pull work in the first routine had
+  // negatives before the dead hang they depend on. There was no way to
+  // move a step without deleting and retyping the ones after it.
+  const move = (index: number, delta: number) => {
+    setExercises((prev) => {
+      const target = index + delta;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
   const promote = (index: number) => {
     setExercises((prev) => {
       const current = movementFromName(prev[index]);
@@ -101,6 +115,24 @@ export function RoutineModal({
                   {rests[ex] != null && (
                     <span className="row-qty">descanso {rests[ex]}s</span>
                   )}
+                </div>
+                <div className="routine-move">
+                  <button
+                    type="button"
+                    aria-label={`Subir ${ex}`}
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Bajar ${ex}`}
+                    disabled={i === exercises.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    ↓
+                  </button>
                 </div>
                 {next && (
                   <button
