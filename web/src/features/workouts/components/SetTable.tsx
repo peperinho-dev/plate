@@ -11,6 +11,7 @@
 // anyone typed.
 import { useEffect, useRef, useState } from "react";
 import { XIcon, PlusIcon } from "../../../shared/components/Icons";
+import { playBeep, unlockBeep } from "../beep";
 import type { Exercise, ExerciseSet, SetType } from "../../../shared/store/types";
 import { formatSet, isHoldSet } from "../../../shared/lib/workouts";
 import { patchSet, removeSet } from "../actions";
@@ -100,7 +101,59 @@ interface SetTableProps {
   onAddSet: () => void;
 }
 
+/**
+ * Stopwatch for a hold.
+ *
+ * A hang or a plank is timed, not counted, and the only way to record one
+ * was to hold it, guess, and type a number. It counts *up* rather than
+ * down because a hold usually ends when you drop, not when a clock says
+ * so — but it beeps as it passes the time you're aiming at, so a
+ * prescribed 45s plank tells you, and holding past it still records the
+ * longer time instead of capping you at the target.
+ *
+ * Elapsed comes from the wall clock for the same reason the interval
+ * timer does: a phone on the floor stops delivering ticks.
+ */
+function useHoldStopwatch() {
+  const [running, setRunning] = useState<{ setId: string; startedAt: number; target: number } | null>(
+    null
+  );
+  const [elapsed, setElapsed] = useState(0);
+  const beepedRef = useRef(false);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      const secs = Math.floor((Date.now() - running.startedAt) / 1000);
+      setElapsed(secs);
+      if (!beepedRef.current && running.target > 0 && secs >= running.target) {
+        beepedRef.current = true;
+        playBeep();
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const start = (setId: string, target: number) => {
+    unlockBeep();
+    beepedRef.current = false;
+    setElapsed(0);
+    setRunning({ setId, startedAt: Date.now(), target });
+  };
+
+  /** Stops and returns the seconds held, rounded. */
+  const stop = () => {
+    if (!running) return null;
+    const secs = Math.max(1, Math.round((Date.now() - running.startedAt) / 1000));
+    setRunning(null);
+    return secs;
+  };
+
+  return { runningId: running?.setId ?? null, target: running?.target ?? 0, elapsed, start, stop };
+}
+
 export function SetTable({ exercise, dayKey, previous, mode, onAddSet }: SetTableProps) {
+  const watch = useHoldStopwatch();
   // "Anterior" pairs like with like rather than by row position. Position
   // breaks the moment warm-ups are prepended: every working set shifts
   // down and starts quoting the wrong session's set back at you. Warm-ups
@@ -159,18 +212,51 @@ export function SetTable({ exercise, dayKey, previous, mode, onAddSet }: SetTabl
             </span>
 
             <span className="set-col-cell">
-              <Cell
-                value={hold ? s.holdSeconds : s.reps}
-                ariaLabel={`${hold ? "Segundos" : "Reps"} de la serie ${i + 1}`}
-                onCommit={(v) =>
-                  patchSet(
-                    dayKey,
-                    exercise.id,
-                    s.id,
-                    hold ? { holdSeconds: v, reps: null } : { reps: v, holdSeconds: null }
-                  )
-                }
-              />
+              {hold && watch.runningId === s.id ? (
+                <button
+                  type="button"
+                  className={
+                    "hold-watch is-running" +
+                    (watch.target > 0 && watch.elapsed >= watch.target ? " is-past" : "")
+                  }
+                  onClick={() => {
+                    const secs = watch.stop();
+                    if (secs != null) {
+                      patchSet(dayKey, exercise.id, s.id, { holdSeconds: secs, reps: null });
+                    }
+                  }}
+                >
+                  {watch.elapsed}s
+                </button>
+              ) : (
+                <>
+                  <Cell
+                    value={hold ? s.holdSeconds : s.reps}
+                    ariaLabel={`${hold ? "Segundos" : "Reps"} de la serie ${i + 1}`}
+                    onCommit={(v) =>
+                      patchSet(
+                        dayKey,
+                        exercise.id,
+                        s.id,
+                        hold ? { holdSeconds: v, reps: null } : { reps: v, holdSeconds: null }
+                      )
+                    }
+                  />
+                  {hold && (
+                    <button
+                      type="button"
+                      className="hold-watch"
+                      aria-label={`Cronometrar la serie ${i + 1}`}
+                      // The target is what the set is already set to, which
+                      // addSet seeds from your last one — so it is what you
+                      // are trying to match or beat.
+                      onClick={() => watch.start(s.id, s.holdSeconds ?? prev?.holdSeconds ?? 0)}
+                    >
+                      ▶
+                    </button>
+                  )}
+                </>
+              )}
             </span>
 
             <span className="set-col-del">

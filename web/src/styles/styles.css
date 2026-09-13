@@ -3801,3 +3801,34 @@ button:focus-visible, input:focus-visible {
 }
 .routine-move button:disabled { opacity: 0.3; }
 .routine-move button:active:not(:disabled) { color: var(--accent-ink); }
+
+/* Stopwatch for a timed set. Idle it is a small play button beside the
+   seconds; running it takes the cell over and shows the count, because
+   while you are hanging off a bar the only thing worth reading is how
+   long it has been. Turns accent once you pass what you were aiming at —
+   the beep is for your ears, this is for when the phone is on the floor. */
+.hold-watch {
+  flex-shrink: 0;
+  min-width: 30px;
+  padding: 6px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.hold-watch.is-running {
+  flex: 1;
+  min-width: 0;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.hold-watch.is-running.is-past {
+  background: var(--accent);
+  color: var(--bg);
+}
+.set-col-cell { display: flex; align-items: center; gap: 4px; }
