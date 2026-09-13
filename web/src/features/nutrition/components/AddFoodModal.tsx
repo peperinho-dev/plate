@@ -28,7 +28,7 @@ import {
   rescalePlateItem,
   type PlateItem
 } from "../plate";
-import { saveRecipe } from "../recipeActions";
+import { recipeItemsDiffer, saveRecipe } from "../recipeActions";
 import { PortionSheet } from "./PortionSheet";
 import { showToast } from "../../../shared/components/Toast";
 
@@ -144,6 +144,25 @@ export function AddFoodModal({
     trimmed.length > 0 && !candidates.some((c) => foldText(c.name) === foldText(trimmed));
 
   const totals = plateTotals(plate);
+
+  // A recipe that was expanded on the plate and then adjusted. Offering to
+  // write the amounts back is what turns "these grams are wrong" into a
+  // fix instead of a correction you redo every single time — recipes made
+  // before the app captured real weights all read 100 g per ingredient,
+  // and this is where you notice.
+  const driftedRecipe = (() => {
+    const id = plate.find((p) => p.sourceRecipeId && p.basis)?.sourceRecipeId;
+    if (!id) return null;
+    const recipe = recipes.find((r) => r.id === id);
+    if (!recipe) return null;
+    const parts = plate.filter((p) => p.sourceRecipeId === id && p.basis);
+    // Only when the whole recipe is on the plate, in its own order: a
+    // half-expanded meal is not a statement about the recipe.
+    if (parts.length !== recipe.items.length) return null;
+    const items = parts.map((p) => p.basis!);
+    if (!items.every((it, i) => it.name === recipe.items[i].name)) return null;
+    return recipeItemsDiffer(recipe.items, items) ? { recipe, items } : null;
+  })();
 
   const runOffSearch = async () => {
     if (!trimmed) return;
@@ -528,6 +547,23 @@ export function AddFoodModal({
 
       {plate.length > 0 && (
         <div className="form">
+          {driftedRecipe && (
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => {
+                saveRecipe(
+                  driftedRecipe.recipe.name,
+                  driftedRecipe.items,
+                  driftedRecipe.recipe.id
+                );
+                showToast(`«${driftedRecipe.recipe.name}» actualizada`);
+              }}
+            >
+              Guardar estas cantidades en «{driftedRecipe.recipe.name}»
+            </button>
+          )}
+
           {/* Keep the combination, not just log it. A meal you repeat at
               the same weights is a recipe — and it was only creatable in
               the old manual form, which is why recipes felt gone. Saving
@@ -551,10 +587,19 @@ export function AddFoodModal({
                   className="btn btn--secondary"
                   disabled={!recipeName.trim()}
                   onClick={() => {
-                    saveRecipe(recipeName.trim(), plateToRecipeItems(plate));
+                    // Same name replaces, rather than quietly making a
+                    // second recipe you can't tell apart in the picker.
+                    // This is also the repair path for a recipe built
+                    // before the app captured real weights: rebuild the
+                    // plate properly, save it under the old name, done.
+                    const name = recipeName.trim();
+                    const existing = recipes.find(
+                      (r) => r.name.trim().toLowerCase() === name.toLowerCase()
+                    );
+                    saveRecipe(name, plateToRecipeItems(plate), existing?.id);
                     setSavingRecipe(false);
                     setRecipeName("");
-                    showToast("Receta guardada");
+                    showToast(existing ? `«${name}» actualizada` : "Receta guardada");
                   }}
                 >
                   Guardar

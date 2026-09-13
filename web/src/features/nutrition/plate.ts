@@ -177,6 +177,11 @@ export function explodePlateItem(item: PlateItem): PlateItem[] {
     const scaled = scaleFoodItem(basis);
     return {
       id: newId(),
+      // Each piece remembers where it came from. Without this the link to
+      // the recipe died at the moment of expanding, which is exactly when
+      // you discover its grams are wrong — so the app could never offer
+      // to write the corrected amounts back.
+      sourceRecipeId: item.sourceRecipeId,
       name: basis.name,
       qtyLabel: formatQuantity(basis),
       calories: scaled.calories,
