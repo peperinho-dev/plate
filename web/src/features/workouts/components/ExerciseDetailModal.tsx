@@ -74,7 +74,9 @@ export function ExerciseDetailModal({
   if (!exercise) return null;
 
   const lastPerf = findLastExerciseSets(workouts, exercise.name, dayKey);
-  const pr = findExercisePR(workouts, exercise.name);
+  // Asked for in the unit on screen, so switching to Tiempo reports a
+  // hold record rather than a rep count from before you timed it.
+  const pr = findExercisePR(workouts, exercise.name, mode);
 
   // The next step in this movement's chain, and whether it is unlocked.
   // Every session ever logged under this name is checked, not just the

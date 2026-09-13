@@ -50,9 +50,15 @@ export function exerciseBodyweightVolume(ex: Exercise, bodyweightKg: number | nu
   return ex.sets.reduce((sum, s) => sum + (s.reps ? bodyweightKg * share * s.reps : 0), 0);
 }
 
-function bestOf(sets: ExerciseSet[]): ExerciseSet | null {
+// Best of one kind only. A session's sets are usually all one or the
+// other, but a record has to be beaten in the unit it was set in — thirty
+// seconds does not beat twelve reps.
+function bestOf(sets: ExerciseSet[], wantHold?: boolean): ExerciseSet | null {
   let best: ExerciseSet | null = null;
-  for (const s of sets) if (!best || isBetterSet(s, best)) best = s;
+  for (const s of sets) {
+    if (wantHold !== undefined && isHoldSet(s) !== wantHold) continue;
+    if (!best || isBetterSet(s, best)) best = s;
+  }
   return best;
 }
 
@@ -81,7 +87,7 @@ export function summarizeSession(
     for (const k of earlierKeys) {
       for (const other of workouts[k].exercises) {
         if (other.name.trim().toLowerCase() !== key) continue;
-        const b = bestOf(other.sets);
+        const b = bestOf(other.sets, mine ? isHoldSet(mine) : undefined);
         if (b && (!bestBefore || isBetterSet(b, bestBefore))) bestBefore = b;
         // The most recent earlier session, which is what "anterior" means
         // everywhere else in the app.

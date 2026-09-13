@@ -83,8 +83,18 @@ export function computeWorkoutDayTotals(
   return { sets, volume, reps, holdSeconds };
 }
 
-// Heavier always wins; at equal load, more reps (or a longer hold) wins.
+/**
+ * Heavier always wins; at equal load, more reps — or a longer hold — wins.
+ *
+ * Reps and seconds are never compared against each other. They are
+ * different quantities, and putting them side by side made whichever
+ * number happened to be bigger the winner: a 13-second hang lost to a
+ * 15-rep set logged months earlier, so an exercise switched to timed kept
+ * reporting a rep count as its best. Different kinds are simply not
+ * comparable, and this says so.
+ */
 export function isBetterSet(a: ExerciseSet, b: ExerciseSet): boolean {
+  if (isHoldSet(a) !== isHoldSet(b)) return false;
   const aw = a.weightKg || 0;
   const bw = b.weightKg || 0;
   if (aw !== bw) return aw > bw;
@@ -93,16 +103,36 @@ export function isBetterSet(a: ExerciseSet, b: ExerciseSet): boolean {
   return aVal > bVal;
 }
 
-export function findExercisePR(workouts: AppState["workouts"], name: string): ExerciseSet | null {
+/**
+ * The best set for an exercise, of one kind.
+ *
+ * `kind` decides whether the answer is a rep record or a hold record. An
+ * exercise can have both — you may have counted reps before you started
+ * timing it — and mixing them produces a "best" in the wrong unit.
+ * Without it, the kind of the most recent set is used, which is the one
+ * you are currently doing.
+ */
+export function findExercisePR(
+  workouts: AppState["workouts"],
+  name: string,
+  kind?: "reps" | "hold"
+): ExerciseSet | null {
   const key = name.trim().toLowerCase();
-  let best: ExerciseSet | null = null;
+  const all: ExerciseSet[] = [];
   Object.values(workouts).forEach((day) => {
     day.exercises.forEach((ex) => {
       if (ex.name.trim().toLowerCase() !== key) return;
-      ex.sets.forEach((s) => {
-        if (!best || isBetterSet(s, best)) best = s;
-      });
+      all.push(...ex.sets);
     });
+  });
+  if (all.length === 0) return null;
+
+  const wantHold =
+    kind === "hold" ? true : kind === "reps" ? false : isHoldSet(all[all.length - 1]);
+  let best: ExerciseSet | null = null;
+  all.forEach((s) => {
+    if (isHoldSet(s) !== wantHold) return;
+    if (!best || isBetterSet(s, best)) best = s;
   });
   return best;
 }
