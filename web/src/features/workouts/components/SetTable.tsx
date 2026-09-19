@@ -12,9 +12,10 @@
 import { useEffect, useRef, useState } from "react";
 import { XIcon, PlusIcon } from "../../../shared/components/Icons";
 import { playBeep, unlockBeep } from "../beep";
+import { showToast } from "../../../shared/components/Toast";
 import type { Exercise, ExerciseSet, SetType } from "../../../shared/store/types";
 import { formatSet, isHoldSet } from "../../../shared/lib/workouts";
-import { patchSet, removeSet } from "../actions";
+import { patchSet, removeSet, restoreSet } from "../actions";
 
 const SET_TYPE_LABELS: Record<Exclude<SetType, "normal">, string> = {
   warmup: "Cal.",
@@ -264,7 +265,13 @@ export function SetTable({ exercise, dayKey, previous, mode, onAddSet }: SetTabl
                 type="button"
                 className="row-del"
                 aria-label={`Quitar serie ${i + 1}`}
-                onClick={() => removeSet(dayKey, exercise.id, s.id)}
+                onClick={() => {
+                  removeSet(dayKey, exercise.id, s.id);
+                  showToast("Serie eliminada", {
+                    label: "Deshacer",
+                    onClick: () => restoreSet(dayKey, exercise.id, s, i)
+                  });
+                }}
               >
                 <XIcon />
               </button>

@@ -86,63 +86,7 @@ export function computeExerciseRecords(
     .slice(0, limit);
 }
 
-export interface TopContributor {
-  name: string;
-  total: number;
-}
-
-export function computeTopContributors(
-  days: AppState["days"],
-  dateKeys: Set<string>,
-  limit = 8
-): TopContributor[] {
-  const tally = new Map<string, TopContributor>();
-  Object.entries(days).forEach(([dayKey, day]) => {
-    if (!dateKeys.has(dayKey)) return;
-    day.entries.forEach((e) => {
-      const key = e.name.trim().toLowerCase();
-      if (!key) return;
-      const existing = tally.get(key);
-      if (existing) existing.total += e.calories;
-      else tally.set(key, { name: e.name, total: e.calories });
-    });
-  });
-  return Array.from(tally.values())
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limit);
-}
-
-export function countSessionsInPeriod(workouts: AppState["workouts"], dateKeys: Set<string>): number {
-  let count = 0;
-  dateKeys.forEach((k) => {
-    if (workouts[k] && workouts[k].exercises.length > 0) count += 1;
-  });
-  return count;
-}
-
 // --- Weekly session goal ----------------------------------------------
-
-// Chunks the period into consecutive 7-day blocks, counting sessions in
-// each. Deliberately chunked from the start of the period rather than by
-// calendar week, so the bars stay the same width regardless of which
-// weekday the period happens to begin on.
-export interface WeekBucket {
-  label: string;
-  count: number;
-}
-
-export function computeWeeklySessions(
-  workouts: AppState["workouts"],
-  days: DayStat[]
-): WeekBucket[] {
-  const weeks: WeekBucket[] = [];
-  for (let i = 0; i < days.length; i += 7) {
-    const chunk = days.slice(i, i + 7);
-    const count = chunk.filter((d) => hasSession(workouts, d.date)).length;
-    weeks.push({ label: chunk[0].date, count });
-  }
-  return weeks;
-}
 
 function hasSession(workouts: AppState["workouts"], dayKey: string): boolean {
   return !!(workouts[dayKey] && workouts[dayKey].exercises.length > 0);
@@ -181,19 +125,3 @@ export function computeCurrentWeekProgress(
   return { done: countSessionsBetween(workouts, mondayOf(today), today), goal: weeklySessions };
 }
 
-// The month's goal scales with how many weeks the month spans, so a
-// 5-week month asks for more than a 4-week one instead of quietly
-// making the same target easier.
-export function computeCurrentMonthProgress(
-  workouts: AppState["workouts"],
-  weeklySessions: number
-): GoalProgress {
-  const today = parseDateKey(todayKey(0));
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const weeksInMonth = Math.ceil(daysInMonth / 7);
-  return {
-    done: countSessionsBetween(workouts, start, today),
-    goal: weeklySessions * weeksInMonth
-  };
-}

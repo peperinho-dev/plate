@@ -340,25 +340,6 @@ export function clearsGate(movement: KnownMovement, sets: GateSet[]): boolean {
   return reached >= gate.sets;
 }
 
-export interface ProgressionHint {
-  /** The step just cleared. */
-  from: KnownMovement;
-  /** What to try next. */
-  next: KnownMovement;
-}
-
-/**
- * "You're ready for the next one" — or null, which is the normal answer.
- *
- * Takes the best session rather than the latest, so one bad day doesn't
- * retract a step you have already earned.
- */
-export function progressionHint(exerciseName: string, bestSession: GateSet[]): ProgressionHint | null {
-  const movement = movementFromName(exerciseName);
-  if (!movement || !clearsGate(movement, bestSession)) return null;
-  const next = nextInChain(movement);
-  return next ? { from: movement, next } : null;
-}
 
 /** Human-readable gate, for showing what is still missing. */
 export function gateLabel(movement: KnownMovement): string | null {

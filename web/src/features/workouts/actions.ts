@@ -80,21 +80,6 @@ export function addSet(dayKey: string, exerciseId: string, input: SetInput) {
   });
 }
 
-export function updateSet(dayKey: string, exerciseId: string, setId: string, input: SetInput) {
-  useAppStore.setState((s) => {
-    const existing = s.workouts[dayKey]?.exercises ?? [];
-    return updateWorkoutDay(
-      s,
-      dayKey,
-      existing.map((e) =>
-        e.id === exerciseId
-          ? { ...e, sets: e.sets.map((st) => (st.id === setId ? { ...st, ...input } : st)) }
-          : e
-      )
-    );
-  });
-}
-
 /**
  * Merges a partial change into one set — the inline table edits a single
  * cell at a time, and rewriting the whole set to change its reps would

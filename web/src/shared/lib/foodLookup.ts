@@ -201,22 +201,6 @@ export function lookupFromCache(state: AppState, barcode: string): LookupResult 
   };
 }
 
-// Called after the user confirms a product that OFF didn't know (or that
-// they corrected), so the next scan of the same barcode is instant and
-// works offline.
-export function rememberProduct(
-  setState: (fn: (s: AppState) => Partial<AppState>) => void,
-  barcode: string,
-  product: Omit<LookupResult, "source">
-) {
-  setState((s) => ({
-    barcodeCache: {
-      ...s.barcodeCache,
-      [barcode]: { ...product, savedAt: Date.now() }
-    }
-  }));
-}
-
 // Cache first: it's instant, works offline, and a product the user
 // corrected by hand should always win over whatever OFF returns.
 export async function lookupBarcode(state: AppState, barcode: string): Promise<LookupResult | null> {

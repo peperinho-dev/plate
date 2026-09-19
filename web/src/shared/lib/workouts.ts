@@ -161,42 +161,6 @@ export function findLastExerciseSets(
   return candidates[0] || null;
 }
 
-export function countWorkoutSessions(workouts: AppState["workouts"]): number {
-  return Object.values(workouts).filter((day) => day.exercises.length > 0).length;
-}
-
-// Every distinct exercise name ever logged — the full vocabulary,
-// unranked and uncapped.
-export function collectAllExerciseNames(workouts: AppState["workouts"]): string[] {
-  const names = new Set<string>();
-  Object.values(workouts).forEach((day) => {
-    day.exercises.forEach((ex) => names.add(ex.name));
-  });
-  return Array.from(names).sort();
-}
-
-export function computeFrequentExercises(workouts: AppState["workouts"], limit = 8) {
-  const tally = new Map<string, { name: string; count: number; lastAddedAt: number }>();
-  Object.values(workouts).forEach((day) => {
-    day.exercises.forEach((ex) => {
-      const key = ex.name.trim().toLowerCase();
-      if (!key) return;
-      const existing = tally.get(key);
-      if (existing) {
-        existing.count += 1;
-        if (ex.addedAt > existing.lastAddedAt) {
-          existing.lastAddedAt = ex.addedAt;
-          existing.name = ex.name;
-        }
-      } else {
-        tally.set(key, { name: ex.name, count: 1, lastAddedAt: ex.addedAt });
-      }
-    });
-  });
-  return Array.from(tally.values())
-    .sort((a, b) => b.count - a.count || b.lastAddedAt - a.lastAddedAt)
-    .slice(0, limit);
-}
 
 // --- Exercise catalog (search) ----------------------------------------
 

@@ -28,7 +28,6 @@ import {
 } from "../../shared/lib/analytics";
 import { dayCalorieTotal, hasWorkoutSession } from "../../shared/lib/nutrition";
 import { SortableCard } from "./SortableCard";
-import { setAnalyticsLayout } from "./actions";
 
 // Default order matches the card order in app.js's index.html — a stored
 // analyticsLayout overrides it, but the out-of-the-box screen should look
@@ -91,11 +90,13 @@ export function AnalyticsView() {
     const from = order.findIndex((o) => o.id === active.id);
     const to = order.findIndex((o) => o.id === over.id);
     if (from < 0 || to < 0) return;
-    setAnalyticsLayout(arrayMove(order, from, to));
+    useAppStore.setState({ analyticsLayout: arrayMove(order, from, to) });
   };
 
   const toggleHidden = (id: CardId) =>
-    setAnalyticsLayout(order.map((o) => (o.id === id ? { ...o, hidden: !o.hidden } : o)));
+    useAppStore.setState({
+      analyticsLayout: order.map((o) => (o.id === id ? { ...o, hidden: !o.hidden } : o))
+    });
 
   const renderCard = (id: CardId) => {
     switch (id) {

@@ -182,21 +182,6 @@ export function deleteGroupItem(dayKey: string, entryId: string, itemIndex: numb
   });
 }
 
-export function updateGroupItem(dayKey: string, entryId: string, itemIndex: number, patch: Partial<FoodItemBasis>) {
-  useAppStore.setState((s) => {
-    const day = s.days[dayKey];
-    if (!day) return {};
-    const entry = day.entries.find((e) => e.id === entryId);
-    if (!entry?.items) return {};
-    const items = entry.items.map((it, i) => (i === itemIndex ? { ...it, ...patch } : it));
-    return updateDay(
-      s,
-      dayKey,
-      day.entries.map((e) => (e.id === entryId ? recomputeGroupEntry({ ...e, items }) : e))
-    );
-  });
-}
-
 // --- Grouping ---------------------------------------------------------
 
 // Converts an already-logged flat entry into a re-scalable food item.

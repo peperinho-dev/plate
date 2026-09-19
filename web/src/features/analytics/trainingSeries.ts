@@ -49,25 +49,6 @@ export function trainingSeries(
   });
 }
 
-/**
- * How much of the period's volume came from movements the share table
- * doesn't recognise as bodyweight — i.e. how much is plain loaded work.
- * Surfaced so a volume figure can say what it's counting.
- */
-export function bodyweightCoverage(
-  workouts: AppState["workouts"],
-  dateKeys: string[]
-): { bodyweight: number; total: number } {
-  let bodyweight = 0;
-  let total = 0;
-  dateKeys.forEach((date) => {
-    (workouts[date]?.exercises ?? []).forEach((ex) => {
-      total += 1;
-      if (exerciseShare(ex) > 0) bodyweight += 1;
-    });
-  });
-  return { bodyweight, total };
-}
 
 export interface VolumeSplitPoint {
   date: string;
