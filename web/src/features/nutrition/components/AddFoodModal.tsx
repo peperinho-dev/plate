@@ -42,6 +42,7 @@ interface AddFoodModalProps {
   onCreateManual: (name: string) => void;
   /** Opens the recipe editor — the only place ingredient grams live. */
   onEditRecipe: (id: string) => void;
+  onDeleteRecipe: (id: string) => void;
   onCommit: (items: PlateItem[], groupName: string | null) => void;
   /** Lets a scan stage straight onto the plate without leaving. */
   pendingHit: SearchHit | null;
@@ -61,6 +62,7 @@ export function AddFoodModal({
   onScanClick,
   onCreateManual,
   onEditRecipe,
+  onDeleteRecipe,
   onCommit,
   pendingHit,
   onPendingHitConsumed
@@ -387,14 +389,34 @@ export function AddFoodModal({
             {recipes.map((r) => {
               const c = candidates.find((x) => x.recipe?.id === r.id);
               if (!c) return null;
+              // Editing needs two actions on one chip — open it, or delete
+              // it — so it becomes two buttons instead of one. removeRecipe()
+              // existed since recipes were built but had no caller anywhere
+              // in the app: there was no way to delete a recipe at all.
+              if (recipesEditing) {
+                return (
+                  <div className="quick-chip quick-chip--split" key={r.id}>
+                    <button type="button" className="quick-chip-main" onClick={() => onEditRecipe(r.id)}>
+                      <span className="quick-chip-name">{r.name}</span>
+                      <span className="quick-chip-kcal">{Math.round(c.calories)} kcal</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="quick-chip-del"
+                      aria-label={`Borrar receta ${r.name}`}
+                      onClick={() => onDeleteRecipe(r.id)}
+                    >
+                      <XIcon />
+                    </button>
+                  </div>
+                );
+              }
               return (
                 <button
                   key={r.id}
                   type="button"
-                  className={"quick-chip" + (recipesEditing ? " is-editing" : "")}
-                  onClick={() =>
-                    recipesEditing ? onEditRecipe(r.id) : stage(plateItemFromCandidate(c))
-                  }
+                  className="quick-chip"
+                  onClick={() => stage(plateItemFromCandidate(c))}
                 >
                   <span className="quick-chip-name">{r.name}</span>
                   <span className="quick-chip-kcal">{Math.round(c.calories)} kcal</span>

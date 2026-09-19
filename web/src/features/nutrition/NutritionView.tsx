@@ -25,7 +25,7 @@ import { RenameGroupModal } from "./components/RenameGroupModal";
 import { IngredientGramsModal } from "./components/IngredientGramsModal";
 import { AddFoodModal } from "./components/AddFoodModal";
 import { plateItemToEntry, type PlateItem } from "./plate";
-import { entryFromRecipe } from "./recipeActions";
+import { entryFromRecipe, removeRecipe } from "./recipeActions";
 import { sumFoodItems } from "../../shared/lib/foodItems";
 import { QuickAddRows } from "./components/QuickAddRows";
 import { computeHourlyGoTos, computeRecentItems, favoriteToQuickItem, type QuickItem } from "./quickAdd";
@@ -129,6 +129,12 @@ export function NutritionView() {
   const favoriteItems = favorites.map(favoriteToQuickItem);
   const recentItems = computeRecentItems(days);
   const goToItems = computeHourlyGoTos(days, new Date().getHours());
+
+  const handleDeleteRecipe = (id: string) => {
+    const recipe = recipes.find((r) => r.id === id);
+    removeRecipe(id);
+    showToast(recipe ? `«${recipe.name}» borrada` : "Receta borrada");
+  };
 
   // One tap logs the item straight onto the visible day — the whole point
   // of these chips is skipping the form entirely.
@@ -485,6 +491,7 @@ export function NutritionView() {
               setEntryOpen(false);
               setRecipeModalOpen(true);
             }}
+            onDeleteRecipe={handleDeleteRecipe}
             recipesEditing={recipesEditing}
             onToggleRecipesEditing={() => setRecipesEditing((v) => !v)}
           />
@@ -529,6 +536,7 @@ export function NutritionView() {
           setEditingRecipeId(id);
           setRecipeModalOpen(true);
         }}
+        onDeleteRecipe={handleDeleteRecipe}
         onCommit={handlePlateCommit}
         pendingHit={pendingHit}
         onPendingHitConsumed={() => setPendingHit(null)}
